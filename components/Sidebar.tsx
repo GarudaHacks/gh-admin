@@ -115,10 +115,12 @@ export default function Sidebar() {
         className={`p-6 border-b border-border ${isCollapsed ? "px-4" : ""}`}
       >
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-primary-foreground font-bold text-lg">
-              GH
-            </span>
+          <div className="w-8 h-8 placeholder:flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <img
+              src="/assets/ghq.png"
+              alt="Garuda Hacks"
+              className="w-8 h-8 object-contain"
+            />
           </div>
           {!isCollapsed && (
             <div className="min-w-0">
