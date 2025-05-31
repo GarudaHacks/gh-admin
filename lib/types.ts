@@ -79,4 +79,13 @@ export interface CombinedApplicationData {
   score?: number;
   evaluationNotes?: string;
   evaluationStatus?: 'pending' | 'approved' | 'rejected';
+}
+
+export interface PortalConfig {
+  applicationCloseDate: Date;
+  applicationReleaseDate: Date;
+  applicationStartDate: Date;
+  applicationsOpen: boolean;
+  hackathonEndDate: Date;
+  hackathonStartDate: Date;
 } 

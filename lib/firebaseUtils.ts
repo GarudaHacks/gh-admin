@@ -18,6 +18,7 @@ import {
   FirestoreUser,
   APPLICATION_STATUS,
   CombinedApplicationData,
+  PortalConfig,
 } from "./types";
 
 export { APPLICATION_STATUS } from "./types";
@@ -206,6 +207,38 @@ export function getYearSuffix(year: number): string {
   if (year === 3) return '3rd Year';
   if (year >= 4) return `${year}th Year`;
   return `Year ${year}`;
+}
+
+/**
+ * Retrieves portal configuration including application dates and status flags
+ */
+export async function getPortalConfig(): Promise<PortalConfig | null> {
+  try {
+    const configRef = doc(db, 'config', 'portalConfig');
+    const configSnap = await getDoc(configRef);
+    
+    if (!configSnap.exists()) {
+      console.warn('Portal config document not found');
+      return null;
+    }
+
+    const data = configSnap.data();
+
+    const config: PortalConfig = {
+      applicationCloseDate: data.applicationCloseDate.toDate(),
+      applicationReleaseDate: data.applicationReleaseDate.toDate(),
+      applicationStartDate: data.applicationStartDate.toDate(),
+      applicationsOpen: Boolean(data.applicationsOpen),
+      hackathonEndDate: data.hackathonEndDate.toDate(),
+      hackathonStartDate: data.hackathonStartDate.toDate(),
+    };
+
+    return config;
+    
+  } catch (error) {
+    console.error('Error fetching portal config:', error);
+    return null;
+  }
 }
 
 /**
