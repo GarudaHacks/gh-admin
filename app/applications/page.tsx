@@ -91,7 +91,6 @@ export default function Applications() {
         setSelectedApplication((prev) =>
           prev ? { ...prev, status: APPLICATION_STATUS.REJECTED } : null
         );
-
       } else {
         console.error("Failed to reject participant");
       }
@@ -124,7 +123,6 @@ export default function Applications() {
         setSelectedApplication((prev) =>
           prev ? { ...prev, status: APPLICATION_STATUS.ACCEPTED } : null
         );
-
       } else {
         console.error("Failed to accept participant");
       }
@@ -514,27 +512,36 @@ export default function Applications() {
                     <h5 className="font-semibold text-white mb-2">
                       Motivation
                     </h5>
-                    <p className="text-white/80 text-sm">
-                      {selectedApplication.motivation}
-                    </p>
+                    <textarea
+                      value={selectedApplication.motivation}
+                      readOnly
+                      className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
+                      style={{ maxHeight: "120px", minHeight: "80px" }}
+                    />
                   </div>
 
                   <div>
                     <h5 className="font-semibold text-white mb-2">
                       Problem to Solve
                     </h5>
-                    <p className="text-white/80 text-sm">
-                      {selectedApplication.bigProblem}
-                    </p>
+                    <textarea
+                      value={selectedApplication.bigProblem}
+                      readOnly
+                      className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
+                      style={{ maxHeight: "120px", minHeight: "80px" }}
+                    />
                   </div>
 
                   <div>
                     <h5 className="font-semibold text-white mb-2">
                       Interesting Project
                     </h5>
-                    <p className="text-white/80 text-sm">
-                      {selectedApplication.interestingProject}
-                    </p>
+                    <textarea
+                      value={selectedApplication.interestingProject}
+                      readOnly
+                      className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
+                      style={{ maxHeight: "120px", minHeight: "80px" }}
+                    />
                   </div>
 
                   <div>
