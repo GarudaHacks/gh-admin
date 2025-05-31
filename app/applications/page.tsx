@@ -11,6 +11,7 @@ import {
   debugAuthToken,
   updateUserStatus,
   updateApplicationScore,
+  getQuestionText,
 } from "@/lib/firebaseUtils";
 import { CombinedApplicationData, APPLICATION_STATUS } from "@/lib/types";
 
@@ -27,9 +28,19 @@ export default function Applications() {
   const [rejecting, setRejecting] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [questionTexts, setQuestionTexts] = useState<{
+    motivation: string;
+    bigProblem: string;
+    interestingProject: string;
+  }>({
+    motivation: "Motivation",
+    bigProblem: "Problem to Solve",
+    interestingProject: "Interesting Project",
+  });
 
   useEffect(() => {
     loadApplications();
+    loadQuestionTexts();
   }, []);
 
   const loadApplications = async () => {
@@ -51,6 +62,25 @@ export default function Applications() {
       setError("Failed to load applications. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadQuestionTexts = async () => {
+    try {
+      const [motivationText, bigProblemText, interestingProjectText] =
+        await Promise.all([
+          getQuestionText("motivation"),
+          getQuestionText("bigProblem"),
+          getQuestionText("interestingProject"),
+        ]);
+
+      setQuestionTexts({
+        motivation: motivationText,
+        bigProblem: bigProblemText,
+        interestingProject: interestingProjectText,
+      });
+    } catch (error) {
+      console.error("Error loading question texts:", error);
     }
   };
 
@@ -550,11 +580,11 @@ export default function Applications() {
                   </div>
 
                   <div>
-                    <h5 className="font-semibold text-white mb-2">
-                      Motivation
-                    </h5>
+                    <div className="font-semibold text-white mb-2 text-sm">
+                      {questionTexts.motivation}
+                    </div>
                     <textarea
-                      value={selectedApplication.motivation}
+                      value={selectedApplication.motivation || "No response"}
                       readOnly
                       className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
                       style={{ maxHeight: "120px", minHeight: "80px" }}
@@ -562,11 +592,11 @@ export default function Applications() {
                   </div>
 
                   <div>
-                    <h5 className="font-semibold text-white mb-2">
-                      Problem to Solve
-                    </h5>
+                    <div className="font-semibold text-white mb-2 text-sm">
+                      {questionTexts.bigProblem}
+                    </div>
                     <textarea
-                      value={selectedApplication.bigProblem}
+                      value={selectedApplication.bigProblem || "No response"}
                       readOnly
                       className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
                       style={{ maxHeight: "120px", minHeight: "80px" }}
@@ -574,11 +604,13 @@ export default function Applications() {
                   </div>
 
                   <div>
-                    <h5 className="font-semibold text-white mb-2">
-                      Interesting Project
-                    </h5>
+                    <div className="font-semibold text-white mb-2 text-sm">
+                      {questionTexts.interestingProject}
+                    </div>
                     <textarea
-                      value={selectedApplication.interestingProject}
+                      value={
+                        selectedApplication.interestingProject || "No response"
+                      }
                       readOnly
                       className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
                       style={{ maxHeight: "120px", minHeight: "80px" }}

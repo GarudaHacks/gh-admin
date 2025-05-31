@@ -95,4 +95,17 @@ export interface PortalConfig {
   applicationsOpen: boolean;
   hackathonEndDate: Date;
   hackathonStartDate: Date;
+}
+
+export interface Question {
+  id: string;
+  order: number;
+  placeholder: string;
+  state: string;
+  text: string;
+  type: string;
+  validation: {
+    maxLength?: number;
+    required?: boolean;
+  };
 } 

@@ -19,10 +19,14 @@ import {
   APPLICATION_STATUS,
   CombinedApplicationData,
   PortalConfig,
+  Question,
 } from "./types";
 
 export { APPLICATION_STATUS } from "./types";
 export type { CombinedApplicationData } from "./types";
+
+// Cache for questions to avoid repeated Firebase calls
+let questionsCache: Map<string, Question> | null = null;
 
 /**
  * Fetches all applications from Firestore, ordered by creation date (newest first)
@@ -318,6 +322,64 @@ export async function debugAuthToken() {
   } else {
     console.log('No user signed in');
   }
+}
+
+/**
+ * Fetches all questions from Firestore and caches them
+ */
+export async function fetchQuestions(): Promise<Map<string, Question>> {
+  if (questionsCache) {
+    return questionsCache;
+  }
+
+  try {
+    const questionsRef = collection(db, 'questions');
+    const querySnapshot = await getDocs(questionsRef);
+    
+    const questions = new Map<string, Question>();
+    querySnapshot.forEach((doc) => {
+      questions.set(doc.id, {
+        id: doc.id,
+        ...doc.data()
+      } as Question);
+    });
+    
+    questionsCache = questions;
+    return questions;
+  } catch (error) {
+    console.error('Error fetching questions:', error);
+    return new Map();
+  }
+}
+
+/**
+ * Gets question text by ID, with fallback to formatted ID if not found
+ */
+export async function getQuestionText(questionId: string): Promise<string> {
+  try {
+    const questions = await fetchQuestions();
+    const question = questions.get(questionId);
+    
+    if (question) {
+      return question.text;
+    }
+    
+    // Fallback: format the ID as a readable title
+    return formatQuestionId(questionId);
+  } catch (error) {
+    console.error(`Error getting question text for ${questionId}:`, error);
+    return formatQuestionId(questionId);
+  }
+}
+
+/**
+ * Formats question ID as a readable title (fallback)
+ */
+function formatQuestionId(questionId: string): string {
+  return questionId
+    .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+    .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+    .trim();
 }
 
 
