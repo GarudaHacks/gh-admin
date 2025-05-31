@@ -10,6 +10,7 @@ import {
   getYearSuffix,
   debugAuthToken,
   updateUserStatus,
+  updateApplicationScore,
 } from "@/lib/firebaseUtils";
 import { CombinedApplicationData, APPLICATION_STATUS } from "@/lib/types";
 
@@ -25,6 +26,7 @@ export default function Applications() {
   const [evaluationNotes, setEvaluationNotes] = useState<string>("");
   const [rejecting, setRejecting] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
 
   useEffect(() => {
     loadApplications();
@@ -42,6 +44,7 @@ export default function Applications() {
       if (data.length > 0) {
         setSelectedApplication(data[0]);
         setEvaluationScore(data[0].score?.toString() || "");
+        setEvaluationNotes(data[0].evaluationNotes || "");
       }
     } catch (err) {
       console.error("Error loading applications:", err);
@@ -54,18 +57,44 @@ export default function Applications() {
   const handleApplicationSelect = (application: CombinedApplicationData) => {
     setSelectedApplication(application);
     setEvaluationScore(application.score?.toString() || "");
-    setEvaluationNotes("");
+    setEvaluationNotes(application.evaluationNotes || "");
   };
 
-  const handleScoreSubmit = () => {
+  const handleScoreSubmit = async () => {
     if (!selectedApplication) return;
 
     const score = parseFloat(evaluationScore);
     if (score >= 0 && score <= 10) {
-      setEvaluationNotes("");
+      try {
+        const success = await updateApplicationScore(
+          selectedApplication.id,
+          score,
+          evaluationNotes
+        );
 
-      // TODO: Save score to Firestore
-      // updateApplicationScore(selectedApplication.id, score, evaluationNotes);
+        if (success) {
+          // Update local state to reflect the changes
+          setApplications((prev) =>
+            prev.map((app) =>
+              app.id === selectedApplication.id
+                ? { ...app, score, evaluationNotes }
+                : app
+            )
+          );
+
+          // Update selected application
+          setSelectedApplication((prev) =>
+            prev ? { ...prev, score, evaluationNotes } : null
+          );
+
+          // Clear the notes field after successful submission
+          setEvaluationNotes("");
+        } else {
+          console.error("Failed to save score and notes");
+        }
+      } catch (error) {
+        console.error("Error saving score:", error);
+      }
     }
   };
 
@@ -133,6 +162,16 @@ export default function Applications() {
     }
   };
 
+  const getDisplayStatus = (application: CombinedApplicationData): string => {
+    if (
+      application.status === APPLICATION_STATUS.SUBMITTED &&
+      application.score
+    ) {
+      return APPLICATION_STATUS.GRADED;
+    }
+    return application.status;
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case APPLICATION_STATUS.ACCEPTED:
@@ -141,6 +180,8 @@ export default function Applications() {
         return "bg-destructive/20 text-violet-600";
       case APPLICATION_STATUS.SUBMITTED:
         return "bg-secondary/20 text-fuchsia-500";
+      case APPLICATION_STATUS.GRADED:
+        return "bg-blue-500/20 text-blue-400";
       case APPLICATION_STATUS.WAITLISTED:
         return "bg-yellow-500/20 text-violet-500";
       case APPLICATION_STATUS.CONFIRMED_RSVP:
@@ -161,9 +202,11 @@ export default function Applications() {
       case APPLICATION_STATUS.ACCEPTED:
         return "bg-accent-accessible/20 text-accent-accessible border-accent-accessible/50";
       case APPLICATION_STATUS.REJECTED:
-        return "bg-violet-600/20 text-violet-600 border-violet-600/50";
+        return "bg-violet-800/20 text-violet-800 border-violet-800/50";
       case APPLICATION_STATUS.SUBMITTED:
         return "bg-fuchsia-500/20 text-fuchsia-500 border-fuchsia-500/50";
+      case APPLICATION_STATUS.GRADED:
+        return "bg-blue-500/20 text-blue-400 border-blue-500/50";
       case APPLICATION_STATUS.WAITLISTED:
         return "bg-violet-500/20 text-violet-500 border-violet-500/50";
       case APPLICATION_STATUS.CONFIRMED_RSVP:
@@ -171,13 +214,6 @@ export default function Applications() {
       default:
         return "bg-white/10 text-white/70 border-white/30";
     }
-  };
-
-  const getScoreColor = (score?: number) => {
-    if (!score) return "text-white/50";
-    if (score >= 8) return "text-accent-foreground";
-    if (score >= 6) return "text-secondary";
-    return "text-destructive";
   };
 
   const calculateAge = (dateOfBirth: string): number => {
@@ -228,7 +264,10 @@ export default function Applications() {
   }
 
   const pendingApplications = applications.filter(
-    (app) => app.status === APPLICATION_STATUS.SUBMITTED
+    (app) => app.status === APPLICATION_STATUS.SUBMITTED && !app.score
+  );
+  const gradedApplications = applications.filter(
+    (app) => app.status === APPLICATION_STATUS.SUBMITTED && app.score
   );
   const approvedApplications = applications.filter(
     (app) => app.status === APPLICATION_STATUS.ACCEPTED
@@ -254,7 +293,7 @@ export default function Applications() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <div className="card p-4 mb-6">
+          <div className="card py-4 px-3 mb-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/10">
               <div className="text-center py-2 md:py-0 px-2">
                 <div
@@ -264,7 +303,7 @@ export default function Applications() {
                 >
                   {pendingApplications.length}
                 </div>
-                <div className="text-xs text-white/70">Total</div>
+                <div className="text-xs text-white/70">Pending</div>
               </div>
               <div className="text-center py-2 md:py-0 px-2">
                 <div
@@ -274,7 +313,7 @@ export default function Applications() {
                 >
                   {waitlistedApplications.length}
                 </div>
-                <div className="text-xs text-white/70">Waitlisted</div>
+                <div className="text-xs text-white/70">Waitlist</div>
               </div>
               <div className="text-center py-2 md:py-0 px-2">
                 <div
@@ -300,7 +339,7 @@ export default function Applications() {
           </div>
           <div
             className="card flex flex-col"
-            style={{ height: "calc(100vh - 320px)" }}
+            style={{ height: "calc(100vh - 400px)" }}
           >
             <div className="p-6 border-b border-white/10 flex-shrink-0">
               <h3 className="text-lg font-semibold text-white">
@@ -337,12 +376,8 @@ export default function Applications() {
                       </h4>
                       <div className="text-right min-w-[30%] ">
                         {application.score ? (
-                          <div
-                            className={`text-lg font-bold ${getScoreColor(
-                              application.score
-                            )}`}
-                          >
-                            {application.score}
+                          <div className="text-md font-bold text-white">
+                            {application.score}/10
                           </div>
                         ) : (
                           <div className="text-white/50 text-sm">
@@ -354,10 +389,10 @@ export default function Applications() {
                     <div className="flex justify-between items-center">
                       <span
                         className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(
-                          application.status
+                          getDisplayStatus(application)
                         )}`}
                       >
-                        {application.status}
+                        {getDisplayStatus(application)}
                       </span>
                     </div>
                   </div>
@@ -365,6 +400,13 @@ export default function Applications() {
               )}
             </div>
           </div>
+
+          <button
+            onClick={() => setShowAcceptModal(true)}
+            className="w-full mt-6 px-4 py-3 bg-accent-accessible/20 border-2 border-grey text-grey-500 rounded-lg hover:bg-accent-accessible/30 hover:opacity-80 font-semibold transition-colors"
+          >
+            Bulk Accept
+          </button>
         </div>
 
         <div className="lg:col-span-2">
@@ -409,6 +451,10 @@ export default function Applications() {
                         <p className="text-white/70">
                           <span className="font-medium">Hackathons:</span>{" "}
                           {selectedApplication.hackathonCount} previous
+                        </p>
+                        <p className="text-white/70">
+                          <span className="font-medium">Desired Roles:</span>{" "}
+                          {selectedApplication.desiredRoles}
                         </p>
                       </div>
                     </div>
@@ -542,13 +588,6 @@ export default function Applications() {
                       className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
                       style={{ maxHeight: "120px", minHeight: "80px" }}
                     />
-                  </div>
-
-                  <div>
-                    <h5 className="font-semibold text-white mb-2">Skills</h5>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedApplication.desiredRoles}
-                    </div>
                   </div>
 
                   <div>
@@ -703,6 +742,66 @@ export default function Applications() {
           </div>
         </div>
       </div>
+
+      {showAcceptModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-white">
+                Accept Participants
+              </h2>
+              <button
+                onClick={() => setShowAcceptModal(false)}
+                className="text-white/70 hover:text-white transition-colors"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-white/80">
+                Select criteria for automatically accepting participants:
+              </p>
+
+              <div className="bg-white/5 border border-white/20 rounded-md p-4">
+                <h3 className="font-medium text-white mb-3">Coming Soon</h3>
+                <p className="text-white/70 text-sm">
+                  This feature will allow you to bulk accept participants based
+                  on scores, status, and other criteria. The implementation is
+                  in progress.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowAcceptModal(false)}
+                className="px-4 py-2 border border-white/20 text-white/80 rounded-md hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled
+                className="px-4 py-2 bg-accent-accessible/50 text-white rounded-md opacity-50 cursor-not-allowed"
+              >
+                Accept Selected
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

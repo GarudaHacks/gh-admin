@@ -127,6 +127,8 @@ export async function fetchApplicationsWithUsers(): Promise<CombinedApplicationD
           resume: application.resume,
           applicationCreatedAt: application.createdAt,
           applicationUpdatedAt: application.updatedAt,
+          score: application.score || null,
+          evaluationNotes: application.evaluationNotes || null,
           firstName: user.firstName || user.first_name,
           lastName: user.lastName || user.last_name,
           preferredName: user.preferredName,
@@ -252,14 +254,44 @@ export async function updatePortalConfig(config: PortalConfig): Promise<boolean>
 }
 
 /**
- * Updates a user's status in Firestore
- * @param userId - The ID of the user to update
- * @param status - The new status to set
+ * Updates a user's status in Firestore given their ID and new status
  */
 export async function updateUserStatus(userId: string, status: string): Promise<boolean> {
   try {
     const userRef = doc(db, 'users', userId);
     await updateDoc(userRef, { status });
+    console.log(`User ${userId} status updated to: ${status}`);
+    return true;
+  } catch (error) {
+    console.error(`Error updating user ${userId} status:`, error);
+    return false;
+  }
+}
+
+/**
+ * Updates an application's score and evaluation notes in Firestore
+ * @param applicationId - The ID of the application to update
+ * @param score - The numerical score (0-10)
+ * @param evaluationNotes - Optional evaluation notes
+ */
+export async function updateApplicationScore(
+  applicationId: string, 
+  score: number, 
+  evaluationNotes?: string
+): Promise<boolean> {
+  try {
+    const applicationRef = doc(db, 'applications', applicationId);
+    
+    const updateData: { score: number; evaluationNotes?: string; updatedAt: string } = {
+      score,
+      updatedAt: new Date().toISOString()
+    };
+    
+    if (evaluationNotes && evaluationNotes.trim() !== '') {
+      updateData.evaluationNotes = evaluationNotes.trim();
+    }
+    
+    await updateDoc(applicationRef, updateData);
     return true;
   } catch (error) {
     return false;

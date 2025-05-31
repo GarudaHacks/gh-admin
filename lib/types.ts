@@ -11,6 +11,8 @@ export interface FirestoreApplication {
   referralSource: string;
   resume: string;
   updatedAt: string;
+  score?: number;
+  evaluationNotes?: string;
 }
 
 export interface FirestoreUser {
@@ -38,10 +40,15 @@ export interface FirestoreUser {
   year: number;
 }
 
+/**
+ * Graded applications are applications that have been scored.
+ * This category is exclusive to the admin portal, and is not recorded in the DB.
+ */
 export enum APPLICATION_STATUS {
   NOT_APPLICABLE = "not applicable",
   DRAFT = "draft",
   SUBMITTED = "submitted",
+  GRADED = "graded",
   WAITLISTED = "waitlisted",
   REJECTED = "rejected",
   ACCEPTED = "accepted",
