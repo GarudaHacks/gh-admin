@@ -3,12 +3,20 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Sidebar() {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      isCollapsed ? "4rem" : "16rem"
+    );
+  }, [isCollapsed]);
 
   const handleSignOut = async () => {
     try {
@@ -98,51 +106,98 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-64 bg-background-secondary border-r border-border flex flex-col z-50">
-      <div className="p-6 border-b border-border">
+    <div
+      className={`fixed left-0 top-0 h-screen bg-background-secondary border-r border-border flex flex-col z-50 transition-all duration-300 ease-in-out ${
+        isCollapsed ? "w-16" : "w-64"
+      }`}
+    >
+      <div
+        className={`p-6 border-b border-border ${isCollapsed ? "px-4" : ""}`}
+      >
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-primary-foreground font-bold text-lg">
               GH
             </span>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-primary-foreground">
-              Garuda Hacks
-            </h1>
-            <p className="text-xs text-muted-foreground">Admin Panel</p>
-          </div>
+          {!isCollapsed && (
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-primary-foreground truncate">
+                Garuda Hacks
+              </h1>
+              <p className="text-xs text-muted-foreground">Admin Portal</p>
+            </div>
+          )}
         </div>
       </div>
 
-      <nav className="flex-1 py-6">
-        <div className="space-y-1 px-3">
+      <div
+        className={`flex justify-end p-2 ${
+          isCollapsed ? "justify-center" : ""
+        }`}
+      >
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <svg
+            className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${
+              isCollapsed ? "rotate-180" : ""
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <nav className="flex-1 py-2">
+        <div className={`space-y-1 ${isCollapsed ? "px-2" : "px-3"}`}>
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`
-                  group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out
-                  ${
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-lg transform scale-[1.02]"
-                      : "text-primary-foreground/70 hover:bg-primary/10 hover:text-primary-foreground hover:transform hover:scale-[1.01]"
-                  }
-                `}
-              >
-                <span
-                  className={`mr-3 transition-colors ${
-                    isActive
-                      ? "text-primary-foreground"
-                      : "text-muted-foreground group-hover:text-primary-foreground"
-                  }`}
+              <div key={item.name} className="relative group">
+                <Link
+                  href={item.href}
+                  className={`
+                    flex items-center text-sm font-medium rounded-lg transition-all duration-200 ease-in-out
+                    ${isCollapsed ? "px-3 py-3 justify-center" : "px-4 py-3"}
+                    ${
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-lg transform scale-[1.02]"
+                        : "text-primary-foreground/70 hover:bg-primary/10 hover:text-primary-foreground hover:transform hover:scale-[1.01]"
+                    }
+                  `}
+                  title={isCollapsed ? item.name : undefined}
                 >
-                  {item.icon}
-                </span>
-                <span className="truncate">{item.name}</span>
-              </Link>
+                  <span
+                    className={`transition-colors flex-shrink-0 ${
+                      isActive
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground group-hover:text-primary-foreground"
+                    } ${isCollapsed ? "" : "mr-3"}`}
+                  >
+                    {item.icon}
+                  </span>
+                  {!isCollapsed && (
+                    <span className="truncate">{item.name}</span>
+                  )}
+                </Link>
+
+                {isCollapsed && (
+                  <div className="absolute left-full top-0 ml-2 px-2 py-1 bg-popover text-popover-foreground text-sm rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
+                    {item.name}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -150,39 +205,73 @@ export default function Sidebar() {
 
       <div className="border-t border-border p-4">
         <div className="relative">
-          <button
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-accent/10 transition-colors"
-          >
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-primary-foreground truncate">
-                {user?.displayName || "User"}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {user?.email}
-              </p>
-            </div>
-            <div className="flex-shrink-0">
-              <svg
-                className={`w-4 h-4 text-muted-foreground transition-transform ${
-                  showProfileMenu ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          {!isCollapsed ? (
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-accent/10 transition-colors"
+            >
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-medium text-primary-foreground truncate">
+                  {user?.displayName || "User"}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user?.email}
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <svg
+                  className={`w-4 h-4 text-muted-foreground transition-transform ${
+                    showProfileMenu ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+            </button>
+          ) : (
+            <div className="relative group">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="w-full p-3 rounded-lg hover:bg-accent/10 transition-colors flex justify-center"
+                title={user?.displayName || "User"}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+                <svg
+                  className="w-5 h-5 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </button>
+
+              <div className="absolute left-full top-0 ml-2 px-2 py-1 bg-popover text-popover-foreground text-sm rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
+                {user?.displayName || "User"}
+              </div>
             </div>
-          </button>
+          )}
 
           {showProfileMenu && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-border rounded-lg shadow-xl py-2">
+            <div
+              className={`absolute ${
+                isCollapsed
+                  ? "left-full ml-2"
+                  : "bottom-full left-0 right-0 mb-2"
+              } bg-card border border-border rounded-lg shadow-xl py-2 z-50`}
+            >
               <div className="px-4 py-2 border-b border-border">
                 <p className="text-sm font-medium text-card-foreground">
                   {user?.displayName || "User"}

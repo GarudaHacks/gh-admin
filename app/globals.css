@@ -9,7 +9,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   
-  /* Custom Color Palette */
   --background: #001745;
   --background-secondary: #020617;
   --foreground: #ff0068;
@@ -55,7 +54,6 @@ body {
   line-height: 1.6;
 }
 
-/* Base component styles */
 .btn-primary {
   background-color: var(--primary);
   color: var(--primary-foreground);
