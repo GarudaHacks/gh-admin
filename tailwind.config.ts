@@ -35,6 +35,7 @@ export default {
         accent: {
           DEFAULT: "var(--accent)",
           foreground: "var(--accent-foreground)",
+          accessible: "var(--accent-accessible)",
         },
         destructive: {
           DEFAULT: "var(--destructive)",

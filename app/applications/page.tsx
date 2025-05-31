@@ -1,126 +1,592 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import PageHeader from "@/components/PageHeader";
+import {
+  fetchApplicationsWithUsers,
+  getEducationLevel,
+  formatApplicationDate,
+  getYearSuffix,
+  debugAuthToken,
+} from "@/lib/firebaseUtils";
+import { CombinedApplicationData, APPLICATION_STATUS } from "@/lib/types";
 
 export default function Applications() {
+  const [applications, setApplications] = useState<CombinedApplicationData[]>(
+    []
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedApplication, setSelectedApplication] =
+    useState<CombinedApplicationData | null>(null);
+  const [evaluationScore, setEvaluationScore] = useState<string>("");
+  const [evaluationNotes, setEvaluationNotes] = useState<string>("");
+
+  useEffect(() => {
+    loadApplications();
+  }, []);
+
+  const loadApplications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      await debugAuthToken();
+
+      const data = await fetchApplicationsWithUsers();
+      setApplications(data);
+      if (data.length > 0) {
+        setSelectedApplication(data[0]);
+        setEvaluationScore(data[0].score?.toString() || "");
+      }
+    } catch (err) {
+      console.error("Error loading applications:", err);
+      setError("Failed to load applications. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApplicationSelect = (application: CombinedApplicationData) => {
+    setSelectedApplication(application);
+    setEvaluationScore(application.score?.toString() || "");
+    setEvaluationNotes("");
+  };
+
+  const handleScoreSubmit = () => {
+    if (!selectedApplication) return;
+
+    const score = parseFloat(evaluationScore);
+    if (score >= 0 && score <= 10) {
+      console.log(
+        `Submitted score ${score} for ${selectedApplication.firstName} ${selectedApplication.lastName}`
+      );
+      console.log(`Notes: ${evaluationNotes}`);
+      setEvaluationNotes("");
+
+      // TODO: Save score to Firestore
+      // updateApplicationScore(selectedApplication.id, score, evaluationNotes);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case APPLICATION_STATUS.ACCEPTED:
+        return "bg-accent-foreground/20 text-accent-accessible";
+      case APPLICATION_STATUS.REJECTED:
+        return "bg-destructive/20 text-violet-600";
+      case APPLICATION_STATUS.SUBMITTED:
+        return "bg-secondary/20 text-fuchsia-500";
+      case APPLICATION_STATUS.WAITLISTED:
+        return "bg-yellow-500/20 text-violet-500";
+      case APPLICATION_STATUS.CONFIRMED_RSVP:
+        return "bg-green-500/20 text-purple-500";
+      default:
+        return "bg-white/10 text-white/70";
+    }
+  };
+
+  const getStatusTextColor = (status: string) => {
+    const colorClasses = getStatusColor(status);
+    const textColorMatch = colorClasses.match(/text-[\w-\/]+/);
+    return textColorMatch ? textColorMatch[0] : "text-white/70";
+  };
+
+  const getStatusBadgeClasses = (status: string) => {
+    switch (status) {
+      case APPLICATION_STATUS.ACCEPTED:
+        return "bg-accent-accessible/20 text-accent-accessible border-accent-accessible/50";
+      case APPLICATION_STATUS.REJECTED:
+        return "bg-violet-600/20 text-violet-600 border-violet-600/50";
+      case APPLICATION_STATUS.SUBMITTED:
+        return "bg-fuchsia-500/20 text-fuchsia-500 border-fuchsia-500/50";
+      case APPLICATION_STATUS.WAITLISTED:
+        return "bg-violet-500/20 text-violet-500 border-violet-500/50";
+      case APPLICATION_STATUS.CONFIRMED_RSVP:
+        return "bg-purple-500/20 text-purple-500 border-purple-500/50";
+      default:
+        return "bg-white/10 text-white/70 border-white/30";
+    }
+  };
+
+  const getScoreColor = (score?: number) => {
+    if (!score) return "text-white/50";
+    if (score >= 8) return "text-accent-foreground";
+    if (score >= 6) return "text-secondary";
+    return "text-destructive";
+  };
+
+  const calculateAge = (dateOfBirth: string): number => {
+    try {
+      const birth = new Date(dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birth.getDate())
+      ) {
+        age--;
+      }
+      return age;
+    } catch {
+      return 0;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Applications"
+          subtitle="Evaluate and score participant applications for Garuda Hacks 6.0."
+        />
+        <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="text-white/70">Loading applications...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Applications"
+          subtitle="Evaluate and score participant applications for Garuda Hacks 6.0."
+        />
+        <div className="card p-6 text-center">
+          <div className="text-destructive mb-4">{error}</div>
+          <button onClick={loadApplications} className="btn-primary">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const pendingApplications = applications.filter(
+    (app) => app.status === APPLICATION_STATUS.SUBMITTED
+  );
+  const approvedApplications = applications.filter(
+    (app) => app.status === APPLICATION_STATUS.ACCEPTED
+  );
+  const waitlistedApplications = applications.filter(
+    (app) => app.status === APPLICATION_STATUS.WAITLISTED
+  );
+  const rejectedApplications = applications.filter(
+    (app) => app.status === APPLICATION_STATUS.REJECTED
+  );
+
+  // Filter out applications with NOT_APPLICABLE status for display
+  const displayableApplications = applications.filter(
+    (app) => app.status !== APPLICATION_STATUS.NOT_APPLICABLE
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Applications"
-        subtitle="Manage and review participant applications for Garuda Hacks 6.0."
+        subtitle="Evaluate and score participant applications for Garuda Hacks 6.0."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="card p-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-primary mb-2">150</div>
-            <div className="text-sm text-white/70">Total Applications</div>
-          </div>
-        </div>
-        <div className="card p-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-secondary mb-2">85</div>
-            <div className="text-sm text-white/70">Pending Review</div>
-          </div>
-        </div>
-        <div className="card p-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-accent-foreground mb-2">
-              45
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <div className="card p-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/10">
+              <div className="text-center py-2 md:py-0 px-2">
+                <div
+                  className={`text-2xl font-bold mb-1 ${getStatusTextColor(
+                    APPLICATION_STATUS.SUBMITTED
+                  )}`}
+                >
+                  {pendingApplications.length}
+                </div>
+                <div className="text-xs text-white/70">Total</div>
+              </div>
+              <div className="text-center py-2 md:py-0 px-2">
+                <div
+                  className={`text-2xl font-bold mb-1 ${getStatusTextColor(
+                    APPLICATION_STATUS.WAITLISTED
+                  )}`}
+                >
+                  {waitlistedApplications.length}
+                </div>
+                <div className="text-xs text-white/70">Waitlisted</div>
+              </div>
+              <div className="text-center py-2 md:py-0 px-2">
+                <div
+                  className={`text-2xl font-bold mb-1 ${getStatusTextColor(
+                    APPLICATION_STATUS.REJECTED
+                  )}`}
+                >
+                  {rejectedApplications.length}
+                </div>
+                <div className="text-xs text-white/70">Rejected</div>
+              </div>
+              <div className="text-center py-2 md:py-0 px-2">
+                <div
+                  className={`text-2xl font-bold mb-1 ${getStatusTextColor(
+                    APPLICATION_STATUS.ACCEPTED
+                  )}`}
+                >
+                  {approvedApplications.length}
+                </div>
+                <div className="text-xs text-white/70">Accepted</div>
+              </div>
             </div>
-            <div className="text-sm text-white/70">Approved</div>
+          </div>
+          <div
+            className="card flex flex-col"
+            style={{ height: "calc(100vh - 320px)" }}
+          >
+            <div className="p-6 border-b border-white/10 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-white">
+                Applications List ({displayableApplications.length})
+              </h3>
+            </div>
+            <div
+              className="flex-1 overflow-y-auto"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              <style jsx>{`
+                div::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+              {displayableApplications.length === 0 ? (
+                <div className="p-6 text-center text-white/70">
+                  No applications found
+                </div>
+              ) : (
+                displayableApplications.map((application) => (
+                  <div
+                    key={application.id}
+                    onClick={() => handleApplicationSelect(application)}
+                    className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
+                      selectedApplication?.id === application.id
+                        ? "bg-primary/10 border-primary/30"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-medium text-white truncate">
+                        {application.firstName}
+                      </h4>
+                      <div className="text-right min-w-[30%] ">
+                        {application.score ? (
+                          <div
+                            className={`text-lg font-bold ${getScoreColor(
+                              application.score
+                            )}`}
+                          >
+                            {application.score}
+                          </div>
+                        ) : (
+                          <div className="text-white/50 text-sm">
+                            Not scored
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(
+                          application.status
+                        )}`}
+                      >
+                        {application.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
-        <div className="card p-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-destructive mb-2">20</div>
-            <div className="text-sm text-white/70">Rejected</div>
-          </div>
-        </div>
-      </div>
 
-      <div className="card">
-        <div className="p-6 border-b border-white/10">
-          <h3 className="text-lg font-semibold text-white">
-            Recent Applications
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-white/5">
-              <tr>
-                <th className="text-left p-4 text-sm font-medium text-white/70">
-                  Name
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-white/70">
-                  Email
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-white/70">
-                  University
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-white/70">
-                  Status
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-white/70">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                {
-                  name: "John Doe",
-                  email: "john@example.com",
-                  university: "University of Indonesia",
-                  status: "pending",
-                },
-                {
-                  name: "Jane Smith",
-                  email: "jane@example.com",
-                  university: "Bandung Institute of Technology",
-                  status: "approved",
-                },
-                {
-                  name: "Bob Johnson",
-                  email: "bob@example.com",
-                  university: "Gadjah Mada University",
-                  status: "pending",
-                },
-              ].map((application, index) => (
-                <tr key={index} className="border-b border-white/10">
-                  <td className="p-4 text-white">{application.name}</td>
-                  <td className="p-4 text-white/70">{application.email}</td>
-                  <td className="p-4 text-white/70">
-                    {application.university}
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        application.status === "approved"
-                          ? "bg-accent-foreground/20 text-accent-foreground"
-                          : application.status === "rejected"
-                          ? "bg-destructive/20 text-destructive"
-                          : "bg-secondary/20 text-secondary"
-                      }`}
-                    >
-                      {application.status}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex space-x-2">
-                      <button className="text-primary hover:text-primary/80 text-sm">
-                        View
-                      </button>
-                      <button className="text-accent-foreground hover:text-accent-foreground/80 text-sm">
-                        Approve
-                      </button>
-                      <button className="text-destructive hover:text-destructive/80 text-sm">
-                        Reject
+        <div className="lg:col-span-2">
+          <div
+            className="card flex flex-col"
+            style={{ height: "calc(100vh - 240px)" }}
+          >
+            <div className="p-6 border-b border-white/10 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-white">
+                Application Evaluator
+              </h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {selectedApplication ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-2">
+                        {selectedApplication.firstName}
+                      </h4>
+                      <div className="space-y-1 text-sm">
+                        <p className="text-white/70">
+                          <span className="font-medium">Email:</span>{" "}
+                          {selectedApplication.email}
+                        </p>
+                        <p className="text-white/70">
+                          <span className="font-medium">School:</span>{" "}
+                          {selectedApplication.school}
+                        </p>
+                        <p className="text-white/70">
+                          <span className="font-medium">Education:</span>{" "}
+                          {getEducationLevel(selectedApplication.education)}
+                        </p>
+                        <p className="text-white/70">
+                          <span className="font-medium">Year:</span>{" "}
+                          {getYearSuffix(selectedApplication.year)}
+                        </p>
+                        <p className="text-white/70">
+                          <span className="font-medium">Age:</span>{" "}
+                          {calculateAge(selectedApplication.date_of_birth)}
+                        </p>
+                        <p className="text-white/70">
+                          <span className="font-medium">Hackathons:</span>{" "}
+                          {selectedApplication.hackathonCount} previous
+                        </p>
+                        <p className="text-white/70">
+                          <span className="font-medium">Status:</span>{" "}
+                          {selectedApplication.status}
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="font-semibold text-white mb-2">
+                        Links & Documents
+                      </h5>
+                      <div className="space-y-2">
+                        {selectedApplication.resume && (
+                          <a
+                            href={selectedApplication.resume}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-accent-accessible hover:text-accent-accessible/80 text-sm"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            Resume (PDF)
+                          </a>
+                        )}
+                        {selectedApplication.portfolio &&
+                          selectedApplication.portfolio !== "X" && (
+                            <a
+                              href={selectedApplication.portfolio}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-accent-accessible hover:text-accent-accessible/80 text-sm"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              Portfolio
+                            </a>
+                          )}
+                        {selectedApplication.github &&
+                          selectedApplication.github !== "X" && (
+                            <a
+                              href={selectedApplication.github}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-accent-accessible hover:text-accent-accessible/80 text-sm"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              GitHub
+                            </a>
+                          )}
+                        {selectedApplication.linkedin &&
+                          selectedApplication.linkedin !== "X" && (
+                            <a
+                              href={selectedApplication.linkedin}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-accent-accessible hover:text-accent-accessible/80 text-sm"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.338 16.338H13.67V12.16c0-.995-.017-2.277-1.387-2.277-1.39 0-1.601 1.086-1.601 2.207v4.248H8.014v-8.59h2.559v1.174h.037c.356-.675 1.227-1.387 2.526-1.387 2.703 0 3.203 1.778 3.203 4.092v4.711zM5.005 6.575a1.548 1.548 0 11-.003-3.096 1.548 1.548 0 01.003 3.096zm-1.337 9.763H6.34v-8.59H3.667v8.59zM17.668 1H2.328C1.595 1 1 1.581 1 2.298v15.403C1 18.418 1.595 19 2.328 19h15.34c.734 0 1.332-.582 1.332-1.299V2.298C19 1.581 18.402 1 17.668 1z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              LinkedIn
+                            </a>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h5 className="font-semibold text-white mb-2">
+                      Motivation
+                    </h5>
+                    <p className="text-white/80 text-sm">
+                      {selectedApplication.motivation}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-semibold text-white mb-2">
+                      Problem to Solve
+                    </h5>
+                    <p className="text-white/80 text-sm">
+                      {selectedApplication.bigProblem}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-semibold text-white mb-2">
+                      Interesting Project
+                    </h5>
+                    <p className="text-white/80 text-sm">
+                      {selectedApplication.interestingProject}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-semibold text-white mb-2">Skills</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedApplication.desiredRoles}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h5 className="font-semibold text-white mb-2">
+                      Additional Info
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-white/90">
+                          Referral Source:
+                        </span>
+                        <p className="text-white/70">
+                          {selectedApplication.referralSource}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-white/90">
+                          Application Date:
+                        </span>
+                        <p className="text-white/70">
+                          {formatApplicationDate(
+                            selectedApplication.applicationCreatedAt
+                          )}
+                        </p>
+                      </div>
+                      {selectedApplication.accommodations &&
+                        selectedApplication.accommodations !== "m" && (
+                          <div>
+                            <span className="font-medium text-white/90">
+                              Accommodations:
+                            </span>
+                            <p className="text-white/70">
+                              {selectedApplication.accommodations}
+                            </p>
+                          </div>
+                        )}
+                      {selectedApplication.dietary_restrictions &&
+                        selectedApplication.dietary_restrictions !== "m" && (
+                          <div>
+                            <span className="font-medium text-white/90">
+                              Dietary Restrictions:
+                            </span>
+                            <p className="text-white/70">
+                              {selectedApplication.dietary_restrictions}
+                            </p>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-white/10 pt-6">
+                    <h5 className="font-semibold text-white mb-4">
+                      Evaluation
+                    </h5>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Score (0-10)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          step="0.1"
+                          value={evaluationScore}
+                          onChange={(e) => setEvaluationScore(e.target.value)}
+                          className="input w-full"
+                          placeholder="Enter score (0-10)"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Evaluation Notes
+                        </label>
+                        <textarea
+                          value={evaluationNotes}
+                          onChange={(e) => setEvaluationNotes(e.target.value)}
+                          className="input w-full h-24 resize-none"
+                          placeholder="Add your evaluation notes..."
+                        />
+                      </div>
+                      <button
+                        onClick={handleScoreSubmit}
+                        disabled={
+                          !evaluationScore ||
+                          parseFloat(evaluationScore) < 0 ||
+                          parseFloat(evaluationScore) > 10
+                        }
+                        className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Submit Score
                       </button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-white/70 py-12">
+                  Select an application to start evaluating
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

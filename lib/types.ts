@@ -1,0 +1,82 @@
+export interface FirestoreApplication {
+  id: string;
+  accommodations: string;
+  bigProblem: string;
+  createdAt: string;
+  desiredRoles: string;
+  dietary_restrictions: string;
+  hackathonCount: number;
+  interestingProject: string;
+  motivation: string;
+  referralSource: string;
+  resume: string;
+  updatedAt: string;
+}
+
+export interface FirestoreUser {
+  id: string;
+  admin: boolean;
+  createdAt: any;
+  dateOfBirth: string;
+  date_of_birth: string;
+  education: string;
+  email: string;
+  firstName: string;
+  first_name: string;
+  genderIdentity: string;
+  gender_identity: string;
+  github: string;
+  grade: number | null;
+  lastName: string;
+  last_name: string;
+  linkedin: string;
+  portfolio: string;
+  preferredName: string;
+  school: string;
+  status: string;
+  updatedAt: string;
+  year: number;
+}
+
+export enum APPLICATION_STATUS {
+  NOT_APPLICABLE = "not applicable",
+  DRAFT = "draft",
+  SUBMITTED = "submitted",
+  WAITLISTED = "waitlisted",
+  REJECTED = "rejected",
+  ACCEPTED = "accepted",
+  CONFIRMED_RSVP = "confirmed rsvp",
+}
+
+export interface CombinedApplicationData {
+  id: string;
+  accommodations: string;
+  bigProblem: string;
+  desiredRoles: string;
+  dietary_restrictions: string;
+  hackathonCount: number;
+  interestingProject: string;
+  motivation: string;
+  referralSource: string;
+  resume: string;
+  applicationCreatedAt: string;
+  applicationUpdatedAt: string;
+  firstName: string;
+  lastName: string;
+  preferredName: string;
+  email: string;
+  education: string;
+  school: string;
+  github: string;
+  linkedin: string;
+  portfolio: string;
+  year: number;
+  date_of_birth: string;
+  gender_identity: string;
+  status: string;
+  userCreatedAt: any;
+  userUpdatedAt: string;
+  score?: number;
+  evaluationNotes?: string;
+  evaluationStatus?: 'pending' | 'approved' | 'rejected';
+} 
