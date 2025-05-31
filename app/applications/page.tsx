@@ -275,8 +275,6 @@ export default function Applications() {
   const rejectedApplications = applications.filter(
     (app) => app.status === APPLICATION_STATUS.REJECTED
   );
-
-  // Filter out applications with NOT_APPLICABLE status for display
   const displayableApplications = applications.filter(
     (app) => app.status !== APPLICATION_STATUS.NOT_APPLICABLE
   );
@@ -294,7 +292,7 @@ export default function Applications() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/10">
               <div className="text-center py-2 md:py-0 px-2">
                 <div
-                  className={`text-2xl font-bold mb-1 ${getStatusTextColor(
+                  className={`text-xl font-bold mb-1 ${getStatusTextColor(
                     APPLICATION_STATUS.SUBMITTED
                   )}`}
                 >
@@ -304,7 +302,7 @@ export default function Applications() {
               </div>
               <div className="text-center py-2 md:py-0 px-2">
                 <div
-                  className={`text-2xl font-bold mb-1 ${getStatusTextColor(
+                  className={`text-xl font-bold mb-1 ${getStatusTextColor(
                     APPLICATION_STATUS.WAITLISTED
                   )}`}
                 >
@@ -314,7 +312,7 @@ export default function Applications() {
               </div>
               <div className="text-center py-2 md:py-0 px-2">
                 <div
-                  className={`text-2xl font-bold mb-1 ${getStatusTextColor(
+                  className={`text-xl font-bold mb-1 ${getStatusTextColor(
                     APPLICATION_STATUS.REJECTED
                   )}`}
                 >
@@ -324,7 +322,7 @@ export default function Applications() {
               </div>
               <div className="text-center py-2 md:py-0 px-2">
                 <div
-                  className={`text-2xl font-bold mb-1 ${getStatusTextColor(
+                  className={`text-xl font-bold mb-1 ${getStatusTextColor(
                     APPLICATION_STATUS.ACCEPTED
                   )}`}
                 >
@@ -368,12 +366,12 @@ export default function Applications() {
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-medium text-white truncate">
+                      <h4 className="font-medium text-sm text-white truncate">
                         {application.firstName}
                       </h4>
                       <div className="text-right min-w-[30%] ">
                         {application.score ? (
-                          <div className="text-md font-bold text-white">
+                          <div className="text-sm font-bold text-white">
                             {application.score}/10
                           </div>
                         ) : (
