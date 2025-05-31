@@ -242,6 +242,34 @@ export async function getPortalConfig(): Promise<PortalConfig | null> {
 }
 
 /**
+ * Updates portal configuration in Firestore
+ * @param config - The portal configuration data to save
+ */
+export async function updatePortalConfig(config: PortalConfig): Promise<boolean> {
+  try {
+    const configRef = doc(db, 'config', 'portalConfig');
+    
+    // Convert Date objects to Firestore timestamps
+    const firestoreData = {
+      applicationCloseDate: Timestamp.fromDate(config.applicationCloseDate),
+      applicationReleaseDate: Timestamp.fromDate(config.applicationReleaseDate),
+      applicationStartDate: Timestamp.fromDate(config.applicationStartDate),
+      applicationsOpen: config.applicationsOpen,
+      hackathonEndDate: Timestamp.fromDate(config.hackathonEndDate),
+      hackathonStartDate: Timestamp.fromDate(config.hackathonStartDate),
+    };
+
+    await updateDoc(configRef, firestoreData);
+    console.log('Portal config updated successfully');
+    return true;
+    
+  } catch (error) {
+    console.error('Error updating portal config:', error);
+    return false;
+  }
+}
+
+/**
  * Debug utility to log current authentication token details
  * @deprecated TODO: Remove after testing
  */

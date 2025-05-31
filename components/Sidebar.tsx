@@ -28,7 +28,7 @@ export default function Sidebar() {
 
   const navigation = [
     {
-      name: "Home",
+      name: "Portal",
       href: "/",
       icon: (
         <svg

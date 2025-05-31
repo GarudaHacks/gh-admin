@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import PageHeader from "@/components/PageHeader";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   fetchApplicationsWithUsers,
   getEducationLevel,
@@ -141,12 +142,7 @@ export default function Applications() {
           title="Applications"
           subtitle="Evaluate and score participant applications for Garuda Hacks 6.0."
         />
-        <div className="flex items-center justify-center py-12">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            <div className="text-white/70">Loading applications...</div>
-          </div>
-        </div>
+        <LoadingSpinner text="Loading applications..." />
       </div>
     );
   }
