@@ -16,8 +16,12 @@ export default function LoginForm() {
 
     try {
       await signInWithGoogle();
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("An unexpected error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -76,7 +80,7 @@ export default function LoginForm() {
 
           <div className="text-center text-xs text-muted-foreground">
             <p>This will only work with @garudahacks.com accounts</p>
-            <p>Make sure you're signed into the correct Google account</p>
+            <p>Make sure you&apos;re signed into the correct Google account</p>
           </div>
         </div>
       </div>

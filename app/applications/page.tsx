@@ -266,9 +266,6 @@ export default function Applications() {
   const pendingApplications = applications.filter(
     (app) => app.status === APPLICATION_STATUS.SUBMITTED && !app.score
   );
-  const gradedApplications = applications.filter(
-    (app) => app.status === APPLICATION_STATUS.SUBMITTED && app.score
-  );
   const approvedApplications = applications.filter(
     (app) => app.status === APPLICATION_STATUS.ACCEPTED
   );
