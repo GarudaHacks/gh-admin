@@ -104,14 +104,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw new Error("Only @garudahacks.com email addresses are allowed");
       }
 
-      // Optional: Check if the user's email is verified and from the right domain
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential) {
-        // You can access additional user info here if needed
-        console.log("User signed in successfully:", result.user.email);
       }
     } catch (error: any) {
-      // Handle specific error cases
       if (error.code === "auth/popup-closed-by-user") {
         throw new Error("Sign-in was cancelled");
       } else if (error.code === "auth/popup-blocked") {
@@ -125,7 +121,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user && !isAllowedDomain(user.email || "")) {
-        // Sign out user if they don't have allowed domain
         firebaseSignOut(auth);
         setUser(null);
         console.error("User signed out: invalid domain");

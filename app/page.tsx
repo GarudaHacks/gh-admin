@@ -28,7 +28,6 @@ export default function Home() {
       setConfig(portalConfig);
       setOriginalConfig(portalConfig);
     } catch (err) {
-      console.error("Error loading config:", err);
       setError("Failed to load portal configuration");
     } finally {
       setLoading(false);
@@ -71,7 +70,6 @@ export default function Home() {
         setError("Failed to update configuration");
       }
     } catch (err) {
-      console.error("Error saving config:", err);
       setError("Failed to update configuration");
     } finally {
       setSaving(false);

@@ -66,7 +66,6 @@ export async function fetchAllUsers(): Promise<FirestoreUser[]> {
     
     return users;
   } catch (error) {
-    console.error('Error fetching users:', error);
     throw new Error('Failed to fetch users');
   }
 }
@@ -85,11 +84,9 @@ export async function fetchUserById(userId: string): Promise<FirestoreUser | nul
         ...userSnap.data()
       } as FirestoreUser;
     } else {
-      console.warn(`User with ID ${userId} not found`);
       return null;
     }
   } catch (error) {
-    console.error(`Error fetching user ${userId}:`, error);
     return null;
   }
 }
@@ -99,28 +96,21 @@ export async function fetchUserById(userId: string): Promise<FirestoreUser | nul
  */
 export async function fetchApplicationsWithUsers(): Promise<CombinedApplicationData[]> {
   try {
-    console.log('Fetching applications and users...');
-    
     const [applications, users] = await Promise.all([
       fetchAllApplications(),
       fetchAllUsers()
     ]);
     
-    console.log(`Fetched ${applications.length} applications and ${users.length} users`);
-    
-    // Create a map of users by ID for efficient lookup
     const usersMap = new Map<string, FirestoreUser>();
     users.forEach(user => {
       usersMap.set(user.id, user);
     });
     
-    // Combine applications with their corresponding users
     const combinedData: CombinedApplicationData[] = applications
       .map(application => {
         const user = usersMap.get(application.id);
         
         if (!user) {
-          console.warn(`No user found for application ID: ${application.id}`);
           return null;
         }
         
@@ -157,13 +147,9 @@ export async function fetchApplicationsWithUsers(): Promise<CombinedApplicationD
       })
       .filter((item): item is CombinedApplicationData => item !== null);
 
-      console.log(combinedData);
-    
-    console.log(`Successfully combined ${combinedData.length} applications with users`);
     return combinedData;
     
   } catch (error) {
-    console.error('Error fetching applications with users:', error);
     throw new Error('Failed to fetch applications with users');
   }
 }
@@ -218,7 +204,6 @@ export async function getPortalConfig(): Promise<PortalConfig | null> {
     const configSnap = await getDoc(configRef);
     
     if (!configSnap.exists()) {
-      console.warn('Portal config document not found');
       return null;
     }
 
@@ -236,7 +221,6 @@ export async function getPortalConfig(): Promise<PortalConfig | null> {
     return config;
     
   } catch (error) {
-    console.error('Error fetching portal config:', error);
     return null;
   }
 }
@@ -260,11 +244,24 @@ export async function updatePortalConfig(config: PortalConfig): Promise<boolean>
     };
 
     await updateDoc(configRef, firestoreData);
-    console.log('Portal config updated successfully');
     return true;
     
   } catch (error) {
-    console.error('Error updating portal config:', error);
+    return false;
+  }
+}
+
+/**
+ * Updates a user's status in Firestore
+ * @param userId - The ID of the user to update
+ * @param status - The new status to set
+ */
+export async function updateUserStatus(userId: string, status: string): Promise<boolean> {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, { status });
+    return true;
+  } catch (error) {
     return false;
   }
 }

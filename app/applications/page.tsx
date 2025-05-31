@@ -9,6 +9,7 @@ import {
   formatApplicationDate,
   getYearSuffix,
   debugAuthToken,
+  updateUserStatus,
 } from "@/lib/firebaseUtils";
 import { CombinedApplicationData, APPLICATION_STATUS } from "@/lib/types";
 
@@ -22,6 +23,8 @@ export default function Applications() {
     useState<CombinedApplicationData | null>(null);
   const [evaluationScore, setEvaluationScore] = useState<string>("");
   const [evaluationNotes, setEvaluationNotes] = useState<string>("");
+  const [rejecting, setRejecting] = useState(false);
+  const [accepting, setAccepting] = useState(false);
 
   useEffect(() => {
     loadApplications();
@@ -59,14 +62,76 @@ export default function Applications() {
 
     const score = parseFloat(evaluationScore);
     if (score >= 0 && score <= 10) {
-      console.log(
-        `Submitted score ${score} for ${selectedApplication.firstName} ${selectedApplication.lastName}`
-      );
-      console.log(`Notes: ${evaluationNotes}`);
       setEvaluationNotes("");
 
       // TODO: Save score to Firestore
       // updateApplicationScore(selectedApplication.id, score, evaluationNotes);
+    }
+  };
+
+  const handleRejectParticipant = async () => {
+    if (!selectedApplication) return;
+
+    try {
+      setRejecting(true);
+      const success = await updateUserStatus(
+        selectedApplication.id,
+        APPLICATION_STATUS.REJECTED
+      );
+
+      if (success) {
+        setApplications((prev) =>
+          prev.map((app) =>
+            app.id === selectedApplication.id
+              ? { ...app, status: APPLICATION_STATUS.REJECTED }
+              : app
+          )
+        );
+
+        setSelectedApplication((prev) =>
+          prev ? { ...prev, status: APPLICATION_STATUS.REJECTED } : null
+        );
+
+      } else {
+        console.error("Failed to reject participant");
+      }
+    } catch (error) {
+      console.error("Error rejecting participant:", error);
+    } finally {
+      setRejecting(false);
+    }
+  };
+
+  const handleAcceptParticipant = async () => {
+    if (!selectedApplication) return;
+
+    try {
+      setAccepting(true);
+      const success = await updateUserStatus(
+        selectedApplication.id,
+        APPLICATION_STATUS.ACCEPTED
+      );
+
+      if (success) {
+        setApplications((prev) =>
+          prev.map((app) =>
+            app.id === selectedApplication.id
+              ? { ...app, status: APPLICATION_STATUS.ACCEPTED }
+              : app
+          )
+        );
+
+        setSelectedApplication((prev) =>
+          prev ? { ...prev, status: APPLICATION_STATUS.ACCEPTED } : null
+        );
+
+      } else {
+        console.error("Failed to accept participant");
+      }
+    } catch (error) {
+      console.error("Error accepting participant:", error);
+    } finally {
+      setAccepting(false);
     }
   };
 
@@ -347,10 +412,6 @@ export default function Applications() {
                           <span className="font-medium">Hackathons:</span>{" "}
                           {selectedApplication.hackathonCount} previous
                         </p>
-                        <p className="text-white/70">
-                          <span className="font-medium">Status:</span>{" "}
-                          {selectedApplication.status}
-                        </p>
                       </div>
                     </div>
                     <div>
@@ -573,6 +634,56 @@ export default function Applications() {
                       >
                         Submit Score
                       </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-white/10 pt-6">
+                    <h5 className="font-semibold text-white mb-4">
+                      Status Overrides
+                    </h5>
+                    <div className="space-y-3">
+                      <p className="text-white/60 text-sm">
+                        Directly change the participant's status regardless of
+                        score.
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {selectedApplication.status !==
+                          APPLICATION_STATUS.ACCEPTED && (
+                          <button
+                            onClick={handleAcceptParticipant}
+                            disabled={accepting}
+                            className="px-4 py-3 bg-green-600/20 border border-green-600/50 text-green-400 rounded-md hover:bg-green-600/30 hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                          >
+                            {accepting ? "Accepting..." : "Accept"}
+                          </button>
+                        )}
+
+                        {selectedApplication.status !==
+                          APPLICATION_STATUS.REJECTED && (
+                          <button
+                            onClick={handleRejectParticipant}
+                            disabled={rejecting}
+                            className="px-4 py-3 bg-red-600/20 border border-red-600/50 text-red-400 rounded-md hover:bg-red-600/30 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                          >
+                            {rejecting ? "Rejecting..." : "Reject"}
+                          </button>
+                        )}
+                      </div>
+
+                      {(selectedApplication.status ===
+                        APPLICATION_STATUS.ACCEPTED ||
+                        selectedApplication.status ===
+                          APPLICATION_STATUS.REJECTED) && (
+                        <div className="mt-3 p-3 bg-blue-600/10 border border-blue-600/30 rounded-md">
+                          <p className="text-blue-400 text-sm">
+                            Current Status:{" "}
+                            <span className="font-semibold">
+                              {selectedApplication.status}
+                            </span>
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
