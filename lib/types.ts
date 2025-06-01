@@ -18,7 +18,7 @@ export interface FirestoreApplication {
 export interface FirestoreUser {
   id: string;
   admin: boolean;
-  createdAt: any;
+  createdAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   dateOfBirth: string;
   date_of_birth: string;
   education: string;
@@ -81,7 +81,7 @@ export interface CombinedApplicationData {
   date_of_birth: string;
   gender_identity: string;
   status: string;
-  userCreatedAt: any;
+  userCreatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   userUpdatedAt: string;
   score?: number;
   evaluationNotes?: string;

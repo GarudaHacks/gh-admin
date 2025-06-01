@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function Sidebar() {
   const { user, signOut } = useAuth();
@@ -116,7 +117,7 @@ export default function Sidebar() {
       >
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 placeholder:flex items-center justify-center flex-shrink-0 overflow-hidden">
-            <img
+            <Image
               src="/assets/ghq.png"
               alt="Garuda Hacks"
               className="w-8 h-8 object-contain"

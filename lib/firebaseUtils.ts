@@ -3,20 +3,15 @@ import {
   getDocs,
   doc,
   getDoc,
-  addDoc,
   updateDoc,
-  deleteDoc,
   query,
-  where,
   orderBy,
-  DocumentData,
   Timestamp,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import {
   FirestoreApplication,
   FirestoreUser,
-  APPLICATION_STATUS,
   CombinedApplicationData,
   PortalConfig,
   Question,
@@ -69,7 +64,7 @@ export async function fetchAllUsers(): Promise<FirestoreUser[]> {
     });
     
     return users;
-  } catch (error) {
+  } catch {
     throw new Error('Failed to fetch users');
   }
 }
@@ -90,7 +85,7 @@ export async function fetchUserById(userId: string): Promise<FirestoreUser | nul
     } else {
       return null;
     }
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -155,7 +150,7 @@ export async function fetchApplicationsWithUsers(): Promise<CombinedApplicationD
 
     return combinedData;
     
-  } catch (error) {
+  } catch {
     throw new Error('Failed to fetch applications with users');
   }
 }
@@ -185,7 +180,7 @@ export function formatApplicationDate(dateString: string): string {
       month: 'short',
       day: 'numeric'
     });
-  } catch (error) {
+  } catch {
     return dateString;
   }
 }
@@ -226,7 +221,7 @@ export async function getPortalConfig(): Promise<PortalConfig | null> {
 
     return config;
     
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -252,7 +247,7 @@ export async function updatePortalConfig(config: PortalConfig): Promise<boolean>
     await updateDoc(configRef, firestoreData);
     return true;
     
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -297,7 +292,7 @@ export async function updateApplicationScore(
     
     await updateDoc(applicationRef, updateData);
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

@@ -27,7 +27,7 @@ export default function Home() {
       const portalConfig = await getPortalConfig();
       setConfig(portalConfig);
       setOriginalConfig(portalConfig);
-    } catch (err) {
+    } catch {
       setError("Failed to load portal configuration");
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ export default function Home() {
       } else {
         setError("Failed to update configuration");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to update configuration");
     } finally {
       setSaving(false);

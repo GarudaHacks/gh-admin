@@ -716,8 +716,8 @@ export default function Applications() {
                     </h5>
                     <div className="space-y-3">
                       <p className="text-white/60 text-sm">
-                        Directly change the participant's status regardless of
-                        score.
+                        Directly change the participant&apos;s status regardless
+                        of score.
                       </p>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
