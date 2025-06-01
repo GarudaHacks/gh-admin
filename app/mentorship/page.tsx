@@ -1,9 +1,17 @@
-import React from 'react'
+import PageHeader from "@/components/PageHeader";
+import UnderConstruction from "@/components/UnderConstruction";
 
-function MentorshipPage() {
+export default function Mentorship() {
   return (
-    <div>MentorshipPage</div>
-  )
+    <div className="space-y-6">
+      <PageHeader
+        title="Mentorship"
+        subtitle="Connect mentors with participants and manage mentorship programs."
+      />
+      <UnderConstruction
+        feature="Mentorship System"
+        description="This section will allow you to manage mentor assignments, track mentorship sessions, and facilitate connections between mentors and participants during Garuda Hacks 6.0."
+      />
+    </div>
+  );
 }
-
-export default MentorshipPage
