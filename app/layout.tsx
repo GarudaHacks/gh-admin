@@ -4,7 +4,10 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Sidebar from "@/components/Sidebar";
-import { Analytics } from "@vercel/analytics/next";
+import { inject } from "@vercel/analytics";
+
+// Initialize Vercel Analytics
+inject();
 
 const inter = Inter({
   subsets: ["latin"],
@@ -57,7 +60,6 @@ export default function RootLayout({
             </div>
           </ProtectedRoute>
         </AuthProvider>
-        <Analytics />
       </body>
     </html>
   );
