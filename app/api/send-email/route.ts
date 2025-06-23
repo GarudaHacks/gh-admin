@@ -9,12 +9,8 @@ interface MailOptions {
   text: string;
 }
 
-const createAcceptanceMailOptions = (
-  email: string,
-  rsvpDeadline: string,
-  teamDeadline: string,
-  eventStartDate: string
-): MailOptions => ({
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const createAcceptanceMailOptions = (email: string): MailOptions => ({
   from: {
     name: "Garuda Hacks",
     address: "no-reply@garudahacks.com",
@@ -205,6 +201,7 @@ You received this email because you applied for Garuda Hacks 6.0.
 `,
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const createRejectionMailOptions = (email: string): MailOptions => ({
   from: {
     name: "Garuda Hacks",
@@ -298,6 +295,7 @@ const createRejectionMailOptions = (email: string): MailOptions => ({
   text: `Your Garuda Hacks 6.0 Application Status\n\nThank you for applying to Garuda Hacks 6.0.\n\nAfter careful consideration, we regret to inform you that we are unable to offer you a spot this year.\n\nThe selection process was highly competitive, and we encourage you to apply again next year.\n\nIf you have any questions, feel free to reach out to us at hiba@garudahacks.com.\n\nWe wish you the best in your future hackathons and hope to see you at Garuda Hacks in the future!\n\n© 2025 Garuda Hacks. All rights reserved.\nYou received this email because you applied for Garuda Hacks 6.0.`,
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const createWaitlistedMailOptions = (email: string): MailOptions => ({
   from: {
     name: "Garuda Hacks",
@@ -424,12 +422,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      mailOptions = createAcceptanceMailOptions(
-        email,
-        rsvpDeadline,
-        teamDeadline,
-        eventStartDate
-      );
+      mailOptions = createAcceptanceMailOptions(email);
     }
 
     await transporter.sendMail(mailOptions);
