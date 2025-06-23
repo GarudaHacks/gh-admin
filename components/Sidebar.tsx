@@ -120,6 +120,8 @@ export default function Sidebar() {
             <Image
               src="/assets/ghq.png"
               alt="Garuda Hacks"
+              width={32}
+              height={32}
               className="w-8 h-8 object-contain"
             />
           </div>

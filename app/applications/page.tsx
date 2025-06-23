@@ -139,6 +139,26 @@ export default function Applications() {
       );
 
       if (success) {
+        try {
+          const response = await fetch("/api/send-email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: selectedApplication.email,
+              type: "rejected",
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Failed to send rejection email:", errorData);
+          }
+        } catch (emailError) {
+          console.error("Error sending rejection email:", emailError);
+        }
+
         setApplications((prev) =>
           prev.map((app) =>
             app.id === selectedApplication.id
@@ -171,6 +191,28 @@ export default function Applications() {
       );
 
       if (success) {
+        try {
+          const response = await fetch("/api/send-email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: selectedApplication.email,
+              rsvpDeadline: "2025-07-01",
+              teamDeadline: "2025-07-01",
+              eventStartDate: "2025-07-24",
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Failed to send acceptance email:", errorData);
+          }
+        } catch (emailError) {
+          console.error("Error sending acceptance email:", emailError);
+        }
+
         setApplications((prev) =>
           prev.map((app) =>
             app.id === selectedApplication.id
@@ -189,6 +231,58 @@ export default function Applications() {
       console.error("Error accepting participant:", error);
     } finally {
       setAccepting(false);
+    }
+  };
+
+  const handleWaitlistParticipant = async () => {
+    if (!selectedApplication) return;
+
+    try {
+      setRejecting(true);
+      const success = await updateUserStatus(
+        selectedApplication.id,
+        APPLICATION_STATUS.WAITLISTED
+      );
+
+      if (success) {
+        try {
+          const response = await fetch("/api/send-email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: selectedApplication.email,
+              type: "waitlisted",
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Failed to send waitlist email:", errorData);
+          }
+        } catch (emailError) {
+          console.error("Error sending waitlist email:", emailError);
+        }
+
+        setApplications((prev) =>
+          prev.map((app) =>
+            app.id === selectedApplication.id
+              ? { ...app, status: APPLICATION_STATUS.WAITLISTED }
+              : app
+          )
+        );
+
+        setSelectedApplication((prev) =>
+          prev ? { ...prev, status: APPLICATION_STATUS.WAITLISTED } : null
+        );
+      } else {
+        console.error("Failed to waitlist participant");
+      }
+    } catch (error) {
+      console.error("Error waitlisting participant:", error);
+    } finally {
+      setRejecting(false);
     }
   };
 
