@@ -15,6 +15,7 @@ import {
 } from "@/lib/firebaseUtils";
 import { CombinedApplicationData, APPLICATION_STATUS } from "@/lib/types";
 import ApplicationAcceptModal from "@/components/ApplicationAcceptModal";
+import { calculateAge } from "@/lib/evaluator";
 
 export default function Applications() {
   const [applications, setApplications] = useState<CombinedApplicationData[]>(
@@ -338,24 +339,6 @@ export default function Applications() {
         return "bg-purple-500/20 text-purple-500 border-purple-500/50";
       default:
         return "bg-white/10 text-white/70 border-white/30";
-    }
-  };
-
-  const calculateAge = (dateOfBirth: string): number => {
-    try {
-      const birth = new Date(dateOfBirth);
-      const today = new Date();
-      let age = today.getFullYear() - birth.getFullYear();
-      const monthDiff = today.getMonth() - birth.getMonth();
-      if (
-        monthDiff < 0 ||
-        (monthDiff === 0 && today.getDate() < birth.getDate())
-      ) {
-        age--;
-      }
-      return age;
-    } catch {
-      return 0;
     }
   };
 

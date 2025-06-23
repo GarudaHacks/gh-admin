@@ -3,12 +3,13 @@ import { SquareArrowOutUpRight } from "lucide-react";
 
 interface AcceptingApplicationRowComponentProps {
     application: CombinedApplicationData
+    onPreviewApplication: (application: CombinedApplicationData) => void
 }
 
 export default function AcceptingApplicationRowComponent(
-    { application }: AcceptingApplicationRowComponentProps
+    { application, onPreviewApplication }: AcceptingApplicationRowComponentProps
 ) {
-
+    
     return (
         <div
             key={application.id}
@@ -29,9 +30,10 @@ export default function AcceptingApplicationRowComponent(
                         </div>
                     )}
                 </div>
-                <button className="flex flex-row items-center px-3 py-1 border border-white/75 rounded-full gap-1 hover:bg-white/10">
-                    <a className="text-xs" href={`/admin/applications/${application.id}`}>Check application
-                    </a>
+                <button
+                    onClick={() => onPreviewApplication(application)}
+                    className="flex flex-row items-center px-3 py-1 border border-white/75 rounded-full gap-1 hover:bg-white/10">
+                    <span className="text-xs">Check application</span>
                     <SquareArrowOutUpRight size={16} />
                 </button>
             </div>
