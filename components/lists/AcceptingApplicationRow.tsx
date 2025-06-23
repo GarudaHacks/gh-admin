@@ -1,5 +1,5 @@
 import { CombinedApplicationData } from "@/lib/types";
-import { SquareArrowOutUpRight } from "lucide-react";
+import { Eye } from "lucide-react";
 
 interface AcceptingApplicationRowComponentProps {
     application: CombinedApplicationData
@@ -34,7 +34,7 @@ export default function AcceptingApplicationRowComponent(
                     onClick={() => onPreviewApplication(application)}
                     className="flex flex-row items-center px-3 py-1 border border-white/75 rounded-full gap-1 hover:bg-white/10">
                     <span className="text-xs">Check application</span>
-                    <SquareArrowOutUpRight size={16} />
+                    <Eye size={16} />
                 </button>
             </div>
         </div>

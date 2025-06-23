@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getEducationLevel, getQuestionText, getYearSuffix } from "@/lib/firebaseUtils"
 import AcceptingApplicationRowComponent from "./lists/AcceptingApplicationRow"
 import LoadingSpinner from "./LoadingSpinner"
-import { X } from "lucide-react"
+import { SeparatorHorizontal, X } from "lucide-react"
 import { calculateAge } from "@/lib/evaluator"
 
 interface ApplicationAcceptModalProps {
@@ -122,6 +122,8 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 							<span className="text-red-500 text-xs text-end">{minScoreError}</span>
 						</div>
 					</div>
+
+					<div className="w-full h-1 border-b border-white/50"/>
 
 					{isLoading ? (
 						<div>
