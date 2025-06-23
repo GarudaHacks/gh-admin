@@ -16,6 +16,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 	const [combinedApplications, setCombinedApplications] = useState<CombinedApplicationData[]>([])
 	const [previewModalActive, setPreviewModalActive] = useState(false)
 	const [currentApplicationPreview, setCurrentApplicationPreview] = useState<CombinedApplicationData | undefined>(undefined)
+	const [toAcceptApplications, setToAcceptApplications] = useState<CombinedApplicationData[]>([])
 
 	const [questionTexts, setQuestionTexts] = useState<{
 		motivation: string;
@@ -61,6 +62,21 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 		setPreviewModalActive(true)
 	}
 
+	const handleIsToAcceptChange = (application: CombinedApplicationData) => {
+		if (toAcceptApplications.includes(application)) {
+			setToAcceptApplications(toAcceptApplications.filter(app => app.id !== application.id))
+		} else {
+			setToAcceptApplications([...toAcceptApplications, application])
+		}
+	}
+
+	const handleSelectAll = () => {
+		setToAcceptApplications(combinedApplications)
+	}
+
+	const handleUnselectAll = () => {
+		setToAcceptApplications([])
+	}
 
 	useEffect(() => {
 		loadQuestionTexts()
@@ -123,7 +139,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 						</div>
 					</div>
 
-					<div className="w-full h-1 border-b border-white/50"/>
+					<div className="w-full h-1 border-b border-white/50" />
 
 					{isLoading ? (
 						<div>
@@ -131,12 +147,23 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 						</div>
 					) : (
 						<>
-							<p className="text-xs font-semibold text-end text-white/70">Showing {combinedApplications.length} applications passing the score threshold</p>
+							<div className="flex flex-row justify-between items-end">
+								<p className="text-xs font-semibold text-white/70">Showing {combinedApplications.length} applications passing the score threshold</p>
+								<div className="flex flex-col items-end gap-2">
+									<div className="flex flex-row gap-1 text-sm text-xs">
+										<button className="border px-3 py-1 rounded-full border-green-400 hover:bg-white/10" onClick={handleSelectAll}>Select All</button>
+										<button className="border px-3 py-1 rounded-full border-red-400 hover:bg-white/10" onClick={handleUnselectAll}>Unselect All</button>
+									</div>
+									<span className="text-xs">Selected {toAcceptApplications.length}</span>
+								</div>
+							</div>
 
 							<div className="bg-white/5 border border-white/20 rounded-md p-4 flex-1 overflow-y-auto max-h-96">
 								{combinedApplications.map((application) => (
-									<div key={application.id}>
+									<div key={application.id} onClick={() => handleIsToAcceptChange(application)}>
 										<AcceptingApplicationRowComponent
+											setIsToAccept={handleIsToAcceptChange}
+											isToAccept={toAcceptApplications.includes(application)}
 											application={application}
 											onPreviewApplication={onPreviewApplication}
 										/>
