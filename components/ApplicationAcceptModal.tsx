@@ -1,12 +1,14 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { CombinedApplicationData, fetchApplicationsWithUsers } from "@/lib/firebaseUtils"
 
 interface ApplicationAcceptModalProps {
     setShowAcceptModal: (value: boolean) => void
 }
 
 export default function ApplicationAcceptModal({ setShowAcceptModal }: ApplicationAcceptModalProps) {
-    const [minScore, setMinScore] = useState(0)
+    const [minScore, setMinScore] = useState<number | undefined>(undefined)
     const [minScoreError, setMinScoreError] = useState("")
+    const [combinedApplications, setCombinedApplications] = useState<CombinedApplicationData[]>([])
 
     const onChangeMinScore = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = Number(e.target.value)
@@ -18,13 +20,23 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
         }
     }
 
+    useEffect(() => {
+        const scoreFilter = minScore === 0 ? undefined : minScore;
+        fetchApplicationsWithUsers("submitted", scoreFilter).then((applications) => {
+            setCombinedApplications(applications.filter(app => app.score !== undefined))
+        })
+    }, [minScore])
+
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-semibold text-white">
-                        Accept Participants
-                    </h2>
+                    <div>
+                        <h2 className="text-xl font-semibold text-white">
+                            Accept Participants
+                        </h2>
+                        <p className="text-white/80 text-sm">Bulk accept participants based on scores, status, and other criteria.</p>
+                    </div>
                     <button
                         onClick={() => setShowAcceptModal(false)}
                         className="text-white/70 hover:text-white transition-colors"
@@ -64,12 +76,9 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
                     </div>
 
                     <div className="bg-white/5 border border-white/20 rounded-md p-4">
-                        <h3 className="font-medium text-white mb-3">Coming Soon</h3>
-                        <p className="text-white/70 text-sm">
-                            This feature will allow you to bulk accept participants based
-                            on scores, status, and other criteria. The implementation is
-                            in progress.
-                        </p>
+                        {combinedApplications.map((application) => (
+                            <div key={application.id}>{application.id}</div>
+                        ))}
                     </div>
                 </div>
 
