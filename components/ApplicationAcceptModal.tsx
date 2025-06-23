@@ -18,6 +18,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 	const [currentApplicationPreview, setCurrentApplicationPreview] = useState<CombinedApplicationData | undefined>(undefined)
 	const [toAcceptApplications, setToAcceptApplications] = useState<CombinedApplicationData[]>([])
 	const [confirmationModalActive, setConfirmationModalActive] = useState(false)
+	const [confirmationError, setConfirmationError] = useState("")
 
 	const [questionTexts, setQuestionTexts] = useState<{
 		motivation: string;
@@ -78,6 +79,31 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 
 	const handleUnselectAll = () => {
 		setToAcceptApplications([])
+	}
+
+	const handleAcceptSelected = () => {
+		if (minScore === undefined || minScore === 0) {
+			setConfirmationError("Score threshold cannot be empty")
+			return
+		}
+		else if (toAcceptApplications.length === 0) {
+			setConfirmationError("Select minimum 1 application")
+			return
+		}
+		setConfirmationError("")
+		setConfirmationModalActive(true)
+	}
+
+	const handleAcceptSubmit = () => {
+		try {
+
+		} catch (error) {
+
+		} finally {
+			setShowAcceptModal(false)
+			setPreviewModalActive(false)
+			setConfirmationModalActive(false)
+		}
 	}
 
 	useEffect(() => {
@@ -185,12 +211,14 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 						Cancel
 					</button>
 					<button
-						disabled
-						className="px-4 py-2 bg-accent-accessible/50 text-white rounded-md opacity-50 cursor-not-allowed"
+						onClick={handleAcceptSelected}
+						className="px-4 py-2 text-white rounded-md bg-primary"
 					>
 						Accept Selected
 					</button>
 				</div>
+
+				<p className="text-red-500 text-xs text-end mt-4">{confirmationError}</p>
 			</div>
 
 			{previewModalActive && (
@@ -437,7 +465,19 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 			{confirmationModalActive && (
 				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
 					<div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
-						Confrimationn
+						<div className="flex justify-between items-center mb-6">
+							<div className="flex flex-col gap-4 w-full">
+								<h2 className="text-xl font-semibold text-white">
+									{"⚠️"} <span className="ml-2">Accept Applications</span>
+								</h2>
+								<p className="text-white/80">You&apos;re about to accept {toAcceptApplications.length} applications with score ≥ {minScore}.</p>
+
+								<div className="flex flex-row justify-end w-full gap-2">
+									<button className="px-4 py-2 text-white rounded-md border border-white" onClick={() => setConfirmationModalActive(false)}>Cancel</button>
+									<button className="px-4 py-2 text-white rounded-md bg-primary" onClick={handleAcceptSubmit}>Accept</button>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 			)}
