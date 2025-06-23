@@ -14,6 +14,7 @@ import {
   getQuestionText,
 } from "@/lib/firebaseUtils";
 import { CombinedApplicationData, APPLICATION_STATUS } from "@/lib/types";
+import ApplicationAcceptModal from "@/components/ApplicationAcceptModal";
 
 export default function Applications() {
   const [applications, setApplications] = useState<CombinedApplicationData[]>(
@@ -865,63 +866,7 @@ export default function Applications() {
       </div>
 
       {showAcceptModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-white">
-                Accept Participants
-              </h2>
-              <button
-                onClick={() => setShowAcceptModal(false)}
-                className="text-white/70 hover:text-white transition-colors"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-white/80">
-                Select criteria for automatically accepting participants:
-              </p>
-
-              <div className="bg-white/5 border border-white/20 rounded-md p-4">
-                <h3 className="font-medium text-white mb-3">Coming Soon</h3>
-                <p className="text-white/70 text-sm">
-                  This feature will allow you to bulk accept participants based
-                  on scores, status, and other criteria. The implementation is
-                  in progress.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowAcceptModal(false)}
-                className="px-4 py-2 border border-white/20 text-white/80 rounded-md hover:bg-white/5 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                disabled
-                className="px-4 py-2 bg-accent-accessible/50 text-white rounded-md opacity-50 cursor-not-allowed"
-              >
-                Accept Selected
-              </button>
-            </div>
-          </div>
-        </div>
+        <ApplicationAcceptModal setShowAcceptModal={setShowAcceptModal} />
       )}
     </div>
   );
