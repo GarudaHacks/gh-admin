@@ -1,4 +1,5 @@
-import { APPLICATION_STATUS, CombinedApplicationData } from "@/lib/types";
+import { CombinedApplicationData } from "@/lib/types";
+import { SquareArrowOutUpRight } from "lucide-react";
 
 interface AcceptingApplicationRowComponentProps {
     application: CombinedApplicationData
@@ -7,22 +8,14 @@ interface AcceptingApplicationRowComponentProps {
 export default function AcceptingApplicationRowComponent(
     { application }: AcceptingApplicationRowComponentProps
 ) {
-    const getDisplayStatus = (application: CombinedApplicationData): string => {
-        if (
-            application.status === APPLICATION_STATUS.SUBMITTED &&
-            application.score
-        ) {
-            return APPLICATION_STATUS.GRADED;
-        }
-        return application.status;
-    };
+
     return (
         <div
             key={application.id}
             className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5`}
         >
-            <div className="flex justify-between items-start mb-2">
-                <h4 className="font-medium text-sm text-white truncate">
+            <div className="grid grid-cols-3 place-items-center">
+                <h4 className="font-medium text-sm text-white truncate place-self-start">
                     {application.firstName}
                 </h4>
                 <div className="text-right min-w-[30%]">
@@ -36,13 +29,11 @@ export default function AcceptingApplicationRowComponent(
                         </div>
                     )}
                 </div>
-            </div>
-            <div className="flex justify-between items-center">
-                <span
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border`}
-                >
-                    {getDisplayStatus(application)}
-                </span>
+                <button className="flex flex-row items-center px-3 py-1 border border-white/75 rounded-full gap-1 hover:bg-white/10">
+                    <a className="text-xs" href={`/admin/applications/${application.id}`}>Check application
+                    </a>
+                    <SquareArrowOutUpRight size={16} />
+                </button>
             </div>
         </div>
     )
