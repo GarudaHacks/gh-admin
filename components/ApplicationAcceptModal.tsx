@@ -17,6 +17,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 	const [previewModalActive, setPreviewModalActive] = useState(false)
 	const [currentApplicationPreview, setCurrentApplicationPreview] = useState<CombinedApplicationData | undefined>(undefined)
 	const [toAcceptApplications, setToAcceptApplications] = useState<CombinedApplicationData[]>([])
+	const [confirmationModalActive, setConfirmationModalActive] = useState(false)
 
 	const [questionTexts, setQuestionTexts] = useState<{
 		motivation: string;
@@ -54,6 +55,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 		} else {
 			setMinScore(value)
 			setMinScoreError("")
+			setToAcceptApplications([])
 		}
 	}
 
@@ -150,7 +152,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 							<div className="flex flex-row justify-between items-end">
 								<p className="text-xs font-semibold text-white/70">Showing {combinedApplications.length} applications passing the score threshold</p>
 								<div className="flex flex-col items-end gap-2">
-									<div className="flex flex-row gap-1 text-sm text-xs">
+									<div className="flex flex-row gap-1 text-xs">
 										<button className="border px-3 py-1 rounded-full border-green-400 hover:bg-white/10" onClick={handleSelectAll}>Select All</button>
 										<button className="border px-3 py-1 rounded-full border-red-400 hover:bg-white/10" onClick={handleUnselectAll}>Unselect All</button>
 									</div>
@@ -428,6 +430,14 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 								</div>
 							)}
 						</div>
+					</div>
+				</div>
+			)}
+
+			{confirmationModalActive && (
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+					<div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+						Confrimationn
 					</div>
 				</div>
 			)}
