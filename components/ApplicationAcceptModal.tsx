@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getEducationLevel, getQuestionText, getYearSuffix, updateApplicationStatus } from "@/lib/firebaseUtils"
 import AcceptingApplicationRowComponent from "./lists/AcceptingApplicationRow"
 import LoadingSpinner from "./LoadingSpinner"
-import { SeparatorHorizontal, X } from "lucide-react"
+import { Podcast, SeparatorHorizontal, X } from "lucide-react"
 import { calculateAge } from "@/lib/evaluator"
 import toast from "react-hot-toast"
 
@@ -20,6 +20,11 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 	const [toAcceptApplications, setToAcceptApplications] = useState<CombinedApplicationData[]>([])
 	const [confirmationModalActive, setConfirmationModalActive] = useState(false)
 	const [confirmationError, setConfirmationError] = useState("")
+	const [successCount, setSuccessCount] = useState({
+		success: 0,
+		fail: 0
+	})
+	const [finalModalActive, setFinalModalActive] = useState(false)
 
 	const [questionTexts, setQuestionTexts] = useState<{
 		motivation: string;
@@ -109,12 +114,12 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 					failCount++
 				}
 			}))
-
-			if (failCount) {
-				toast.error(`${failCount} applications failed to accept`)
-			} else if (successCount) {
-				toast.success(`${successCount} applications accepted`)
-			}
+			setSuccessCount({
+				success: successCount,
+				fail: failCount
+			})
+			setConfirmationModalActive(false)
+			setFinalModalActive(true)
 		} catch (error) {
 			console.log(`Error when to bulk accept: ${error}`)
 			toast.error("Something went wrong. Please check log.")
@@ -123,6 +128,11 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 			setPreviewModalActive(false)
 			setConfirmationModalActive(false)
 		}
+	}
+
+	const handleFinalModal = () => {
+		setFinalModalActive(false)
+		window.location.reload()
 	}
 
 	useEffect(() => {
@@ -497,6 +507,27 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 								</div>
 							</div>
 						</div>
+					</div>
+				</div>
+			)}
+
+			{finalModalActive && (
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+					<div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col gap-4">
+						<div className="flex justify-between items-center mb-6">
+							<div className="flex flex-col gap-4 w-full">
+								<h2 className="text-xl font-semibold text-white">
+									Accept Result
+								</h2>
+							</div>
+						</div>
+						<div className="grid grid-cols-2 place-items-center">
+							<p className="font-bold text-green-400">Success</p>
+							<p className="font-bold text-red-400">Fail</p>
+							<p className="font-bold text-green-400">{successCount.success}</p>
+							<p className="font-bold text-red-400">{successCount.fail}</p>
+						</div>
+						<button className="px-4 py-2 text-white rounded-md bg-primary" onClick={handleFinalModal}>Close</button>
 					</div>
 				</div>
 			)}
