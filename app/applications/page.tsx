@@ -21,6 +21,9 @@ export default function Applications() {
   const [applications, setApplications] = useState<CombinedApplicationData[]>(
     []
   );
+  const [applicationsOriginal, setApplicationsOriginal] = useState<CombinedApplicationData[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] =
@@ -39,6 +42,47 @@ export default function Applications() {
     bigProblem: "Problem to Solve",
     interestingProject: "Interesting Project",
   });
+  const [searchName, setSearchName] = useState<string>("");
+
+  const onChangeSearchQuery = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchName(e.target.value);
+
+    // possible for gender
+    const genderFiltered = applicationsOriginal.filter(app => app.gender_identity?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for university
+    const uniFiltered = applicationsOriginal.filter(app => app.school?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for status
+    const statusFiltered = applicationsOriginal.filter(app => app.status?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for name
+    const nameFiltered = applicationsOriginal.filter(app => app.firstName?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for last name
+    const lastNameFiltered = applicationsOriginal.filter(app => app.lastName?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for email
+    const emailFiltered = applicationsOriginal.filter(app => app.email?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for desired role
+    const roleFiltered = applicationsOriginal.filter(app => app.desiredRoles?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for age
+    const ageFiltered = applicationsOriginal.filter(app => {
+      const age = calculateAge(app.date_of_birth);
+      return age.toString().includes(e.target.value);
+    })
+
+    // for year
+    const schoolYearFiltered = applicationsOriginal.filter(app => app.year?.toString().includes(e.target.value))
+
+    const allResults = genderFiltered.concat(uniFiltered, statusFiltered, nameFiltered, lastNameFiltered, emailFiltered, roleFiltered, ageFiltered, schoolYearFiltered, schoolYearFiltered);
+    const uniqueResults = allResults.filter((app, index, self) =>
+      index === self.findIndex(a => a.id === app.id)
+    );
+    setApplications(uniqueResults);
+  }
 
   useEffect(() => {
     loadApplications();
@@ -54,6 +98,7 @@ export default function Applications() {
 
       const data = await fetchApplicationsWithUsers();
       setApplications(data);
+      setApplicationsOriginal(data);
       if (data.length > 0) {
         setSelectedApplication(data[0]);
         setEvaluationScore(data[0].score?.toString() || "");
@@ -444,6 +489,16 @@ export default function Applications() {
             className="card flex flex-col"
             style={{ height: "calc(100vh - 400px)" }}
           >
+            <div className="p-4 flex flex-col gap-2">
+              <input
+                onChange={onChangeSearchQuery}
+                value={searchName}
+                className="input input-bordered input-primary w-full"
+                type="text"
+                placeholder="Search by keyword"
+              />
+              <p className="text-xs text-white/80">Support name, email, status, university, gender.</p>
+            </div>
             <div className="p-6 border-b border-white/10 flex-shrink-0">
               <h3 className="text-lg font-semibold text-white">
                 Applications List ({displayableApplications.length})
@@ -467,11 +522,10 @@ export default function Applications() {
                   <div
                     key={application.id}
                     onClick={() => handleApplicationSelect(application)}
-                    className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
-                      selectedApplication?.id === application.id
+                    className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${selectedApplication?.id === application.id
                         ? "bg-primary/10 border-primary/30"
                         : ""
-                    }`}
+                      }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-medium text-sm text-white truncate">
@@ -801,40 +855,40 @@ export default function Applications() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {selectedApplication.status !==
                           APPLICATION_STATUS.ACCEPTED && (
-                          <button
-                            onClick={handleAcceptParticipant}
-                            disabled={accepting}
-                            className="px-4 py-3 bg-green-600/20 border border-green-600/50 text-green-400 rounded-md hover:bg-green-600/30 hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
-                          >
-                            {accepting ? "Accepting..." : "Accept"}
-                          </button>
-                        )}
+                            <button
+                              onClick={handleAcceptParticipant}
+                              disabled={accepting}
+                              className="px-4 py-3 bg-green-600/20 border border-green-600/50 text-green-400 rounded-md hover:bg-green-600/30 hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                            >
+                              {accepting ? "Accepting..." : "Accept"}
+                            </button>
+                          )}
 
                         {selectedApplication.status !==
                           APPLICATION_STATUS.REJECTED && (
-                          <button
-                            onClick={handleRejectParticipant}
-                            disabled={rejecting}
-                            className="px-4 py-3 bg-red-600/20 border border-red-600/50 text-red-400 rounded-md hover:bg-red-600/30 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
-                          >
-                            {rejecting ? "Rejecting..." : "Reject"}
-                          </button>
-                        )}
+                            <button
+                              onClick={handleRejectParticipant}
+                              disabled={rejecting}
+                              className="px-4 py-3 bg-red-600/20 border border-red-600/50 text-red-400 rounded-md hover:bg-red-600/30 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                            >
+                              {rejecting ? "Rejecting..." : "Reject"}
+                            </button>
+                          )}
                       </div>
 
                       {(selectedApplication.status ===
                         APPLICATION_STATUS.ACCEPTED ||
                         selectedApplication.status ===
-                          APPLICATION_STATUS.REJECTED) && (
-                        <div className="mt-3 p-3 bg-blue-600/10 border border-blue-600/30 rounded-md">
-                          <p className="text-blue-400 text-sm">
-                            Current Status:{" "}
-                            <span className="font-semibold">
-                              {selectedApplication.status}
-                            </span>
-                          </p>
-                        </div>
-                      )}
+                        APPLICATION_STATUS.REJECTED) && (
+                          <div className="mt-3 p-3 bg-blue-600/10 border border-blue-600/30 rounded-md">
+                            <p className="text-blue-400 text-sm">
+                              Current Status:{" "}
+                              <span className="font-semibold">
+                                {selectedApplication.status}
+                              </span>
+                            </p>
+                          </div>
+                        )}
                     </div>
                   </div>
                 </div>
