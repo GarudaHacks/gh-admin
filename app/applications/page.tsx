@@ -798,7 +798,7 @@ export default function Applications() {
                       value={selectedApplication.motivation || "No response"}
                       readOnly
                       className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
-                      style={{ maxHeight: "120px", minHeight: "80px" }}
+                      style={{ maxHeight: "500px", minHeight: "250px" }}
                     />
                   </div>
 
@@ -810,7 +810,7 @@ export default function Applications() {
                       value={selectedApplication.bigProblem || "No response"}
                       readOnly
                       className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
-                      style={{ maxHeight: "120px", minHeight: "80px" }}
+                      style={{ maxHeight: "500px", minHeight: "250px" }}
                     />
                   </div>
 
@@ -824,7 +824,7 @@ export default function Applications() {
                       }
                       readOnly
                       className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
-                      style={{ maxHeight: "120px", minHeight: "80px" }}
+                      style={{ maxHeight: "500px", minHeight: "250px" }}
                     />
                   </div>
 
