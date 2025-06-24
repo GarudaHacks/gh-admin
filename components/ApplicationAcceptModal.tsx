@@ -20,11 +20,6 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 	const [toAcceptApplications, setToAcceptApplications] = useState<CombinedApplicationData[]>([])
 	const [confirmationModalActive, setConfirmationModalActive] = useState(false)
 	const [confirmationError, setConfirmationError] = useState("")
-	const [successCount, setSuccessCount] = useState({
-		success: 0,
-		fail: 0
-	})
-	const [finalModalActive, setFinalModalActive] = useState(false)
 
 	const [questionTexts, setQuestionTexts] = useState<{
 		motivation: string;
@@ -105,34 +100,49 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 		let failCount = 0;
 		try {
 			const applications = toAcceptApplications.filter(app => app.score !== undefined && app.score >= minScore!)
-			await Promise.all(applications.map(async (application) => {
-				const result = await updateApplicationStatus(application.id, APPLICATION_STATUS.ACCEPTED)
-				console.log(`Application ${application.id} accepted: ${result}`)
-				if (result) {
-					successCount++
-				} else {
-					failCount++
+			console.log('Processing applications:', applications.length); // Debug log
+		
+			const results = await Promise.allSettled(applications.map(async (application) => {
+				try {
+					const result = await updateApplicationStatus(application.id, APPLICATION_STATUS.ACCEPTED)
+					console.log(`Application ${application.id} accepted: ${result}`)
+					return result;
+				} catch (error) {
+					console.error(`Error accepting application ${application.id}:`, error);
+					return false;
 				}
-			}))
-			setSuccessCount({
-				success: successCount,
-				fail: failCount
-			})
-			setConfirmationModalActive(false)
-			setFinalModalActive(true)
+			}));
+			
+			results.forEach(result => {
+				if (result.status === 'fulfilled' && result.value) {
+					successCount++;
+				} else {
+					failCount++;
+				}
+			});
+
+			toast((t) => (
+				<div>
+					<p className="">Successfully  <span className="text-green-600 font-semibold"> accepted {successCount} applications.</span></p>
+					<p><span className="text-red-600 font-semibold">{failCount} applications failed</span> to process.</p>
+					<p>This window will refresh automatically in 7 seconds.</p>
+				</div>
+			), {
+				duration: 7000
+			});
+
+			setTimeout(() => {
+				window.location.reload()
+			}, 7000)
 		} catch (error) {
-			console.log(`Error when to bulk accept: ${error}`)
+			console.log(`Error when bulk accept: ${error}`)
 			toast.error("Something went wrong. Please check log.")
 		} finally {
+			console.log('Finally block executing');
 			setShowAcceptModal(false)
 			setPreviewModalActive(false)
 			setConfirmationModalActive(false)
 		}
-	}
-
-	const handleFinalModal = () => {
-		setFinalModalActive(false)
-		window.location.reload()
 	}
 
 	useEffect(() => {
@@ -507,27 +517,6 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 								</div>
 							</div>
 						</div>
-					</div>
-				</div>
-			)}
-
-			{finalModalActive && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-					<div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col gap-4">
-						<div className="flex justify-between items-center mb-6">
-							<div className="flex flex-col gap-4 w-full">
-								<h2 className="text-xl font-semibold text-white">
-									Accept Result
-								</h2>
-							</div>
-						</div>
-						<div className="grid grid-cols-2 place-items-center">
-							<p className="font-bold text-green-400">Success</p>
-							<p className="font-bold text-red-400">Fail</p>
-							<p className="font-bold text-green-400">{successCount.success}</p>
-							<p className="font-bold text-red-400">{successCount.fail}</p>
-						</div>
-						<button className="px-4 py-2 text-white rounded-md bg-primary" onClick={handleFinalModal}>Close</button>
 					</div>
 				</div>
 			)}
