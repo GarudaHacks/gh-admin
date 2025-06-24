@@ -102,7 +102,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 			const applications = toAcceptApplications.filter(app => app.score !== undefined && app.score >= minScore!)
 			await Promise.all(applications.map(async (application) => {
 				const result = await updateApplicationStatus(application.id, APPLICATION_STATUS.ACCEPTED)
-
+				console.log(`Application ${application.id} accepted: ${result}`)
 				if (result) {
 					successCount++
 				} else {

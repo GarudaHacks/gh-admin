@@ -43,6 +43,7 @@ export default function Applications() {
     interestingProject: "Interesting Project",
   });
   const [searchName, setSearchName] = useState<string>("");
+  const [searchSort, setSearchSort] = useState<string>("");
 
   const onChangeSearchQuery = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchName(e.target.value);
@@ -82,6 +83,25 @@ export default function Applications() {
       index === self.findIndex(a => a.id === app.id)
     );
     setApplications(uniqueResults);
+  }
+
+  const onChangeSearchSort = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSearchSort(e.target.value);
+    if (e.target.value === "score") {
+      setApplications([...applications].sort((a, b) => (a.score || 0) - (b.score || 0)));
+    } else if (e.target.value === "applicationCreatedAt") {
+      setApplications([...applications].sort((a, b) => new Date(b.applicationCreatedAt).getTime() - new Date(a.applicationCreatedAt).getTime()));
+    } else if (e.target.value === "applicationUpdatedAt") {
+      setApplications([...applications].sort((a, b) => new Date(b.applicationUpdatedAt).getTime() - new Date(a.applicationUpdatedAt).getTime()));
+    } else if (e.target.value === "email") {
+      setApplications([...applications].sort((a, b) => a.email.localeCompare(b.email)));
+    } else if (e.target.value === "firstName") {
+      setApplications([...applications].sort((a, b) => a.firstName?.localeCompare(b.firstName)));
+    } else if (e.target.value === "lastName") {
+      setApplications([...applications].sort((a, b) => a.lastName?.localeCompare(b.lastName)));
+    } else {
+      setApplications([...applicationsOriginal]);
+    }
   }
 
   useEffect(() => {
@@ -497,7 +517,26 @@ export default function Applications() {
                 type="text"
                 placeholder="Search by keyword"
               />
-              <p className="text-xs text-white/80">Support name, email, status, university, gender.</p>
+              <p className="text-xs text-white/80">Support name, email, status, university, gender, role, age, school year.</p>
+
+              <div className="flex flex-row gap-1 justify-end items-center">
+                <p className="text-sm font-bold text-white/75">Sort by</p>
+                <div>
+                  <select
+                    className="bg-transparent text-sm border rounded-lg px-2"
+                    value={searchSort}
+                    onChange={onChangeSearchSort}
+                  >
+                    <option value={"none"}>None</option>
+                    <option value={"firstName"}>First Name</option>
+                    <option value={"lastName"}>Last Name</option>
+                    <option value={"email"}>Email</option>
+                    <option value={"score"}>Score</option>
+                    <option value={"applicationCreatedAt"}>Created At</option>
+                    <option value={"applicationUpdatedAt"}>Updated At</option>
+                  </select>
+                </div>
+              </div>
             </div>
             <div className="p-6 border-b border-white/10 flex-shrink-0">
               <h3 className="text-lg font-semibold text-white">
@@ -506,13 +545,13 @@ export default function Applications() {
             </div>
             <div
               className="flex-1 overflow-y-auto"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              // style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
-              <style jsx>{`
+              {/* <style jsx>{`
                 div::-webkit-scrollbar {
                   display: none;
                 }
-              `}</style>
+              `}</style> */}
               {displayableApplications.length === 0 ? (
                 <div className="p-6 text-center text-white/70">
                   No applications found
