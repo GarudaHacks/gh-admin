@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react"
-import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getEducationLevel, getQuestionText, getYearSuffix } from "@/lib/firebaseUtils"
+import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getEducationLevel, getQuestionText, getYearSuffix, updateApplicationStatus } from "@/lib/firebaseUtils"
 import AcceptingApplicationRowComponent from "./lists/AcceptingApplicationRow"
 import LoadingSpinner from "./LoadingSpinner"
 import { SeparatorHorizontal, X } from "lucide-react"
 import { calculateAge } from "@/lib/evaluator"
+import toast from "react-hot-toast"
 
 interface ApplicationAcceptModalProps {
 	setShowAcceptModal: (value: boolean) => void
@@ -94,11 +95,29 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 		setConfirmationModalActive(true)
 	}
 
-	const handleAcceptSubmit = () => {
+	const handleAcceptSubmit = async () => {
+		let successCount = 0;
+		let failCount = 0;
 		try {
+			const applications = toAcceptApplications.filter(app => app.score !== undefined && app.score >= minScore!)
+			await Promise.all(applications.map(async (application) => {
+				const result = await updateApplicationStatus(application.id, APPLICATION_STATUS.ACCEPTED)
 
+				if (result) {
+					successCount++
+				} else {
+					failCount++
+				}
+			}))
+
+			if (failCount) {
+				toast.error(`${failCount} applications failed to accept`)
+			} else if (successCount) {
+				toast.success(`${successCount} applications accepted`)
+			}
 		} catch (error) {
-
+			console.log(`Error when to bulk accept: ${error}`)
+			toast.error("Something went wrong. Please check log.")
 		} finally {
 			setShowAcceptModal(false)
 			setPreviewModalActive(false)

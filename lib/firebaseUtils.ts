@@ -277,7 +277,7 @@ export async function updatePortalConfig(config: PortalConfig): Promise<boolean>
 export async function updateUserStatus(userId: string, status: string): Promise<boolean> {
   try {
     const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, { status });
+    await updateDoc(userRef, { status, acceptedAt: new Date });
     console.log(`User ${userId} status updated to: ${status}`);
     return true;
   } catch (error) {
@@ -396,5 +396,21 @@ function formatQuestionId(questionId: string): string {
     .trim();
 }
 
-
+/**
+ * Change an application's status in Firestore
+ */
+export async function updateApplicationStatus(userId: string, status: string): Promise<boolean> {
+  try {
+    const applicationRef = doc(db, 'users', userId);
+    const updatedData = {
+      status: status,
+      acceptedAt: new Date().toISOString()
+    };
+    await updateDoc(applicationRef, updatedData);
+    return true;
+  } catch (error) {
+    console.error(`Error updating application status for ${userId}:`, error);
+    return false;
+  }
+}
 
