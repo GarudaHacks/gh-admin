@@ -102,11 +102,8 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
       fetchAllUsers(status)
     ]);
 
-    if (minScore !== undefined) {
+    if (minScore !== undefined && minScore > 0) {
       applications = applications.filter(application => application.score !== undefined && application.score >= minScore);
-    }
-    else if (minScore === undefined || minScore === 0) {
-      applications = applications.filter(application => application.score === undefined);
     }
 
     applications.sort((a, b) => {
