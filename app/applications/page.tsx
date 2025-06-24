@@ -44,6 +44,7 @@ export default function Applications() {
   });
   const [searchName, setSearchName] = useState<string>("");
   const [searchSort, setSearchSort] = useState<string>("");
+  const [isSortDescending, setIsSortDescending] = useState<boolean>(false);
 
   const onChangeSearchQuery = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchName(e.target.value);
@@ -85,24 +86,59 @@ export default function Applications() {
     setApplications(uniqueResults);
   }
 
+  const getSortValue = (app: CombinedApplicationData, sortField: string) => {
+    switch (sortField) {
+      case "score":
+        return app.score || 0;
+      case "applicationCreatedAt":
+        return new Date(app.applicationCreatedAt).getTime();
+      case "applicationUpdatedAt":
+        return new Date(app.applicationUpdatedAt).getTime();
+      case "email":
+        return app.email;
+      case "firstName":
+        return app.firstName || "";
+      case "lastName":
+        return app.lastName || "";
+      default:
+        return "";
+    }
+  };
+
+  const applySorting = (sortField: string, descending: boolean = false) => {
+    if (sortField === "none") {
+      setApplications([...applicationsOriginal]);
+      return;
+    }
+
+    const sorted = [...applications].sort((a, b) => {
+      const aValue = getSortValue(a, sortField);
+      const bValue = getSortValue(b, sortField);
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return descending ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
+      }
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return descending ? bValue - aValue : aValue - bValue;
+      }
+
+      return 0;
+    });
+
+    setApplications(sorted);
+  };
+
   const onChangeSearchSort = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSearchSort(e.target.value);
-    if (e.target.value === "score") {
-      setApplications([...applications].sort((a, b) => (a.score || 0) - (b.score || 0)));
-    } else if (e.target.value === "applicationCreatedAt") {
-      setApplications([...applications].sort((a, b) => new Date(b.applicationCreatedAt).getTime() - new Date(a.applicationCreatedAt).getTime()));
-    } else if (e.target.value === "applicationUpdatedAt") {
-      setApplications([...applications].sort((a, b) => new Date(b.applicationUpdatedAt).getTime() - new Date(a.applicationUpdatedAt).getTime()));
-    } else if (e.target.value === "email") {
-      setApplications([...applications].sort((a, b) => a.email.localeCompare(b.email)));
-    } else if (e.target.value === "firstName") {
-      setApplications([...applications].sort((a, b) => a.firstName?.localeCompare(b.firstName)));
-    } else if (e.target.value === "lastName") {
-      setApplications([...applications].sort((a, b) => a.lastName?.localeCompare(b.lastName)));
-    } else {
-      setApplications([...applicationsOriginal]);
-    }
-  }
+    applySorting(e.target.value, isSortDescending);
+  };
+
+  const onChangeIsSortDescending = () => {
+    const newIsSortDescending = !isSortDescending;
+    setIsSortDescending(newIsSortDescending);
+    applySorting(searchSort, newIsSortDescending);
+  };
 
   useEffect(() => {
     loadApplications();
@@ -519,9 +555,9 @@ export default function Applications() {
               />
               <p className="text-xs text-white/80">Support name, email, status, university, gender, role, age, school year.</p>
 
-              <div className="flex flex-row gap-1 justify-end items-center">
-                <p className="text-sm font-bold text-white/75">Sort by</p>
-                <div>
+              <div className="flex flex-row justify-end gap-4">
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-bold text-white/75">Sort by</p>
                   <select
                     className="bg-transparent text-sm border rounded-lg px-2"
                     value={searchSort}
@@ -536,6 +572,10 @@ export default function Applications() {
                     <option value={"applicationUpdatedAt"}>Updated At</option>
                   </select>
                 </div>
+                <div className="flex items-center flex-col gap-2">
+                  <p className="text-sm font-bold text-white/75">Desc</p>
+                  <input type="checkbox" onChange={onChangeIsSortDescending} />
+                </div>
               </div>
             </div>
             <div className="p-6 border-b border-white/10 flex-shrink-0">
@@ -545,7 +585,7 @@ export default function Applications() {
             </div>
             <div
               className="flex-1 overflow-y-auto"
-              // style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            // style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
               {/* <style jsx>{`
                 div::-webkit-scrollbar {
@@ -562,8 +602,8 @@ export default function Applications() {
                     key={application.id}
                     onClick={() => handleApplicationSelect(application)}
                     className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${selectedApplication?.id === application.id
-                        ? "bg-primary/10 border-primary/30"
-                        : ""
+                      ? "bg-primary/10 border-primary/30"
+                      : ""
                       }`}
                   >
                     <div className="flex justify-between items-start mb-2">
