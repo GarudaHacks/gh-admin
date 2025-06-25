@@ -287,7 +287,7 @@ export async function updateUserStatus(userId: string, status: string): Promise<
 /**
  * Updates an application's score and evaluation notes in Firestore
  * @param applicationId - The ID of the application to update
- * @param score - The numerical score (0-10)
+ * @param score - The numerical score (0-20)
  * @param evaluationNotes - Optional evaluation notes
  */
 export async function updateApplicationScore(

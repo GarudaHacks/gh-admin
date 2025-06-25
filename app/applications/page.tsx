@@ -898,17 +898,17 @@ export default function Applications() {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-white mb-2">
-                          Score (0-10)
+                          Score (0-20)
                         </label>
                         <input
                           type="number"
                           min="0"
-                          max="10"
+                          max="20"
                           step="0.1"
                           value={evaluationScore}
                           onChange={(e) => setEvaluationScore(e.target.value)}
                           className="input w-full"
-                          placeholder="Enter score (0-10)"
+                          placeholder="Enter score (0-20)"
                         />
                       </div>
                       <div>
