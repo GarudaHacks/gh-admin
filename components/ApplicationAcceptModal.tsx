@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getEducationLevel, getQuestionText, getYearSuffix, updateApplicationStatus } from "@/lib/firebaseUtils"
 import AcceptingApplicationRowComponent from "./lists/AcceptingApplicationRow"
 import LoadingSpinner from "./LoadingSpinner"
-import { Podcast, SeparatorHorizontal, X } from "lucide-react"
+import { Loader2, Podcast, SeparatorHorizontal, X } from "lucide-react"
 import { calculateAge } from "@/lib/evaluator"
 import toast from "react-hot-toast"
 
@@ -20,6 +20,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 	const [toAcceptApplications, setToAcceptApplications] = useState<CombinedApplicationData[]>([])
 	const [confirmationModalActive, setConfirmationModalActive] = useState(false)
 	const [confirmationError, setConfirmationError] = useState("")
+	const [isAcceptingLoading, setIsAcceptingLoading] = useState(false)
 
 	const [questionTexts, setQuestionTexts] = useState<{
 		motivation: string;
@@ -98,28 +99,47 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 	const handleAcceptSubmit = async () => {
 		let successCount = 0;
 		let failCount = 0;
+		setIsAcceptingLoading(true)
 		try {
 			const applications = toAcceptApplications.filter(app => app.score !== undefined && app.score >= minScore!)
-			console.log('Processing applications:', applications.length); // Debug log
-		
+
 			const results = await Promise.allSettled(applications.map(async (application) => {
 				try {
 					const result = await updateApplicationStatus(application.id, APPLICATION_STATUS.ACCEPTED)
-					console.log(`Application ${application.id} accepted: ${result}`)
-					return result;
+					return { success: result, application };
 				} catch (error) {
-					console.error(`Error accepting application ${application.id}:`, error);
-					return false;
+					return { success: false, application };
 				}
 			}));
-			
-			results.forEach(result => {
+
+			for (const result of results) {
 				if (result.status === 'fulfilled' && result.value) {
+					try {
+						const response = await fetch("/api/send-email", {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								email: result.value.application.email,
+								rsvpDeadline: "2025-07-01",
+								teamDeadline: "2025-07-01",
+								eventStartDate: "2025-07-24",
+							}),
+						});
+
+						if (!response.ok) {
+							const errorData = await response.json();
+							console.error("Failed to send acceptance email:", errorData);
+						}
+					} catch (emailError) {
+						console.error("Error sending acceptance email:", emailError);
+					}
 					successCount++;
 				} else {
 					failCount++;
 				}
-			});
+			}
 
 			toast((t) => (
 				<div>
@@ -142,6 +162,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 			setShowAcceptModal(false)
 			setPreviewModalActive(false)
 			setConfirmationModalActive(false)
+			setIsAcceptingLoading(false)
 		}
 	}
 
@@ -513,7 +534,10 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 
 								<div className="flex flex-row justify-end w-full gap-2">
 									<button className="px-4 py-2 text-white rounded-md border border-white" onClick={() => setConfirmationModalActive(false)}>Cancel</button>
-									<button className="px-4 py-2 text-white rounded-md bg-primary" onClick={handleAcceptSubmit}>Accept</button>
+									<button className="px-4 py-2 text-white rounded-md bg-primary" onClick={handleAcceptSubmit}>
+										{isAcceptingLoading && <Loader2 className="animate-spin" />}
+										Accept
+									</button>
 								</div>
 							</div>
 						</div>
