@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getEducationLevel, getQuestionText, getYearSuffix, updateApplicationStatus } from "@/lib/firebaseUtils"
+import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getEducationLevel, getQuestionText, getYearSuffix, updateApplicationAcceptanceEmail, updateApplicationStatus } from "@/lib/firebaseUtils"
 import AcceptingApplicationRowComponent from "./lists/AcceptingApplicationRow"
 import LoadingSpinner from "./LoadingSpinner"
 import { Loader2, Podcast, SeparatorHorizontal, X } from "lucide-react"
@@ -131,6 +131,17 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 						if (!response.ok) {
 							const errorData = await response.json();
 							console.error("Failed to send acceptance email:", errorData);
+							failCount++
+							continue;
+						}
+
+						// add to db acceptance email sent
+						try {
+							await updateApplicationAcceptanceEmail(result.value.application.id)
+						} catch (error) {
+							console.error(`Error updating application acceptance email for ${result.value.application.id}:`, error);
+							failCount++
+							continue;
 						}
 					} catch (emailError) {
 						console.error("Error sending acceptance email:", emailError);

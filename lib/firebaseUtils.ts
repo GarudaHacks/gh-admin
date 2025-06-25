@@ -411,3 +411,20 @@ export async function updateApplicationStatus(userId: string, status: string): P
   }
 }
 
+/**
+ * Change an application's acceptance email bool in Firestore
+ */
+export async function updateApplicationAcceptanceEmail(userId: string): Promise<boolean> {
+  try {
+    const applicationRef = doc(db, 'users', userId);
+    const updatedData = {
+      acceptanceEmailSent: true,
+      acceptanceEmailSentAt: new Date().toISOString()
+    };
+    await updateDoc(applicationRef, updatedData);
+    return true;
+  } catch (error) {
+    console.error(`Error updating application acceptance email for ${userId}:`, error);
+    return false;
+  }
+}
