@@ -532,6 +532,13 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 								</h2>
 								<p className="text-white/80">You&apos;re about to accept {toAcceptApplications.length} applications with score ≥ {minScore}.</p>
 
+								{toAcceptApplications.length > 12 && (
+									<div className="flex flex-col gap-2 rounded bg-yellow-500/70 p-4 text-sm">
+										<p className="">‼️ You&apos;re accepting over 200 participants. This may take longer—continue?</p>
+										<p>Bulk operation completes within 5 seconds for up to 200 applicants.</p>
+									</div>
+								)}
+
 								<div className="flex flex-row justify-end w-full gap-2">
 									<button className="px-4 py-2 text-white rounded-md border border-white" onClick={() => setConfirmationModalActive(false)}>Cancel</button>
 									<button className="px-4 py-2 text-white rounded-md bg-primary flex gap-1" onClick={handleAcceptSubmit}>
