@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react"
-import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getEducationLevel, getQuestionText, getYearSuffix, updateApplicationAcceptanceEmail, updateApplicationStatus } from "@/lib/firebaseUtils"
+import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getEducationLevel, getPortalConfig, getQuestionText, getYearSuffix, updateApplicationAcceptanceEmail, updateApplicationStatus } from "@/lib/firebaseUtils"
 import AcceptingApplicationRowComponent from "./lists/AcceptingApplicationRow"
 import LoadingSpinner from "./LoadingSpinner"
 import { Loader2, Podcast, SeparatorHorizontal, X } from "lucide-react"
 import { calculateAge } from "@/lib/evaluator"
 import toast from "react-hot-toast"
+import { PortalConfig } from "@/lib/types"
 
 interface ApplicationAcceptModalProps {
 	setShowAcceptModal: (value: boolean) => void
 }
 
 export default function ApplicationAcceptModal({ setShowAcceptModal }: ApplicationAcceptModalProps) {
+	const [config, setConfig] = useState<PortalConfig | null>(null);
+	const [configError, setConfigError] = useState("")
 	const [isLoading, setIsLoading] = useState(true)
 	const [minScore, setMinScore] = useState<number | undefined>(undefined)
 	const [minScoreError, setMinScoreError] = useState("")
@@ -31,6 +34,19 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 		bigProblem: "Problem to Solve",
 		interestingProject: "Interesting Project",
 	});
+
+	const loadConfig = async () => {
+    try {
+      setIsLoading(true);
+      const portalConfig = await getPortalConfig();
+      setConfig(portalConfig);
+    } catch {
+      setConfigError("Failed to load portal configuration");
+			console.log("Failed to load portal config.")
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 	const loadQuestionTexts = async () => {
 		try {
@@ -178,6 +194,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 	}
 
 	useEffect(() => {
+		loadConfig()
 		loadQuestionTexts()
 	}, [])
 
@@ -189,6 +206,12 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 		})
 		setIsLoading(false)
 	}, [minScore])
+
+	if (configError) {
+		<div>
+			<p className="text-red-500 text-sm text-center">{configError}</p>
+		</div>
+	}
 
 	return (
 		<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -265,6 +288,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 											isToAccept={toAcceptApplications.includes(application)}
 											application={application}
 											onPreviewApplication={onPreviewApplication}
+											maxApplicationEvaluationScore={config?.maxApplicationEvaluationScore || 20}
 										/>
 									</div>
 								))}

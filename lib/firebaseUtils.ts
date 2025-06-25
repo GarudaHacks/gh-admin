@@ -233,6 +233,7 @@ export async function getPortalConfig(): Promise<PortalConfig | null> {
       applicationsOpen: Boolean(data.applicationsOpen),
       hackathonEndDate: data.hackathonEndDate.toDate(),
       hackathonStartDate: data.hackathonStartDate.toDate(),
+      maxApplicationEvaluationScore: data.maxApplicationEvaluationScore,
     };
 
     return config;

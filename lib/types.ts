@@ -95,6 +95,7 @@ export interface PortalConfig {
   applicationsOpen: boolean;
   hackathonEndDate: Date;
   hackathonStartDate: Date;
+  maxApplicationEvaluationScore: number;
 }
 
 export interface Question {

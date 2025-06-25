@@ -12,12 +12,14 @@ import {
   updateUserStatus,
   updateApplicationScore,
   getQuestionText,
+  getPortalConfig,
 } from "@/lib/firebaseUtils";
-import { CombinedApplicationData, APPLICATION_STATUS } from "@/lib/types";
+import { CombinedApplicationData, APPLICATION_STATUS, PortalConfig } from "@/lib/types";
 import ApplicationAcceptModal from "@/components/ApplicationAcceptModal";
 import { calculateAge } from "@/lib/evaluator";
 
 export default function Applications() {
+  const [config, setConfig] = useState<PortalConfig | null>(null);
   const [applications, setApplications] = useState<CombinedApplicationData[]>(
     []
   );
@@ -141,9 +143,22 @@ export default function Applications() {
   };
 
   useEffect(() => {
+    loadConfig();
     loadApplications();
     loadQuestionTexts();
   }, []);
+
+  const loadConfig = async () => {
+    try {
+      setLoading(true);
+      const portalConfig = await getPortalConfig();
+      setConfig(portalConfig);
+    } catch {
+      setError("Failed to load portal configuration");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadApplications = async () => {
     try {
@@ -613,7 +628,7 @@ export default function Applications() {
                       <div className="text-right min-w-[30%] ">
                         {application.score ? (
                           <div className="text-sm font-bold text-white">
-                            {application.score}/10
+                            {application.score}/{config?.maxApplicationEvaluationScore || 20}
                           </div>
                         ) : (
                           <div className="text-white/50 text-sm">

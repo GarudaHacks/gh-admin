@@ -6,10 +6,11 @@ interface AcceptingApplicationRowComponentProps {
     setIsToAccept: (application: CombinedApplicationData) => void
     application: CombinedApplicationData
     onPreviewApplication: (application: CombinedApplicationData) => void
+    maxApplicationEvaluationScore: number
 }
 
 export default function AcceptingApplicationRowComponent(
-    { isToAccept, setIsToAccept, application, onPreviewApplication }: AcceptingApplicationRowComponentProps
+    { isToAccept, setIsToAccept, application, onPreviewApplication, maxApplicationEvaluationScore }: AcceptingApplicationRowComponentProps
 ) {
     return (
         <div
@@ -23,7 +24,7 @@ export default function AcceptingApplicationRowComponent(
                 <div className="text-right min-w-[30%] col-span-2">
                     {application.score ? (
                         <div className="text-sm font-bold text-white">
-                            <span className="text-green-400">{application.score}</span>/10
+                            <span className="text-green-400">{application.score}</span>/{maxApplicationEvaluationScore}
                         </div>
                     ) : (
                         <div className="text-white/50 text-sm">
