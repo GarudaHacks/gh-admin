@@ -212,7 +212,7 @@ export default function Applications() {
     if (!selectedApplication) return;
 
     const score = parseFloat(evaluationScore);
-    if (score >= 0 && score <= 10) {
+    if (score >= 0 && score <= (config?.maxApplicationEvaluationScore || 20)) {
       try {
         const success = await updateApplicationScore(
           selectedApplication.id,
@@ -927,7 +927,7 @@ export default function Applications() {
                         disabled={
                           !evaluationScore ||
                           parseFloat(evaluationScore) < 0 ||
-                          parseFloat(evaluationScore) > 10
+                          parseFloat(evaluationScore) > (config?.maxApplicationEvaluationScore || 20)
                         }
                         className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                       >
