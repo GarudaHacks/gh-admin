@@ -534,7 +534,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 
 								<div className="flex flex-row justify-end w-full gap-2">
 									<button className="px-4 py-2 text-white rounded-md border border-white" onClick={() => setConfirmationModalActive(false)}>Cancel</button>
-									<button className="px-4 py-2 text-white rounded-md bg-primary" onClick={handleAcceptSubmit}>
+									<button className="px-4 py-2 text-white rounded-md bg-primary flex gap-1" onClick={handleAcceptSubmit}>
 										{isAcceptingLoading && <Loader2 className="animate-spin" />}
 										Accept
 									</button>
