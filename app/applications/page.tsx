@@ -12,11 +12,18 @@ import {
   updateUserStatus,
   updateApplicationScore,
   getQuestionText,
+  getPortalConfig,
 } from "@/lib/firebaseUtils";
-import { CombinedApplicationData, APPLICATION_STATUS } from "@/lib/types";
+import { CombinedApplicationData, APPLICATION_STATUS, PortalConfig } from "@/lib/types";
+import ApplicationAcceptModal from "@/components/ApplicationAcceptModal";
+import { calculateAge } from "@/lib/evaluator";
 
 export default function Applications() {
+  const [config, setConfig] = useState<PortalConfig | null>(null);
   const [applications, setApplications] = useState<CombinedApplicationData[]>(
+    []
+  );
+  const [applicationsOriginal, setApplicationsOriginal] = useState<CombinedApplicationData[]>(
     []
   );
   const [loading, setLoading] = useState(true);
@@ -37,11 +44,121 @@ export default function Applications() {
     bigProblem: "Problem to Solve",
     interestingProject: "Interesting Project",
   });
+  const [searchName, setSearchName] = useState<string>("");
+  const [searchSort, setSearchSort] = useState<string>("");
+  const [isSortDescending, setIsSortDescending] = useState<boolean>(false);
+
+  const onChangeSearchQuery = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchName(e.target.value);
+
+    // possible for gender
+    const genderFiltered = applicationsOriginal.filter(app => app.gender_identity?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for university
+    const uniFiltered = applicationsOriginal.filter(app => app.school?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for status
+    const statusFiltered = applicationsOriginal.filter(app => app.status?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for name
+    const nameFiltered = applicationsOriginal.filter(app => app.firstName?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for last name
+    const lastNameFiltered = applicationsOriginal.filter(app => app.lastName?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for email
+    const emailFiltered = applicationsOriginal.filter(app => app.email?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for desired role
+    const roleFiltered = applicationsOriginal.filter(app => app.desiredRoles?.toLowerCase().includes(e.target.value.toLowerCase()))
+
+    // for age
+    const ageFiltered = applicationsOriginal.filter(app => {
+      const age = calculateAge(app.date_of_birth);
+      return age.toString().includes(e.target.value);
+    })
+
+    // for year
+    const schoolYearFiltered = applicationsOriginal.filter(app => app.year?.toString().includes(e.target.value))
+
+    const allResults = genderFiltered.concat(uniFiltered, statusFiltered, nameFiltered, lastNameFiltered, emailFiltered, roleFiltered, ageFiltered, schoolYearFiltered, schoolYearFiltered);
+    const uniqueResults = allResults.filter((app, index, self) =>
+      index === self.findIndex(a => a.id === app.id)
+    );
+    setApplications(uniqueResults);
+  }
+
+  const getSortValue = (app: CombinedApplicationData, sortField: string) => {
+    switch (sortField) {
+      case "score":
+        return app.score || 0;
+      case "applicationCreatedAt":
+        return new Date(app.applicationCreatedAt).getTime();
+      case "applicationUpdatedAt":
+        return new Date(app.applicationUpdatedAt).getTime();
+      case "email":
+        return app.email;
+      case "firstName":
+        return app.firstName || "";
+      case "lastName":
+        return app.lastName || "";
+      default:
+        return "";
+    }
+  };
+
+  const applySorting = (sortField: string, descending: boolean = false) => {
+    if (sortField === "none") {
+      setApplications([...applicationsOriginal]);
+      return;
+    }
+
+    const sorted = [...applications].sort((a, b) => {
+      const aValue = getSortValue(a, sortField);
+      const bValue = getSortValue(b, sortField);
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return descending ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
+      }
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return descending ? bValue - aValue : aValue - bValue;
+      }
+
+      return 0;
+    });
+
+    setApplications(sorted);
+  };
+
+  const onChangeSearchSort = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSearchSort(e.target.value);
+    applySorting(e.target.value, isSortDescending);
+  };
+
+  const onChangeIsSortDescending = () => {
+    const newIsSortDescending = !isSortDescending;
+    setIsSortDescending(newIsSortDescending);
+    applySorting(searchSort, newIsSortDescending);
+  };
 
   useEffect(() => {
+    loadConfig();
     loadApplications();
     loadQuestionTexts();
   }, []);
+
+  const loadConfig = async () => {
+    try {
+      setLoading(true);
+      const portalConfig = await getPortalConfig();
+      setConfig(portalConfig);
+    } catch {
+      setError("Failed to load portal configuration");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadApplications = async () => {
     try {
@@ -52,6 +169,7 @@ export default function Applications() {
 
       const data = await fetchApplicationsWithUsers();
       setApplications(data);
+      setApplicationsOriginal(data);
       if (data.length > 0) {
         setSelectedApplication(data[0]);
         setEvaluationScore(data[0].score?.toString() || "");
@@ -94,7 +212,7 @@ export default function Applications() {
     if (!selectedApplication) return;
 
     const score = parseFloat(evaluationScore);
-    if (score >= 0 && score <= 10) {
+    if (score >= 0 && score <= (config?.maxApplicationEvaluationScore || 20)) {
       try {
         const success = await updateApplicationScore(
           selectedApplication.id,
@@ -340,24 +458,6 @@ export default function Applications() {
     }
   };
 
-  const calculateAge = (dateOfBirth: string): number => {
-    try {
-      const birth = new Date(dateOfBirth);
-      const today = new Date();
-      let age = today.getFullYear() - birth.getFullYear();
-      const monthDiff = today.getMonth() - birth.getMonth();
-      if (
-        monthDiff < 0 ||
-        (monthDiff === 0 && today.getDate() < birth.getDate())
-      ) {
-        age--;
-      }
-      return age;
-    } catch {
-      return 0;
-    }
-  };
-
   if (loading) {
     return (
       <div className="space-y-6">
@@ -460,6 +560,39 @@ export default function Applications() {
             className="card flex flex-col"
             style={{ height: "calc(100vh - 400px)" }}
           >
+            <div className="p-4 flex flex-col gap-2">
+              <input
+                onChange={onChangeSearchQuery}
+                value={searchName}
+                className="input input-bordered input-primary w-full"
+                type="text"
+                placeholder="Search by keyword"
+              />
+              <p className="text-xs text-white/80">Support name, email, status, university, gender, role, age, school year.</p>
+
+              <div className="flex flex-row justify-end gap-4">
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-bold text-white/75">Sort by</p>
+                  <select
+                    className="bg-transparent text-sm border rounded-lg px-2"
+                    value={searchSort}
+                    onChange={onChangeSearchSort}
+                  >
+                    <option value={"none"}>None</option>
+                    <option value={"firstName"}>First Name</option>
+                    <option value={"lastName"}>Last Name</option>
+                    <option value={"email"}>Email</option>
+                    <option value={"score"}>Score</option>
+                    <option value={"applicationCreatedAt"}>Created At</option>
+                    <option value={"applicationUpdatedAt"}>Updated At</option>
+                  </select>
+                </div>
+                <div className="flex items-center flex-col gap-2">
+                  <p className="text-sm font-bold text-white/75">Desc</p>
+                  <input type="checkbox" onChange={onChangeIsSortDescending} />
+                </div>
+              </div>
+            </div>
             <div className="p-6 border-b border-white/10 flex-shrink-0">
               <h3 className="text-lg font-semibold text-white">
                 Applications List ({displayableApplications.length})
@@ -467,13 +600,13 @@ export default function Applications() {
             </div>
             <div
               className="flex-1 overflow-y-auto"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            // style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
-              <style jsx>{`
+              {/* <style jsx>{`
                 div::-webkit-scrollbar {
                   display: none;
                 }
-              `}</style>
+              `}</style> */}
               {displayableApplications.length === 0 ? (
                 <div className="p-6 text-center text-white/70">
                   No applications found
@@ -483,11 +616,10 @@ export default function Applications() {
                   <div
                     key={application.id}
                     onClick={() => handleApplicationSelect(application)}
-                    className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
-                      selectedApplication?.id === application.id
-                        ? "bg-primary/10 border-primary/30"
-                        : ""
-                    }`}
+                    className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${selectedApplication?.id === application.id
+                      ? "bg-primary/10 border-primary/30"
+                      : ""
+                      }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-medium text-sm text-white truncate">
@@ -496,7 +628,7 @@ export default function Applications() {
                       <div className="text-right min-w-[30%] ">
                         {application.score ? (
                           <div className="text-sm font-bold text-white">
-                            {application.score}/10
+                            {application.score}/{config?.maxApplicationEvaluationScore || 20}
                           </div>
                         ) : (
                           <div className="text-white/50 text-sm">
@@ -681,7 +813,7 @@ export default function Applications() {
                       value={selectedApplication.motivation || "No response"}
                       readOnly
                       className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
-                      style={{ maxHeight: "120px", minHeight: "80px" }}
+                      style={{ maxHeight: "500px", minHeight: "250px" }}
                     />
                   </div>
 
@@ -693,7 +825,7 @@ export default function Applications() {
                       value={selectedApplication.bigProblem || "No response"}
                       readOnly
                       className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
-                      style={{ maxHeight: "120px", minHeight: "80px" }}
+                      style={{ maxHeight: "500px", minHeight: "250px" }}
                     />
                   </div>
 
@@ -707,7 +839,7 @@ export default function Applications() {
                       }
                       readOnly
                       className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
-                      style={{ maxHeight: "120px", minHeight: "80px" }}
+                      style={{ maxHeight: "500px", minHeight: "250px" }}
                     />
                   </div>
 
@@ -795,7 +927,7 @@ export default function Applications() {
                         disabled={
                           !evaluationScore ||
                           parseFloat(evaluationScore) < 0 ||
-                          parseFloat(evaluationScore) > 10
+                          parseFloat(evaluationScore) > (config?.maxApplicationEvaluationScore || 20)
                         }
                         className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -817,40 +949,40 @@ export default function Applications() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {selectedApplication.status !==
                           APPLICATION_STATUS.ACCEPTED && (
-                          <button
-                            onClick={handleAcceptParticipant}
-                            disabled={accepting}
-                            className="px-4 py-3 bg-green-600/20 border border-green-600/50 text-green-400 rounded-md hover:bg-green-600/30 hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
-                          >
-                            {accepting ? "Accepting..." : "Accept"}
-                          </button>
-                        )}
+                            <button
+                              onClick={handleAcceptParticipant}
+                              disabled={accepting}
+                              className="px-4 py-3 bg-green-600/20 border border-green-600/50 text-green-400 rounded-md hover:bg-green-600/30 hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                            >
+                              {accepting ? "Accepting..." : "Accept"}
+                            </button>
+                          )}
 
                         {selectedApplication.status !==
                           APPLICATION_STATUS.REJECTED && (
-                          <button
-                            onClick={handleRejectParticipant}
-                            disabled={rejecting}
-                            className="px-4 py-3 bg-red-600/20 border border-red-600/50 text-red-400 rounded-md hover:bg-red-600/30 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
-                          >
-                            {rejecting ? "Rejecting..." : "Reject"}
-                          </button>
-                        )}
+                            <button
+                              onClick={handleRejectParticipant}
+                              disabled={rejecting}
+                              className="px-4 py-3 bg-red-600/20 border border-red-600/50 text-red-400 rounded-md hover:bg-red-600/30 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                            >
+                              {rejecting ? "Rejecting..." : "Reject"}
+                            </button>
+                          )}
                       </div>
 
                       {(selectedApplication.status ===
                         APPLICATION_STATUS.ACCEPTED ||
                         selectedApplication.status ===
-                          APPLICATION_STATUS.REJECTED) && (
-                        <div className="mt-3 p-3 bg-blue-600/10 border border-blue-600/30 rounded-md">
-                          <p className="text-blue-400 text-sm">
-                            Current Status:{" "}
-                            <span className="font-semibold">
-                              {selectedApplication.status}
-                            </span>
-                          </p>
-                        </div>
-                      )}
+                        APPLICATION_STATUS.REJECTED) && (
+                          <div className="mt-3 p-3 bg-blue-600/10 border border-blue-600/30 rounded-md">
+                            <p className="text-blue-400 text-sm">
+                              Current Status:{" "}
+                              <span className="font-semibold">
+                                {selectedApplication.status}
+                              </span>
+                            </p>
+                          </div>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -865,63 +997,7 @@ export default function Applications() {
       </div>
 
       {showAcceptModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-white">
-                Accept Participants
-              </h2>
-              <button
-                onClick={() => setShowAcceptModal(false)}
-                className="text-white/70 hover:text-white transition-colors"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-white/80">
-                Select criteria for automatically accepting participants:
-              </p>
-
-              <div className="bg-white/5 border border-white/20 rounded-md p-4">
-                <h3 className="font-medium text-white mb-3">Coming Soon</h3>
-                <p className="text-white/70 text-sm">
-                  This feature will allow you to bulk accept participants based
-                  on scores, status, and other criteria. The implementation is
-                  in progress.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowAcceptModal(false)}
-                className="px-4 py-2 border border-white/20 text-white/80 rounded-md hover:bg-white/5 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                disabled
-                className="px-4 py-2 bg-accent-accessible/50 text-white rounded-md opacity-50 cursor-not-allowed"
-              >
-                Accept Selected
-              </button>
-            </div>
-          </div>
-        </div>
+        <ApplicationAcceptModal setShowAcceptModal={setShowAcceptModal} />
       )}
     </div>
   );

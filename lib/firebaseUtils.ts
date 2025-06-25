@@ -7,6 +7,7 @@ import {
   query,
   orderBy,
   Timestamp,
+  where,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import {
@@ -50,10 +51,11 @@ export async function fetchAllApplications(): Promise<FirestoreApplication[]> {
 /**
  * Fetches all users from Firestore
  */
-export async function fetchAllUsers(): Promise<FirestoreUser[]> {
+export async function fetchAllUsers(status?: string): Promise<FirestoreUser[]> {
   try {
     const usersRef = collection(db, 'users');
-    const querySnapshot = await getDocs(usersRef);
+    const firebaseQuery = status ? query(usersRef, where('status', '==', status)) : usersRef;
+    const querySnapshot = await getDocs(firebaseQuery);
     
     const users: FirestoreUser[] = [];
     querySnapshot.forEach((doc) => {
@@ -93,13 +95,27 @@ export async function fetchUserById(userId: string): Promise<FirestoreUser | nul
 /**
  * Combines application data with corresponding user data for evaluation interface
  */
-export async function fetchApplicationsWithUsers(): Promise<CombinedApplicationData[]> {
+export async function fetchApplicationsWithUsers(status?: string, minScore?: number): Promise<CombinedApplicationData[]> {
   try {
-    const [applications, users] = await Promise.all([
+    let [applications, users] = await Promise.all([
       fetchAllApplications(),
-      fetchAllUsers()
+      fetchAllUsers(status)
     ]);
-    
+
+    if (minScore !== undefined && minScore > 0) {
+      applications = applications.filter(application => application.score !== undefined && application.score >= minScore);
+    }
+
+    applications.sort((a, b) => {
+      if (a.score === undefined) {
+        return 1;
+      }
+      if (b.score === undefined) {
+        return -1;
+      }
+      return b.score - a.score;
+    });
+
     const usersMap = new Map<string, FirestoreUser>();
     users.forEach(user => {
       usersMap.set(user.id, user);
@@ -217,6 +233,7 @@ export async function getPortalConfig(): Promise<PortalConfig | null> {
       applicationsOpen: Boolean(data.applicationsOpen),
       hackathonEndDate: data.hackathonEndDate.toDate(),
       hackathonStartDate: data.hackathonStartDate.toDate(),
+      maxApplicationEvaluationScore: data.maxApplicationEvaluationScore,
     };
 
     return config;
@@ -258,7 +275,7 @@ export async function updatePortalConfig(config: PortalConfig): Promise<boolean>
 export async function updateUserStatus(userId: string, status: string): Promise<boolean> {
   try {
     const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, { status });
+    await updateDoc(userRef, { status, acceptedAt: new Date });
     console.log(`User ${userId} status updated to: ${status}`);
     return true;
   } catch (error) {
@@ -377,5 +394,38 @@ function formatQuestionId(questionId: string): string {
     .trim();
 }
 
+/**
+ * Change an application's status in Firestore
+ */
+export async function updateApplicationStatus(userId: string, status: string): Promise<boolean> {
+  try {
+    const applicationRef = doc(db, 'users', userId);
+    const updatedData = {
+      status: status,
+      acceptedAt: new Date().toISOString()
+    };
+    await updateDoc(applicationRef, updatedData);
+    return true;
+  } catch (error) {
+    console.error(`Error updating application status for ${userId}:`, error);
+    return false;
+  }
+}
 
-
+/**
+ * Change an application's acceptance email bool in Firestore
+ */
+export async function updateApplicationAcceptanceEmail(userId: string): Promise<boolean> {
+  try {
+    const applicationRef = doc(db, 'users', userId);
+    const updatedData = {
+      acceptanceEmailSent: true,
+      acceptanceEmailSentAt: new Date().toISOString()
+    };
+    await updateDoc(applicationRef, updatedData);
+    return true;
+  } catch (error) {
+    console.error(`Error updating application acceptance email for ${userId}:`, error);
+    return false;
+  }
+}

@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Sidebar from "@/components/Sidebar";
 import { inject } from "@vercel/analytics";
+import { Toaster } from "react-hot-toast";
 
 // Initialize Vercel Analytics
 inject();
@@ -47,6 +48,7 @@ export default function RootLayout({
         <link rel="manifest" href="/static/site.webmanifest" />
       </head>
       <body className="font-sans">
+        <Toaster />
         <AuthProvider>
           <ProtectedRoute>
             <div className="min-h-screen bg-background">
