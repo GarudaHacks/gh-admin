@@ -69,8 +69,8 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 
 	const onChangeMinScore = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = Number(e.target.value)
-		if (value < 0 || value > 10) {
-			setMinScoreError("Score must be between 0 and 10")
+		if (value < 0 || value > 20) {
+			setMinScoreError("Score must be between 0 and 20")
 		} else {
 			setMinScore(value)
 			setMinScoreError("")
@@ -254,7 +254,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 								className="bg-transparent border border-white/20 rounded-md px-4 py-2 text-white w-full"
 								placeholder="Minimum score"
 								min={0}
-								max={10}
+								max={20}
 								onChange={onChangeMinScore}
 							/>
 							<span className="text-red-500 text-xs text-end">{minScoreError}</span>
