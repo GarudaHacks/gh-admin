@@ -9,7 +9,6 @@ interface MailOptions {
   text: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const createAcceptanceMailOptions = (email: string): MailOptions => ({
   from: {
     name: "Garuda Hacks",
@@ -25,7 +24,6 @@ const createAcceptanceMailOptions = (email: string): MailOptions => ({
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Congratulations! You're Accepted to Garuda Hacks 6.0!</title>
         <style>
-            /* Reset styles for email clients */
             body, table, td, p, a, li, blockquote {
                 -webkit-text-size-adjust: 100%;
                 -ms-text-size-adjust: 100%;
@@ -44,26 +42,24 @@ const createAcceptanceMailOptions = (email: string): MailOptions => ({
             }
         </style>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;">
+    <body style="margin: 0; padding: 0; background: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;">
         <!-- Main Container -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f4;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #fff; min-height: 100vh;">
             <tr>
                 <td align="center" style="padding: 20px 0;">
                     <!-- Email Content Container -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background: linear-gradient(135deg, #6B46C1 0%, #1E40AF 100%); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
-                        
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="800" style="max-width: 800px; background: linear-gradient(135deg, #1e40af 0%, #3730a3 25%, #7c3aed 75%, #a855f7 100%); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
                         <!-- Header Section -->
                         <tr>
                             <td style="padding: 40px 40px 20px 40px; text-align: center;">
                                 <h1 style="color: white; font-size: 48px; font-weight: 700; margin: 0 0 10px 0; line-height: 1.1;">
-                                    Garuda<br>Hacks <span style="background-color: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 8px; font-size: 24px; vertical-align: middle;">6.0</span>
+                                    Garuda Hacks <span style="background-color: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 8px; font-size: 40px; vertical-align: middle;">6.0</span>
                                 </h1>
-                                
                                 <p style="color: #EC4899; font-size: 18px; font-weight: 600; margin: 0; letter-spacing: 0.5px;">
-                                    July 24 - 26 • 2025
+                                    24 - 26 July 2025
                                 </p>
-                            </tr>
-                        
+                            </td>
+                        </tr>
                         <!-- Main Content -->
                         <tr>
                             <td style="padding: 0 40px 40px 40px;">
@@ -73,17 +69,23 @@ const createAcceptanceMailOptions = (email: string): MailOptions => ({
                                         🎉 Congratulations!
                                     </h2>
                                     <p style="color: rgba(255,255,255,0.9); font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">
-                                        We're thrilled to inform you that your application has been <strong style="color: #EC4899;">accepted</strong> for Garuda Hacks 6.0!
+                                        On behalf of the entire Garuda Hacks team, we're excited to welcome you to <strong>Garuda Hacks 6.0</strong>, happening from <strong>24 to 26 July 2025</strong> at <strong>Universitas Multimedia Nusantara (UMN)</strong>. We're so glad to have you on board.
                                     </p>
-                                    <p style="color: rgba(255,255,255,0.9); font-size: 16px; line-height: 1.6; margin: 0; text-align: center;">
-                                        This year is an exciting time to to join Garuda Hacks. When we began planning for this year’s event, we collected feedback from previous years and decided to focus on the participant experience. From a career fair and a networking lunch, to a live judging round with VCs and a revamped application portal, we are determined to make this year our most engaging event yet. We hope that you will enjoy the experience.
-                                    </p>
+                                    <p style="color: rgba(255,255,255,0.9); font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">
+                                        This year's event is proudly presented in collaboration with <strong>Himpunan Mahasiswa Informatika Universitas Multimedia Nusantara (HMIF UMN)</strong>, who have graciously offered their beautiful campus and full support to ensure a smooth and enjoyable experience for all participants. </p>
+                                        <p style="color: rgba(255,255,255,0.9); font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">
+                This year is an exciting time to be joining Garuda Hacks. When we began planning for this year's event, we collected feedback from previous years and decided to focus on the participant experience. From a career fair and a networking lunch, to a live judging round with VCs and a revamped application portal, we are determined to make this year our most engaging event yet. We hope that you will enjoy the experience.
+                </p>
+                <p style="color: rgba(255,255,255,0.9); font-size: 16px; line-height: 1.6; margin: 0 0 10px 0; text-align: center;">
+                At the same time, we understand the world is going through challenging times. In moments of uncertainty, it is often the smallest communities that feel the greatest impact. We hope this event will be a space for you to build, connect, and be reminded of our shared mission as creators: to drive meaningful impact within our communities. We hope that this motivation will empower you to consistently think about what you can do to serve people and drive positive and lasting change for them.
+
+                                </p>
                                 </div>
                                 
                                 <!-- Event Details -->
                                 <div style="background-color: rgba(255,255,255,0.05); border-radius: 12px; padding: 25px; margin-bottom: 30px;">
                                     <h3 style="color: white; font-size: 20px; font-weight: 600; margin: 0 0 20px 0;">
-                                        📅 Event Details
+                                        📅  Event Details
                                     </h3>
                                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                         <tr>
@@ -96,7 +98,7 @@ const createAcceptanceMailOptions = (email: string): MailOptions => ({
                                         </tr>
                                         <tr>
                                             <td style="color: rgba(255,255,255,0.7); font-size: 14px; padding: 8px 0;">Duration:</td>
-                                            <td style="color: white; font-size: 14px; padding: 8px 0; font-weight: 500;">30 Hours</td>
+                                            <td style="color: white; font-size: 14px; padding: 8px 0; font-weight: 500;">30 Hours Hacking Period and Finalist Demo Day</td>
                                         </tr>
                                     </table>
                                 </div>
@@ -104,19 +106,31 @@ const createAcceptanceMailOptions = (email: string): MailOptions => ({
                                 <!-- Next Steps -->
                                 <div style="background-color: rgba(255,255,255,0.05); border-radius: 12px; padding: 25px; margin-bottom: 30px;">
                                     <h3 style="color: white; font-size: 20px; font-weight: 600; margin: 0 0 20px 0;">
-                                        🚀 Next Steps
+                                        🚀 Action Items
                                     </h3>
                                     <ul style="color: rgba(255,255,255,0.9); font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
                                         <li style="margin-bottom: 10px;">RSVP on Portal to confirm your participation at <a href="https://portal.garudahacks.com/" style="color: white; text-decoration: underline;">portal.garudahacks.com</a></li>
+                                        <li style="margin-bottom: 10px;">If you're under 18, sign and upload the Underage Consent Form on the RSVP Portal</li>
+                                         <li style="margin-bottom: 10px;">Follow @<a href="https://www.instagram.com/garudahacks" style="color: white; text-decoration: underline;">garudahacks</a> on Instagram for latest updates</li>
                                         <li style="margin-bottom: 10px;">
                                             Join our Discord community for updates and networking: 
                                             <a href="https://discord.gg/5hVnu8t4mw" style="color: white; text-decoration: underline;">discord.gg/5hVnu8t4mw</a>
                                         </li>
                                         <li style="margin-bottom: 10px;">Add the official Garuda Hacks 6.0 Twibbon to your social media: <a href="https://twb.nz/garudahacks6" style="color: white; text-decoration: underline;">twb.nz/garudahacks6</a></li>
                                         <li style="margin-bottom: 10px;">Prepare your development environment and tools</li>
-                                        <li style="margin-bottom: 10px;">Form your team or find teammates in our Discord</li>
+                                        <li style="margin-bottom: 10px;">Attend our technical meeting and speed dating sessions (details on Discord & Instagram)</li>
                                         <li>Mark your calendar and get ready to hack!</li>
                                     </ul>
+                                </div>
+                                
+                                <div style="background-color: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 25px 20px 25px; margin-bottom: 30px;">
+                                    <p style="color: rgba(255,255,255,0.9); font-size: 16px; line-height: 1.6; margin: 20px 0 20px 0; text-align: center;">
+                                        Once again, on behalf of the entire Garuda Hacks committee, sponsors, and partners, <strong>WELCOME!</strong> We cannot wait to see what you will create!
+                                    </p>
+                                    <p style="color: rgba(255,255,255,0.9); font-size: 16px; line-height: 1.6; margin: 0 0 10px 0; text-align: center;">
+                                        Maria Gracia Athalia & Dominic Kartadjoemena<br>
+                                        Co-Managing Directors, Garuda Hacks 6.0
+                                    </p>                               
                                 </div>
                                 
                                 <!-- CTA Buttons -->
@@ -129,8 +143,8 @@ const createAcceptanceMailOptions = (email: string): MailOptions => ({
                                                 </a>
                                             </td>
                                             <td style="padding-left: 10px;">
-                                                <a href="#" style="display: inline-block; background-color: transparent; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid rgba(255,255,255,0.3);">
-                                                    View Guidebook
+                                                <a href="https://garudahq.notion.site/garudahacks-6-0-handbook" style="display: inline-block; background-color: transparent; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid rgba(255,255,255,0.3);">
+                                                    View Handbook
                                                 </a>
                                             </td>
                                         </tr>
@@ -140,7 +154,7 @@ const createAcceptanceMailOptions = (email: string): MailOptions => ({
                                 <!-- Contact Info -->
                                 <div style="text-align: center; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
                                     <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0 0 10px 0;">
-                                        Questions? Contact us at <a href="mailto:hiba@garudahacks.com" style="color: #EC4899; text-decoration: none;">hiba@garudahacks.com</a>
+                                        Questions? Contact us at <a href="mailto:hiba@garudahacks.com" style="color: #fff; text-decoration: underline; text-decoration-color: #EC4899;">hiba@garudahacks.com</a>
                                     </p>
                                     <p style="color: rgba(255,255,255,0.5); font-size: 12px; margin: 0;">
                                         Follow us on social media for the latest updates
@@ -154,10 +168,10 @@ const createAcceptanceMailOptions = (email: string): MailOptions => ({
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; margin-top: 20px;">
                         <tr>
                             <td style="text-align: center; padding: 20px;">
-                                <p style="color: #666; font-size: 12px; margin: 0 0 10px 0;">
+                                <p style="color: rgba(255,255,255,0.7); font-size: 12px; margin: 0 0 10px 0;">
                                     © 2025 Garuda Hacks. All rights reserved.
                                 </p>
-                                <p style="color: #999; font-size: 11px; margin: 0;">
+                                <p style="color: rgba(255,255,255,0.6); font-size: 11px; margin: 0;">
                                     You received this email because you applied for Garuda Hacks 6.0.
                                 </p>
                             </td>
@@ -172,31 +186,44 @@ const createAcceptanceMailOptions = (email: string): MailOptions => ({
   text: `Welcome to Garuda Hacks 6.0!
 
 🎉 Congratulations!
-We're thrilled to inform you that your application has been accepted for Garuda Hacks 6.0! You're now part of Indonesia's largest hackathon - please RSVP on our portal to get ready for an incredible experience!
+On behalf of the entire Garuda Hacks team, we're excited to welcome you to Garuda Hacks 6.0, happening from 24 to 26 July 2025 at Universitas Multimedia Nusantara (UMN). We're so glad to have you on board.
+
+This year's event is proudly presented in collaboration with Himpunan Mahasiswa Informatika Universitas Multimedia Nusantara (HMIF UMN), who have graciously offered their beautiful campus and full support to ensure a smooth and enjoyable experience for all participants.
+
+This year is an exciting time to be joining Garuda Hacks. When we began planning for this year's event, we collected feedback from previous years and decided to focus on the participant experience. From a career fair and a networking lunch, to a live judging round with VCs and a revamped application portal, we are determined to make this year our most engaging event yet. We hope that you will enjoy the experience.
+
+At the same time, we understand the world is going through challenging times. In moments of uncertainty, it is often the smallest communities that feel the greatest impact. We hope this event will be a space for you to build, connect, and be reminded of our shared mission as creators: to drive meaningful impact within our communities. We hope that this motivation will empower you to consistently think about what you can do to serve people and drive positive and lasting change for them.
 
 ---
 
 EVENT DETAILS
 - Date: July 24 - 26, 2025
 - Location: Universitas Multimedia Nusantara (UMN)
-- Duration: 30 Hours
+- Duration: 30 Hours Hacking Period and Finalist Demo Day
 
 ---
 
-NEXT STEPS
-1. RSVP on our portal to confirm your participation: https://portal.garudahacks.com/
-2. Join our Discord community for updates and networking: https://discord.gg/5hVnu8t4mw
-3. Add the official Garuda Hacks 6.0 Twibbon to your social media.
-4. Prepare your development environment and tools.
-5. Form your team or find teammates in our Discord.
-6. Mark your calendar and get ready to hack!
+ACTION ITEMS
+1. RSVP on Portal to confirm your participation: https://portal.garudahacks.com/
+2. If you're under 18, sign and upload the Underage Consent Form on the RSVP Portal
+3. Follow @garudahacks on Instagram for latest updates: https://www.instagram.com/garudahacks
+4. Join our Discord community for updates and networking: https://discord.gg/5hVnu8t4mw
+5. Add the official Garuda Hacks 6.0 Twibbon to your social media: https://twb.nz/garudahacks6
+6. Prepare your development environment and tools
+7. Attend our technical meeting and speed dating sessions (details on Discord & Instagram)
+8. Mark your calendar and get ready to hack!
 
 ---
+
+Once again, on behalf of the entire Garuda Hacks committee, sponsors, and partners, WELCOME! We cannot wait to see what you will create!
+
+Maria Gracia Athalia & Dominic Kartadjoemena
+Co-Managing Directors, Garuda Hacks 6.0
 
 Questions? Contact us at hiba@garudahacks.com
 Follow us on social media for the latest updates.
 
-© 2025 Garuda Hacks. All rights reserved.   
+© 2025 Garuda Hacks. All rights reserved.
 You received this email because you applied for Garuda Hacks 6.0.
 `,
 });
