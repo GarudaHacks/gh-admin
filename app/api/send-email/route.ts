@@ -210,7 +210,8 @@ ACTION ITEMS
 4. Follow @garudahacks on Instagram for latest updates: https://www.instagram.com/garudahacks
 5. Add the official Garuda Hacks 6.0 Twibbon to your social media: https://twibbo.nz/garudahacks6
 6. Prepare your development environment and tools
-7. Mark your calendar and get ready to hack!
+7. Attend our technical meeting and speed dating sessions (details on Discord & Instagram)
+8. Mark your calendar and get ready to hack!
 
 ---
 
