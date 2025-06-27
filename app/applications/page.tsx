@@ -317,9 +317,7 @@ export default function Applications() {
             },
             body: JSON.stringify({
               email: selectedApplication.email,
-              rsvpDeadline: "2025-07-01",
-              teamDeadline: "2025-07-01",
-              eventStartDate: "2025-07-24",
+              type: "accepted",
             }),
           });
 
