@@ -111,12 +111,12 @@ const createAcceptanceMailOptions = (email: string): MailOptions => ({
                                     <ul style="color: rgba(255,255,255,0.9); font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
                                         <li style="margin-bottom: 10px;">RSVP on Portal to confirm your participation at <a href="https://portal.garudahacks.com/" style="color: white; text-decoration: underline;">portal.garudahacks.com</a></li>
                                         <li style="margin-bottom: 10px;">If you're under 18, sign and upload the Underage Consent Form on the RSVP Portal</li>
-                                         <li style="margin-bottom: 10px;">Follow @<a href="https://www.instagram.com/garudahacks" style="color: white; text-decoration: underline;">garudahacks</a> on Instagram for latest updates</li>
                                         <li style="margin-bottom: 10px;">
                                             Join our Discord community for updates and networking: 
-                                            <a href="https://discord.gg/5hVnu8t4mw" style="color: white; text-decoration: underline;">discord.gg/5hVnu8t4mw</a>
+                                            <a href="https://discord.gg/vQw3UeYzFb" style="color: white; text-decoration: underline;">discord.gg/vQw3UeYzFb</a>
                                         </li>
-                                        <li style="margin-bottom: 10px;">Add the official Garuda Hacks 6.0 Twibbon to your social media: <a href="https://twb.nz/garudahacks6" style="color: white; text-decoration: underline;">twb.nz/garudahacks6</a></li>
+                                        <li style="margin-bottom: 10px;">Follow @<a href="https://www.instagram.com/garudahacks" style="color: white; text-decoration: underline;">garudahacks</a> on Instagram for latest updates</li>
+                                        <li style="margin-bottom: 10px;">Add the official Garuda Hacks 6.0 Twibbon to your social media: <a href="https://twibbo.nz/garudahacks6" style="color: white; text-decoration: underline;">twibbo.nz/garudahacks6</a></li>
                                         <li style="margin-bottom: 10px;">Prepare your development environment and tools</li>
                                         <li style="margin-bottom: 10px;">Attend our technical meeting and speed dating sessions (details on Discord & Instagram)</li>
                                         <li>Mark your calendar and get ready to hack!</li>
@@ -206,9 +206,9 @@ EVENT DETAILS
 ACTION ITEMS
 1. RSVP on Portal to confirm your participation: https://portal.garudahacks.com/
 2. If you're under 18, sign and upload the Underage Consent Form on the RSVP Portal
-3. Follow @garudahacks on Instagram for latest updates: https://www.instagram.com/garudahacks
-4. Join our Discord community for updates and networking: https://discord.gg/5hVnu8t4mw
-5. Add the official Garuda Hacks 6.0 Twibbon to your social media: https://twb.nz/garudahacks6
+3. Join our Discord community for updates and networking: https://discord.gg/vQw3UeYzFb
+4. Follow @garudahacks on Instagram for latest updates: https://www.instagram.com/garudahacks
+5. Add the official Garuda Hacks 6.0 Twibbon to your social media: https://twibbo.nz/garudahacks6
 6. Prepare your development environment and tools
 7. Attend our technical meeting and speed dating sessions (details on Discord & Instagram)
 8. Mark your calendar and get ready to hack!
@@ -419,7 +419,7 @@ const createWaitlistedMailOptions = (email: string): MailOptions => ({
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, type, rsvpDeadline, teamDeadline, eventStartDate } = body;
+    const { email, type } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -443,12 +443,6 @@ export async function POST(request: Request) {
     } else if (type === "waitlisted") {
       mailOptions = createWaitlistedMailOptions(email);
     } else {
-      if (!rsvpDeadline || !teamDeadline || !eventStartDate) {
-        return NextResponse.json(
-          { error: "Missing required parameters for acceptance email" },
-          { status: 400 }
-        );
-      }
       mailOptions = createAcceptanceMailOptions(email);
     }
 
