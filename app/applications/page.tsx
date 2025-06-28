@@ -500,6 +500,9 @@ export default function Applications() {
   const displayableApplications = applications.filter(
     (app) => app.status !== APPLICATION_STATUS.NOT_APPLICABLE
   );
+  const confirmedRSVPApplications = applications.filter(
+    (app) => app.status === APPLICATION_STATUS.CONFIRMED_RSVP
+  );
 
   return (
     <div className="space-y-6">
@@ -522,7 +525,7 @@ export default function Applications() {
                 </div>
                 <div className="text-xs text-white/70">Pending</div>
               </div>
-              <div className="text-center py-2 md:py-0 px-2">
+              {/* <div className="text-center py-2 md:py-0 px-2">
                 <div
                   className={`text-xl font-bold mb-1 ${getStatusTextColor(
                     APPLICATION_STATUS.WAITLISTED
@@ -531,7 +534,7 @@ export default function Applications() {
                   {waitlistedApplications.length}
                 </div>
                 <div className="text-xs text-white/70">Waitlist</div>
-              </div>
+              </div> */}
               <div className="text-center py-2 md:py-0 px-2">
                 <div
                   className={`text-xl font-bold mb-1 ${getStatusTextColor(
@@ -551,6 +554,16 @@ export default function Applications() {
                   {approvedApplications.length}
                 </div>
                 <div className="text-xs text-white/70">Accepted</div>
+              </div>
+              <div className="text-center py-2 md:py-0 px-2">
+                <div
+                  className={`text-xl font-bold mb-1 ${getStatusTextColor(
+                    APPLICATION_STATUS.CONFIRMED_RSVP
+                  )}`}
+                >
+                  {confirmedRSVPApplications.length}
+                </div>
+                <div className="text-xs text-white/70">Confirmed RSVP</div>
               </div>
             </div>
           </div>
