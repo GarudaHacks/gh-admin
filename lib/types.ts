@@ -13,6 +13,7 @@ export interface FirestoreApplication {
   updatedAt: string;
   score?: number;
   evaluationNotes?: string;
+  list_teammates?: string;
 }
 
 export interface FirestoreUser {
@@ -85,7 +86,8 @@ export interface CombinedApplicationData {
   userUpdatedAt: string;
   score?: number;
   evaluationNotes?: string;
-  evaluationStatus?: 'pending' | 'approved' | 'rejected';
+  evaluationStatus?: "pending" | "approved" | "rejected";
+  list_teammates?: string;
 }
 
 export interface PortalConfig {
@@ -109,4 +111,4 @@ export interface Question {
     maxLength?: number;
     required?: boolean;
   };
-} 
+}
