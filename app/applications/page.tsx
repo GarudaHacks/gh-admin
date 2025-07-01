@@ -14,7 +14,11 @@ import {
   getQuestionText,
   getPortalConfig,
 } from "@/lib/firebaseUtils";
-import { CombinedApplicationData, APPLICATION_STATUS, PortalConfig } from "@/lib/types";
+import {
+  CombinedApplicationData,
+  APPLICATION_STATUS,
+  PortalConfig,
+} from "@/lib/types";
 import ApplicationAcceptModal from "@/components/ApplicationAcceptModal";
 import { calculateAge } from "@/lib/evaluator";
 
@@ -23,9 +27,9 @@ export default function Applications() {
   const [applications, setApplications] = useState<CombinedApplicationData[]>(
     []
   );
-  const [applicationsOriginal, setApplicationsOriginal] = useState<CombinedApplicationData[]>(
-    []
-  );
+  const [applicationsOriginal, setApplicationsOriginal] = useState<
+    CombinedApplicationData[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] =
@@ -39,10 +43,12 @@ export default function Applications() {
     motivation: string;
     bigProblem: string;
     interestingProject: string;
+    listTeammates: string;
   }>({
     motivation: "Motivation",
     bigProblem: "Problem to Solve",
     interestingProject: "Interesting Project",
+    listTeammates: "List of Teammates",
   });
   const [searchName, setSearchName] = useState<string>("");
   const [searchSort, setSearchSort] = useState<string>("");
@@ -52,41 +58,67 @@ export default function Applications() {
     setSearchName(e.target.value);
 
     // possible for gender
-    const genderFiltered = applicationsOriginal.filter(app => app.gender_identity?.toLowerCase().includes(e.target.value.toLowerCase()))
+    const genderFiltered = applicationsOriginal.filter((app) =>
+      app.gender_identity?.toLowerCase().includes(e.target.value.toLowerCase())
+    );
 
     // for university
-    const uniFiltered = applicationsOriginal.filter(app => app.school?.toLowerCase().includes(e.target.value.toLowerCase()))
+    const uniFiltered = applicationsOriginal.filter((app) =>
+      app.school?.toLowerCase().includes(e.target.value.toLowerCase())
+    );
 
     // for status
-    const statusFiltered = applicationsOriginal.filter(app => app.status?.toLowerCase().includes(e.target.value.toLowerCase()))
+    const statusFiltered = applicationsOriginal.filter((app) =>
+      app.status?.toLowerCase().includes(e.target.value.toLowerCase())
+    );
 
     // for name
-    const nameFiltered = applicationsOriginal.filter(app => app.firstName?.toLowerCase().includes(e.target.value.toLowerCase()))
+    const nameFiltered = applicationsOriginal.filter((app) =>
+      app.firstName?.toLowerCase().includes(e.target.value.toLowerCase())
+    );
 
     // for last name
-    const lastNameFiltered = applicationsOriginal.filter(app => app.lastName?.toLowerCase().includes(e.target.value.toLowerCase()))
+    const lastNameFiltered = applicationsOriginal.filter((app) =>
+      app.lastName?.toLowerCase().includes(e.target.value.toLowerCase())
+    );
 
     // for email
-    const emailFiltered = applicationsOriginal.filter(app => app.email?.toLowerCase().includes(e.target.value.toLowerCase()))
+    const emailFiltered = applicationsOriginal.filter((app) =>
+      app.email?.toLowerCase().includes(e.target.value.toLowerCase())
+    );
 
     // for desired role
-    const roleFiltered = applicationsOriginal.filter(app => app.desiredRoles?.toLowerCase().includes(e.target.value.toLowerCase()))
+    const roleFiltered = applicationsOriginal.filter((app) =>
+      app.desiredRoles?.toLowerCase().includes(e.target.value.toLowerCase())
+    );
 
     // for age
-    const ageFiltered = applicationsOriginal.filter(app => {
+    const ageFiltered = applicationsOriginal.filter((app) => {
       const age = calculateAge(app.date_of_birth);
       return age.toString().includes(e.target.value);
-    })
+    });
 
     // for year
-    const schoolYearFiltered = applicationsOriginal.filter(app => app.year?.toString().includes(e.target.value))
+    const schoolYearFiltered = applicationsOriginal.filter((app) =>
+      app.year?.toString().includes(e.target.value)
+    );
 
-    const allResults = genderFiltered.concat(uniFiltered, statusFiltered, nameFiltered, lastNameFiltered, emailFiltered, roleFiltered, ageFiltered, schoolYearFiltered, schoolYearFiltered);
-    const uniqueResults = allResults.filter((app, index, self) =>
-      index === self.findIndex(a => a.id === app.id)
+    const allResults = genderFiltered.concat(
+      uniFiltered,
+      statusFiltered,
+      nameFiltered,
+      lastNameFiltered,
+      emailFiltered,
+      roleFiltered,
+      ageFiltered,
+      schoolYearFiltered,
+      schoolYearFiltered
+    );
+    const uniqueResults = allResults.filter(
+      (app, index, self) => index === self.findIndex((a) => a.id === app.id)
     );
     setApplications(uniqueResults);
-  }
+  };
 
   const getSortValue = (app: CombinedApplicationData, sortField: string) => {
     switch (sortField) {
@@ -118,7 +150,9 @@ export default function Applications() {
       const bValue = getSortValue(b, sortField);
 
       if (typeof aValue === "string" && typeof bValue === "string") {
-        return descending ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
+        return descending
+          ? bValue.localeCompare(aValue)
+          : aValue.localeCompare(bValue);
       }
 
       if (typeof aValue === "number" && typeof bValue === "number") {
@@ -185,17 +219,23 @@ export default function Applications() {
 
   const loadQuestionTexts = async () => {
     try {
-      const [motivationText, bigProblemText, interestingProjectText] =
-        await Promise.all([
-          getQuestionText("motivation"),
-          getQuestionText("bigProblem"),
-          getQuestionText("interestingProject"),
-        ]);
+      const [
+        motivationText,
+        bigProblemText,
+        interestingProjectText,
+        listTeammatesText,
+      ] = await Promise.all([
+        getQuestionText("motivation"),
+        getQuestionText("bigProblem"),
+        getQuestionText("interestingProject"),
+        getQuestionText("list_teammates"),
+      ]);
 
       setQuestionTexts({
         motivation: motivationText,
         bigProblem: bigProblemText,
         interestingProject: interestingProjectText,
+        listTeammates: listTeammatesText,
       });
     } catch (error) {
       console.error("Error loading question texts:", error);
@@ -579,7 +619,10 @@ export default function Applications() {
                 type="text"
                 placeholder="Search by keyword"
               />
-              <p className="text-xs text-white/80">Support name, email, status, university, gender, role, age, school year.</p>
+              <p className="text-xs text-white/80">
+                Support name, email, status, university, gender, role, age,
+                school year.
+              </p>
 
               <div className="flex flex-row justify-end gap-4">
                 <div className="flex flex-col gap-2">
@@ -611,7 +654,7 @@ export default function Applications() {
             </div>
             <div
               className="flex-1 overflow-y-auto"
-            // style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              // style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
               {/* <style jsx>{`
                 div::-webkit-scrollbar {
@@ -627,10 +670,11 @@ export default function Applications() {
                   <div
                     key={application.id}
                     onClick={() => handleApplicationSelect(application)}
-                    className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${selectedApplication?.id === application.id
-                      ? "bg-primary/10 border-primary/30"
-                      : ""
-                      }`}
+                    className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
+                      selectedApplication?.id === application.id
+                        ? "bg-primary/10 border-primary/30"
+                        : ""
+                    }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-medium text-sm text-white truncate">
@@ -639,7 +683,8 @@ export default function Applications() {
                       <div className="text-right min-w-[30%] ">
                         {application.score ? (
                           <div className="text-sm font-bold text-white">
-                            {application.score}/{config?.maxApplicationEvaluationScore || 20}
+                            {application.score}/
+                            {config?.maxApplicationEvaluationScore || 20}
                           </div>
                         ) : (
                           <div className="text-white/50 text-sm">
@@ -902,6 +947,20 @@ export default function Applications() {
                     </div>
                   </div>
 
+                  <div>
+                    <div className="font-semibold text-white mb-2 text-sm">
+                      {questionTexts.listTeammates}
+                    </div>
+                    <textarea
+                      value={
+                        selectedApplication.list_teammates || "No response"
+                      }
+                      readOnly
+                      className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
+                      style={{ maxHeight: "150px", minHeight: "100px" }}
+                    />
+                  </div>
+
                   <div className="border-t border-white/10 pt-6">
                     <h5 className="font-semibold text-white mb-4">
                       Evaluation
@@ -938,7 +997,8 @@ export default function Applications() {
                         disabled={
                           !evaluationScore ||
                           parseFloat(evaluationScore) < 0 ||
-                          parseFloat(evaluationScore) > (config?.maxApplicationEvaluationScore || 20)
+                          parseFloat(evaluationScore) >
+                            (config?.maxApplicationEvaluationScore || 20)
                         }
                         className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -960,40 +1020,40 @@ export default function Applications() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {selectedApplication.status !==
                           APPLICATION_STATUS.ACCEPTED && (
-                            <button
-                              onClick={handleAcceptParticipant}
-                              disabled={accepting}
-                              className="px-4 py-3 bg-green-600/20 border border-green-600/50 text-green-400 rounded-md hover:bg-green-600/30 hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
-                            >
-                              {accepting ? "Accepting..." : "Accept"}
-                            </button>
-                          )}
+                          <button
+                            onClick={handleAcceptParticipant}
+                            disabled={accepting}
+                            className="px-4 py-3 bg-green-600/20 border border-green-600/50 text-green-400 rounded-md hover:bg-green-600/30 hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                          >
+                            {accepting ? "Accepting..." : "Accept"}
+                          </button>
+                        )}
 
                         {selectedApplication.status !==
                           APPLICATION_STATUS.REJECTED && (
-                            <button
-                              onClick={handleRejectParticipant}
-                              disabled={rejecting}
-                              className="px-4 py-3 bg-red-600/20 border border-red-600/50 text-red-400 rounded-md hover:bg-red-600/30 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
-                            >
-                              {rejecting ? "Rejecting..." : "Reject"}
-                            </button>
-                          )}
+                          <button
+                            onClick={handleRejectParticipant}
+                            disabled={rejecting}
+                            className="px-4 py-3 bg-red-600/20 border border-red-600/50 text-red-400 rounded-md hover:bg-red-600/30 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                          >
+                            {rejecting ? "Rejecting..." : "Reject"}
+                          </button>
+                        )}
                       </div>
 
                       {(selectedApplication.status ===
                         APPLICATION_STATUS.ACCEPTED ||
                         selectedApplication.status ===
-                        APPLICATION_STATUS.REJECTED) && (
-                          <div className="mt-3 p-3 bg-blue-600/10 border border-blue-600/30 rounded-md">
-                            <p className="text-blue-400 text-sm">
-                              Current Status:{" "}
-                              <span className="font-semibold">
-                                {selectedApplication.status}
-                              </span>
-                            </p>
-                          </div>
-                        )}
+                          APPLICATION_STATUS.REJECTED) && (
+                        <div className="mt-3 p-3 bg-blue-600/10 border border-blue-600/30 rounded-md">
+                          <p className="text-blue-400 text-sm">
+                            Current Status:{" "}
+                            <span className="font-semibold">
+                              {selectedApplication.status}
+                            </span>
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

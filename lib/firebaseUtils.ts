@@ -159,7 +159,8 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
           status: user.status || 'not applicable',
           userCreatedAt: user.createdAt,
           userUpdatedAt: user.updatedAt,
-          evaluationStatus: 'pending'
+          evaluationStatus: 'pending',
+          list_teammates: application.list_teammates
         } as CombinedApplicationData;
       })
       .filter((item): item is CombinedApplicationData => item !== null);
