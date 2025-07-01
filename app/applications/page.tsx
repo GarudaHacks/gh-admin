@@ -678,7 +678,7 @@ export default function Applications() {
                   >
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-medium text-sm text-white truncate">
-                        {application.firstName}
+                        {application.firstName} {application.lastName}
                       </h4>
                       <div className="text-right min-w-[30%] ">
                         {application.score ? (
