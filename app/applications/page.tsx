@@ -740,6 +740,10 @@ export default function Applications() {
                           {selectedApplication.email}
                         </p>
                         <p className="text-white/70">
+                          <span className="font-medium">Gender:</span>{" "}
+                          {selectedApplication.gender_identity}
+                        </p>
+                        <p className="text-white/70">
                           <span className="font-medium">School:</span>{" "}
                           {selectedApplication.school}
                         </p>
