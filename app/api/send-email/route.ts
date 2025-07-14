@@ -244,14 +244,23 @@ const createRejectionMailOptions = (email: string): MailOptions => ({
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Your Garuda Hacks 6.0 Application Status</title>
         <style>
-            body, table, td, p, a, li, blockquote {
+            body,
+            table,
+            td,
+            p,
+            a,
+            li,
+            blockquote {
                 -webkit-text-size-adjust: 100%;
                 -ms-text-size-adjust: 100%;
             }
-            table, td {
+
+            table,
+            td {
                 mso-table-lspace: 0pt;
                 mso-table-rspace: 0pt;
             }
+
             img {
                 -ms-interpolation-mode: bicubic;
                 border: 0;
@@ -262,46 +271,72 @@ const createRejectionMailOptions = (email: string): MailOptions => ({
             }
         </style>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f4;">
+    <body
+        style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+            style="background-color: #f4f4f4;">
             <tr>
                 <td align="center" style="padding: 20px 0;">
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background: linear-gradient(135deg, #64748B 0%, #334155 100%); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08);">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                        style="max-width: 600px; background: linear-gradient(135deg, #64748B 0%, #334155 100%); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08);">
                         <tr>
                             <td style="padding: 40px 40px 20px 40px; text-align: center;">
-                                <h1 style="color: white; font-size: 40px; font-weight: 700; margin: 0 0 10px 0; line-height: 1.1;">
-                                    Garuda<br>Hacks <span style="background-color: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 8px; font-size: 22px; vertical-align: middle;">6.0</span>
+                                <h1
+                                    style="color: white; font-size: 40px; font-weight: 700; margin: 0 0 10px 0; line-height: 1.1;">
+                                    Garuda<br>Hacks <span
+                                        style="background-color: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 8px; font-size: 22px; vertical-align: middle;">6.0</span>
                                 </h1>
-                                <p style="color: #F87171; font-size: 18px; font-weight: 600; margin: 0; letter-spacing: 0.5px;">
+                                <p
+                                    style="color: #F87171; font-size: 18px; font-weight: 600; margin: 0; letter-spacing: 0.5px;">
                                     Application Update
                                 </p>
                             </td>
                         </tr>
                         <tr>
                             <td style="padding: 0 40px 40px 40px;">
-                                <div style="background-color: rgba(255,255,255,0.12); border-radius: 12px; padding: 30px; margin-bottom: 30px; backdrop-filter: blur(8px);">
-                                    <h2 style="color: white; font-size: 26px; font-weight: 700; margin: 0 0 15px 0; text-align: center;">
-                                        Thank you for applying
-                                    </h2>
-                                    <p style="color: rgba(255,255,255,0.9); font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">
-                                        We appreciate your interest in Garuda Hacks 6.0. After careful consideration, we regret to inform you that we are unable to offer you a spot this year.
+                                <div
+                                    style="background-color: rgba(255,255,255,0.12); border-radius: 12px; padding: 30px; margin-bottom: 30px; backdrop-filter: blur(8px);">
+                                    <p
+                                        style="color: rgba(255,255,255,0.9); font-size: 18px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">
+                                        Thank you so much for the thought and care that you have put into your application.
+                                        The Garuda Hacks team has reviewed your application, and unfortunately <span
+                                            style="font-weight: bold; text-decoration-line: underline;">we are not able to
+                                            invite you to join Garuda Hacks 6.0</span> at this time.
                                     </p>
-                                    <p style="color: rgba(255,255,255,0.8); font-size: 15px; line-height: 1.6; margin: 0; text-align: center;">
-                                        The selection process was highly competitive, and we encourage you to apply again next year. Thank you for your passion and effort!
+                                    <p
+                                        style="color: rgba(255,255,255,0.9); font-size: 15px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">
+                                        This is not an easy decision to make. We at Garuda Hacks have always prided
+                                        ourselves on making an inclusive event where anyone can join. In the past we have
+                                        always been able to do this—initially through our online format and the venues we
+                                        have been honored to partner with. However, this year, for the first time, demand
+                                        far outpaced the number of people we can accept, and so we have been forced to
+                                        reject many well-qualified applicants.
                                     </p>
-                                </div>
-                                <div style="background-color: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin-bottom: 30px; text-align: center;">
-                                    <p style="color: #F87171; font-size: 15px; margin: 0 0 10px 0;">
-                                        If you have any questions, feel free to reach out to us at <a href="mailto:hiba@garudahacks.com" style="color: #F87171; text-decoration: underline;">hiba@garudahacks.com</a>.
+                                    <p
+                                        style="color: rgba(255,255,255,0.8); font-size: 15px; line-height: 1.6; margin: 0; text-align: center;">
+                                        We are not able to provide individual feedback on each application. However, we
+                                        suggest that you apply earlier in the coming years, as applications are read on a
+                                        rolling basis.
                                     </p>
-                                    <p style="color: rgba(255,255,255,0.7); font-size: 13px; margin: 0;">
-                                        We wish you the best in your future hackathons and hope to see you at Garuda Hacks in the future!
+                                    <p
+                                        style="color: rgba(255,255,255,0.8); font-size: 15px; line-height: 1.6; margin: 0; text-align: center;">
+                                        We hope that you understand that this decision does not reflect how the committee
+                                        sees your achievements, potential, or character. We believe that the hackathon
+                                        experience is amplified as more people come to solve problems and ideate together.
+                                        Perhaps someday we will be able to accommodate all 1,500 applicants. However, we are
+                                        constrained by capacity and regulations.
+                                    </p>
+                                    <p
+                                        style="color: rgba(255,255,255,0.8); font-size: 15px; line-height: 1.6; margin: 6; text-align: center;">
+                                        All our best, <br>
+                                        <span style="font-weight: bold;">The Garuda Hacks 6.0 Committee</span>
                                     </p>
                                 </div>
                             </td>
                         </tr>
                     </table>
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; margin-top: 20px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                        style="max-width: 600px; margin-top: 20px;">
                         <tr>
                             <td style="text-align: center; padding: 20px;">
                                 <p style="color: #666; font-size: 12px; margin: 0 0 10px 0;">
@@ -319,7 +354,7 @@ const createRejectionMailOptions = (email: string): MailOptions => ({
     </body>
     </html>
   `,
-  text: `Your Garuda Hacks 6.0 Application Status\n\nThank you for applying to Garuda Hacks 6.0.\n\nAfter careful consideration, we regret to inform you that we are unable to offer you a spot this year.\n\nThe selection process was highly competitive, and we encourage you to apply again next year.\n\nIf you have any questions, feel free to reach out to us at hiba@garudahacks.com.\n\nWe wish you the best in your future hackathons and hope to see you at Garuda Hacks in the future!\n\n© 2025 Garuda Hacks. All rights reserved.\nYou received this email because you applied for Garuda Hacks 6.0.`,
+  text: `Your Garuda Hacks 6.0 Application Status\n\nThank you so much for the thought and care that you have put into your application.\n\nThe Garuda Hacks team has reviewed your application, and unfortunately we are not able to invite you to join Garuda Hacks 6.0 at this time.\n\nThis is not an easy decision to make. We at Garuda Hacks have always prided ourselves on making an inclusive event where anyone can join. In the past we have always been able to do this—initially through our online format and the venues we have been honored to partner with. However, this year, for the first time, demand far outpaced the number of people we can accept, and so we have been forced to reject many well-qualified applicants.\n\nWe are not able to provide individual feedback on each application. However, we suggest that you apply earlier in the coming years, as applications are read on a rolling basis.\n\nWe hope that you understand that this decision does not reflect how the committee sees your achievements, potential, or character. We believe that the hackathon experience is amplified as more people come to solve problems and ideate together. Perhaps someday we will be able to accommodate all 1,500 applicants. However, we are constrained by capacity and regulations.\n\nAll our best, The Garuda Hacks 6.0 Committee\n\n© 2025 Garuda Hacks. All rights reserved.\nYou received this email because you applied for Garuda Hacks 6.0.`,
 });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
