@@ -1,5 +1,6 @@
 "use client"
 
+import MentoringSlotsComponent from "@/components/MentoringSlots"
 import { fetchMentorById } from "@/lib/firebaseUtils"
 import { epochToStringDate } from "@/lib/helpers"
 import { AvailableMentoring, FirestoreMentor } from "@/lib/types"
@@ -34,6 +35,10 @@ export default function MentorDetailPage() {
 
       <div className="flex flex-col gap-4">
         <h2 className="font-bold">Available Slots</h2>
+
+        {/* {availableMentorings && <MentoringSlotsComponent availableMentorings={availableMentorings} />} */}
+
+
         <div className="border p-4 rounded-xl">
           {availableMentorings?.map((availableMentoring, availableMentoringIndex) => {
             return (
