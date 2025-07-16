@@ -60,6 +60,18 @@ export interface AvailableMentoring {
 }
 
 /**
+ * Define appointment booked by hackers for a mentor. Related to collection `mentorships`.
+ */
+export interface MentorshipAppointment {
+  id: string;
+  startTime: number;
+  endTime: number;
+  mentorId: string;
+  hackerId: string; // a hacker book for one team
+  hackerDescription: string; // inquiry needed by hacker
+}
+
+/**
  * Graded applications are applications that have been scored.
  * This category is exclusive to the admin portal, and is not recorded in the DB.
  */

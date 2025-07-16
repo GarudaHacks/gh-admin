@@ -17,6 +17,7 @@ import {
   PortalConfig,
   Question,
   FirestoreMentor,
+  MentorshipAppointment,
 } from "./types";
 
 export { APPLICATION_STATUS } from "./types";
@@ -473,5 +474,28 @@ export async function fetchMentorById(uid: string): Promise<FirestoreMentor | nu
     }
   } catch {
     return null;
+  }
+}
+
+/**
+ * Fetch booked mentorship schedules.
+ */
+export async function fetchBookedMentorshipSlotsByMentorId(mentorId: string) {
+  try {
+    const usersRef = collection(db, 'mentorships');
+    const firebaseQuery = query(usersRef, where('mentorId', '==', mentorId));
+    const querySnapshot = await getDocs(firebaseQuery);
+
+    const users: MentorshipAppointment[] = [];
+    querySnapshot.forEach((doc) => {
+      users.push({
+        id: doc.id,
+        ...doc.data()
+      } as MentorshipAppointment);
+    });
+
+    return users;
+  } catch {
+    throw new Error('Failed to fetch mentors');
   }
 }

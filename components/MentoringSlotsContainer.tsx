@@ -17,26 +17,30 @@ export default function MentoringSlotsContainer(
     hourMarks.push(
       <div
         key={i}
-        className="absolute left-0 right-0 border-t border-gray-300 text-sm text-gray-500 p-2"
+        className="absolute text-sm text-gray-500 p-2 flex w-full"
         style={{ top: `${topPosition}px` }}
       >
-        {epochToStringDate(hourEpoch)}
+        <div className="w-1/5 -translate-y-2">
+          {epochToStringDate(hourEpoch)}
+        </div>
+        <div className="border-t w-full h-1">
+        </div>
       </div>
     );
   }
   return (
     <div>
       <div
-        className="border p-4 rounded-xl relative overflow-hidden"
+        className=" p-4 rounded-xl relative overflow-hidden"
         style={{
           height: `${TOTAL_HEIGHT}px`,
           minHeight: '400px',
         }}
       >
-        <div className="absolute inset-0">
-          {hourMarks}
+        {hourMarks}
+        <div className="w-3/5">
+          {children}
         </div>
-        {children}
       </div>
     </div>
   )
