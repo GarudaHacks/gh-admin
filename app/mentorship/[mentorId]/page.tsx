@@ -36,16 +36,8 @@ export default function MentorDetailPage() {
       <div className="flex flex-col gap-4">
         <h2 className="font-bold">Available Slots</h2>
 
-        {/* {availableMentorings && <MentoringSlotsComponent availableMentorings={availableMentorings} />} */}
+        {availableMentorings && <MentoringSlotsComponent availableMentorings={availableMentorings} />}
 
-
-        <div className="border p-4 rounded-xl">
-          {availableMentorings?.map((availableMentoring, availableMentoringIndex) => {
-            return (
-              <div key={availableMentoringIndex}>{epochToStringDate(availableMentoring.startTime)}</div>
-            )
-          })}
-        </div>
       </div>
     </div>
   )
