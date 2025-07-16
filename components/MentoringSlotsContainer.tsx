@@ -1,17 +1,10 @@
+import { EPOCH_START_MENTORING, HOUR_HEIGHT, TOTAL_DURATION_MINUTES, TOTAL_HEIGHT } from "@/config";
 import { epochToStringDate } from "@/lib/helpers";
 import { ReactNode } from "react";
 
 export default function MentoringSlotsContainer(
   { children }: { children: ReactNode }
 ) {
-  const EPOCH_START_MENTORING = 1753340400;
-  const EPOCH_ENDS_MENTORING = 1753448400;
-
-  const TOTAL_DURATION_SECONDS = EPOCH_ENDS_MENTORING - EPOCH_START_MENTORING;
-  const TOTAL_DURATION_MINUTES = TOTAL_DURATION_SECONDS / 60;
-  const PIXELS_PER_MINUTE = 1.2;
-  const TOTAL_HEIGHT = TOTAL_DURATION_MINUTES * PIXELS_PER_MINUTE;
-  const HOUR_HEIGHT = 60 * PIXELS_PER_MINUTE;
 
   // Generate hour marks
   const hourMarks = [];

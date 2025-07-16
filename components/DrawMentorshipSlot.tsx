@@ -20,12 +20,12 @@ export default function DrawMentorshipSlot(
   return (
     <div
       key={index}
-      className="absolute flex flex-col text-sm w-fit items-center gap-2 px-2 py-1 border bg-primary opacity-90 rounded-lg cursor-pointer transition-colors z-10"
+      className="absolute flex flex-col w-fit text-sm items-center gap-2 px-2 py-1 border bg-primary opacity-90 rounded-lg cursor-pointer transition-colors z-10"
       style={{
         top: `${topPosition}px`,
         height: `${height}px`,
-        right: '8px',
-        minHeight: '24px'
+        minHeight: '24px',
+        right: '10px',
       }}
     >
       <div className="flex flex-col gap-2">

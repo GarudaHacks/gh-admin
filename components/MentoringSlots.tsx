@@ -16,6 +16,7 @@ export default function MentoringSlotsComponent(
     <MentoringSlotsContainer>
       {availableMentorings.map((availableMentoring, index) => (
         <DrawMentorshipSlot key={index} index={index} startTime={availableMentoring.startTime} endTime={availableMentoring.endTime}>
+          <p>Mentor is available <span className="font-bold">{availableMentoring.location}</span></p>
         </DrawMentorshipSlot>
       ))}
     </MentoringSlotsContainer>
