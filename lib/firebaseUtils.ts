@@ -16,6 +16,7 @@ import {
   CombinedApplicationData,
   PortalConfig,
   Question,
+  FirestoreMentor,
 } from "./types";
 
 export { APPLICATION_STATUS } from "./types";
@@ -428,5 +429,28 @@ export async function updateApplicationAcceptanceEmail(userId: string): Promise<
   } catch (error) {
     console.error(`Error updating application acceptance email for ${userId}:`, error);
     return false;
+  }
+}
+
+/**
+ * Fetch list of mentors from database.
+ */
+export async function fetchMentors(): Promise<FirestoreMentor[]> {
+  try {
+    const usersRef = collection(db, 'users');
+    const firebaseQuery = query(usersRef, where('mentor', '==', true));
+    const querySnapshot = await getDocs(firebaseQuery);
+    
+    const users: FirestoreMentor[] = [];
+    querySnapshot.forEach((doc) => {
+      users.push({
+        id: doc.id,
+        ...doc.data()
+      } as FirestoreMentor);
+    });
+    
+    return users;
+  } catch {
+    throw new Error('Failed to fetch mentors');
   }
 }

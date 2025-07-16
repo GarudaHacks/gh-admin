@@ -41,6 +41,14 @@ export interface FirestoreUser {
   year: number;
 }
 
+export interface FirestoreMentor {
+  id: string;
+  email: string;
+  name: string;
+  mentor: boolean;
+  specialization: string;
+}
+
 /**
  * Graded applications are applications that have been scored.
  * This category is exclusive to the admin portal, and is not recorded in the DB.

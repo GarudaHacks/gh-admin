@@ -1,5 +1,8 @@
+"use client";
+
+import MentorListComponent from "@/components/MentorList";
 import PageHeader from "@/components/PageHeader";
-import UnderConstruction from "@/components/UnderConstruction";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Mentorship() {
   return (
@@ -8,10 +11,9 @@ export default function Mentorship() {
         title="Mentorship"
         subtitle="Connect mentors with participants and manage mentorship programs."
       />
-      <UnderConstruction
-        feature="Mentorship System"
-        description="This section will allow you to manage mentor assignments, track mentorship sessions, and facilitate connections between mentors and participants during Garuda Hacks 6.0."
-      />
+      <div>
+        <MentorListComponent />
+      </div>
     </div>
   );
 }
