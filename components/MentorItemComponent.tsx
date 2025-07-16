@@ -1,3 +1,4 @@
+import { epochToStringDate } from "@/lib/helpers"
 import { FirestoreMentor } from "@/lib/types"
 import Link from "next/link"
 
@@ -12,19 +13,9 @@ export default function MentorItemComponent({ mentor: m }: { mentor: FirestoreMe
         {m.availableMentorings && (
           <div className="">
             {m.availableMentorings.map((availableMentoring, index) => {
-              const startDate = new Date(availableMentoring.startTime * 1000)
-              const startDay = startDate.toLocaleDateString()
-              const startTimestamp = startDate.toLocaleString('id-ID', { timeStyle: 'short' })
-              const start = `${startDay} ${startTimestamp}`
-
-              const endDate = new Date(availableMentoring.startTime * 1000)
-              const endDay = endDate.toLocaleDateString()
-              const endTimestamp = endDate.toLocaleString('id-ID', { timeStyle: 'short' })
-              const end = `${endDay} ${endTimestamp}`
-
               return (
                 <div key={index} className="text-sm flex gap-2 px-2 border bg-muted rounded-xl">
-                  <span>{start} WIB - {end} WIB</span>
+                  <span>{epochToStringDate(availableMentoring.startTime)} WIB - {epochToStringDate(availableMentoring.endTime)} WIB</span>
                 </div>
               )
             }

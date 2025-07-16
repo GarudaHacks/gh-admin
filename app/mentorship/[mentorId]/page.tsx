@@ -1,7 +1,8 @@
 "use client"
 
 import { fetchMentorById } from "@/lib/firebaseUtils"
-import { FirestoreMentor } from "@/lib/types"
+import { epochToStringDate } from "@/lib/helpers"
+import { AvailableMentoring, FirestoreMentor } from "@/lib/types"
 import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -9,11 +10,13 @@ export default function MentorDetailPage() {
   const params = useParams<{ mentorId: string }>()
 
   const [mentor, setMentor] = useState<FirestoreMentor>()
+  const [availableMentorings, setAvailableMentorings] = useState<AvailableMentoring[]>()
 
   useEffect(() => {
     fetchMentorById(params.mentorId).then((m) => {
       if (m) {
         setMentor(m)
+        setAvailableMentorings(m.availableMentorings)
       }
     })
   }, [params.mentorId])
@@ -27,13 +30,16 @@ export default function MentorDetailPage() {
           <h3 className="text-muted-foreground">{mentor?.email}</h3>
           <p className="">Specialization: {mentor?.specialization.toUpperCase()}</p>
         </div>
-
       </div>
 
       <div className="flex flex-col gap-4">
         <h2 className="font-bold">Available Slots</h2>
         <div className="border p-4 rounded-xl">
-
+          {availableMentorings?.map((availableMentoring, availableMentoringIndex) => {
+            return (
+              <div key={availableMentoringIndex}>{epochToStringDate(availableMentoring.startTime)}</div>
+            )
+          })}
         </div>
       </div>
     </div>
