@@ -56,6 +56,7 @@ export interface FirestoreMentor {
 export interface AvailableMentoring {
   startTime: number;
   endTime: number;
+  location: string;
 }
 
 /**

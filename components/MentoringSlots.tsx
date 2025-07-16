@@ -1,6 +1,7 @@
 import { epochToStringDate } from "@/lib/helpers"
 import { AvailableMentoring } from "@/lib/types"
 import MentoringSlotsContainer from "./MentoringSlotsContainer";
+import { MapPin, Video } from "lucide-react";
 
 interface MentoringSlotsComponentProps {
   availableMentorings: AvailableMentoring[]
@@ -30,7 +31,7 @@ export default function MentoringSlotsComponent(
         return (
           <div
             key={index}
-            className="absolute text-sm w-fit items-center gap-2 px-2 py-1 border bg-primary opacity-90 rounded-lg cursor-pointer transition-colors z-10"
+            className="absolute flex flex-col text-sm w-fit items-center gap-2 px-2 py-1 border bg-primary opacity-90 rounded-lg cursor-pointer transition-colors z-10"
             style={{
               top: `${topPosition}px`,
               height: `${height}px`,
@@ -38,9 +39,14 @@ export default function MentoringSlotsComponent(
               minHeight: '24px'
             }}
           >
-            <span className="truncate">
-              {epochToStringDate(availableMentoring.startTime)} - {epochToStringDate(availableMentoring.endTime)} WIB
-            </span>
+            <div className="flex flex-col gap-2">
+              <span className="truncate">
+                {epochToStringDate(availableMentoring.startTime)} - {epochToStringDate(availableMentoring.endTime)} WIB
+              </span>
+              <p className="text-sm">
+                Mentor availability is <span className="font-bold">{availableMentoring.location.toUpperCase()}</span>
+              </p>
+            </div>
           </div>
         );
       })}
