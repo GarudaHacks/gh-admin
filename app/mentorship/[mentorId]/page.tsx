@@ -34,10 +34,8 @@ export default function MentorDetailPage() {
       </div>
 
       <div className="flex flex-col gap-4">
-        <h2 className="font-bold">Available Slots</h2>
-
+        <h2 className="font-bold">Mentoring Slots</h2>
         {availableMentorings && <MentoringSlotsComponent availableMentorings={availableMentorings} />}
-
       </div>
     </div>
   )
