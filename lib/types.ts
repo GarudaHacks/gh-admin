@@ -41,12 +41,21 @@ export interface FirestoreUser {
   year: number;
 }
 
+/**
+ * Mentor type of user.
+ */
 export interface FirestoreMentor {
   id: string;
   email: string;
   name: string;
   mentor: boolean;
   specialization: string;
+  availableMentorings: AvailableMentoring[];
+}
+
+export interface AvailableMentoring {
+  startTime: number;
+  endTime: number;
 }
 
 /**
