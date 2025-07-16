@@ -52,6 +52,7 @@ export default function MentorDetailPage() {
 
           {bookedSlots?.map((bookedSlot, index) => (
             <DrawMentorshipSlot key={index} index={index} startTime={bookedSlot.startTime} endTime={bookedSlot.endTime} asBooking>
+              <p>{bookedSlot.hackerDescription}</p>
             </DrawMentorshipSlot>
           ))}
         </MentoringSlotsContainer>
