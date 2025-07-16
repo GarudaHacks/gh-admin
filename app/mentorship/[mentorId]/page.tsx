@@ -1,18 +1,41 @@
 "use client"
 
+import { fetchMentorById } from "@/lib/firebaseUtils"
+import { FirestoreMentor } from "@/lib/types"
 import { useParams } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 export default function MentorDetailPage() {
   const params = useParams<{ mentorId: string }>()
 
+  const [mentor, setMentor] = useState<FirestoreMentor>()
+
   useEffect(() => {
-    console.log("prams", params.mentorId)
-  }, [])
+    fetchMentorById(params.mentorId).then((m) => {
+      if (m) {
+        setMentor(m)
+      }
+    })
+  }, [params.mentorId])
 
   return (
-    <div>
-      {params.mentorId}
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-bold">Mentor Details</h1>
+        <div className="flex flex-col gap-2 border p-4 rounded-xl">
+          <h2 className="text-2xl font-bold">{mentor?.name}</h2>
+          <h3 className="text-muted-foreground">{mentor?.email}</h3>
+          <p className="">Specialization: {mentor?.specialization.toUpperCase()}</p>
+        </div>
+
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <h2 className="font-bold">Available Slots</h2>
+        <div className="border p-4 rounded-xl">
+
+        </div>
+      </div>
     </div>
   )
 }
