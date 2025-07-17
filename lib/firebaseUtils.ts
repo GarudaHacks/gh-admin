@@ -9,6 +9,7 @@ import {
   where,
   orderBy,
   addDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import {
@@ -21,6 +22,7 @@ import {
   MentorshipAppointment,
 } from "./types";
 import { ONE_SLOT_INTERVAL_MINUTES } from "@/config";
+import { error } from "console";
 
 export { APPLICATION_STATUS } from "./types";
 export type { CombinedApplicationData } from "./types";
@@ -526,5 +528,19 @@ export async function addMentorshipAppointment(startDate: number, mentorId: stri
   } catch (error) {
     console.log(error)
     throw new Error('Failed to add a new mentorship appointment slot')
+  }
+}
+
+/**
+ * Delete mentorship slot.
+ */
+export async function deleteMentorshipAppointment(mentorshipId: string) {
+  try {
+    const docRef = doc(db, 'mentorships', mentorshipId);
+    await deleteDoc(docRef);
+    return true
+  } catch (error) {
+    console.log(error)
+    throw new Error('Error when deleting a mentorship appointment')
   }
 }
