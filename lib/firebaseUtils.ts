@@ -11,7 +11,7 @@ import {
   addDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { db, auth } from "./firebase";
+import { db, auth, storage } from "./firebase";
 import {
   FirestoreApplication,
   FirestoreUser,
@@ -22,7 +22,7 @@ import {
   MentorshipAppointment,
 } from "./types";
 import { ONE_SLOT_INTERVAL_MINUTES } from "@/config";
-import { error } from "console";
+import { getDownloadURL, ref } from "firebase/storage";
 
 export { APPLICATION_STATUS } from "./types";
 export type { CombinedApplicationData } from "./types";
@@ -540,7 +540,20 @@ export async function deleteMentorshipAppointment(mentorshipId: string) {
     await deleteDoc(docRef);
     return true
   } catch (error) {
-    console.log(error)
+    console.error(error)
     throw new Error('Error when deleting a mentorship appointment')
+  }
+}
+
+/**
+ * Fetch mentor image
+ */
+export async function getMentorProfilePicture(mentor_name: string) {
+  try{
+    const imageRef = ref(storage, `/mentors/${mentor_name}.png`)
+    const url = await getDownloadURL(imageRef)
+    return url
+  } catch (error) {
+    return ''
   }
 }

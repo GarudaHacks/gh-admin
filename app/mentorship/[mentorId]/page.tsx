@@ -1,22 +1,31 @@
 "use client"
 
 import MentorshipAppointmentCardComponent from "@/components/MentorshipAppointmentCardComponent"
-import { fetchMentorshipAppointmentsByMentorId, fetchMentorById } from "@/lib/firebaseUtils"
+import { fetchMentorshipAppointmentsByMentorId, fetchMentorById, getMentorProfilePicture } from "@/lib/firebaseUtils"
 import { FirestoreMentor, MentorshipAppointment } from "@/lib/types"
 import { Plus } from "lucide-react"
+import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import ghq from "@/public/assets/ghq.png"
 
 export default function MentorDetailPage() {
   const params = useParams<{ mentorId: string }>()
   const router = useRouter()
   const [mentor, setMentor] = useState<FirestoreMentor>()
   const [mentorshipAppointments, setMentorshipAppointments] = useState<MentorshipAppointment[]>()
+  const [mentorUrl, setMentorUrl] = useState<string>('')
 
   useEffect(() => {
     fetchMentorById(params.mentorId).then((m) => {
       if (m) {
         setMentor(m)
+
+        getMentorProfilePicture(m.name).then((pp) => {
+          if (pp) {
+            setMentorUrl(pp)
+          }
+        })
       }
     })
 
@@ -25,6 +34,8 @@ export default function MentorDetailPage() {
         setMentorshipAppointments(m)
       }
     })
+
+
   }, [params.mentorId])
 
   const handleOnClickAddAppointment = (mentorId: string) => {
@@ -36,6 +47,18 @@ export default function MentorDetailPage() {
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-bold">Mentor Details</h1>
         <div className="flex flex-col gap-2 border p-4 rounded-xl">
+          {mentorUrl && (
+            <Image
+              src={mentorUrl}
+              alt={`Profile picture of ${mentor?.name || 'mentor'}`}
+              width={200}
+              height={200}
+              onError={() => {
+                setMentorUrl(ghq.src)
+              }}
+              className="rounded-full"
+            />
+          )}
           <h2 className="text-2xl font-bold">{mentor?.name}</h2>
           <h3 className="text-muted-foreground">{mentor?.email}</h3>
           <p className="">
@@ -52,7 +75,7 @@ export default function MentorDetailPage() {
         <div className="flex justify-between items-center">
           <h2 className="font-bold">Mentoring Schedule</h2>
           <button className="flex items-center gap-1 text-sm border rounded-full px-3 py-1 hover:bg-primary/90"
-          onClick={() => handleOnClickAddAppointment(params.mentorId)}
+            onClick={() => handleOnClickAddAppointment(params.mentorId)}
           >Add Schedule
             <Plus />
           </button>
