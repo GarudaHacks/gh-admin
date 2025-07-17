@@ -4,14 +4,13 @@ import MentorshipAppointmentCardComponent from "@/components/MentorshipAppointme
 import { fetchMentorshipAppointmentsByMentorId, fetchMentorById } from "@/lib/firebaseUtils"
 import { FirestoreMentor, MentorshipAppointment } from "@/lib/types"
 import { Plus } from "lucide-react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 export default function MentorDetailPage() {
   const params = useParams<{ mentorId: string }>()
-
+  const router = useRouter()
   const [mentor, setMentor] = useState<FirestoreMentor>()
-
   const [mentorshipAppointments, setMentorshipAppointments] = useState<MentorshipAppointment[]>()
 
   useEffect(() => {
@@ -28,6 +27,10 @@ export default function MentorDetailPage() {
     })
   }, [params.mentorId])
 
+  const handleOnClickAddAppointment = (mentorId: string) => {
+    router.push(`/mentorship/add?mentorId=${mentorId}`)
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4">
@@ -42,7 +45,9 @@ export default function MentorDetailPage() {
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <h2 className="font-bold">Mentoring Schedule</h2>
-          <button className="flex items-center gap-1 text-sm border bg-primary rounded-full px-2 py-1 hover:bg-primary/90">Add Schedule
+          <button className="flex items-center gap-1 text-sm border rounded-full px-3 py-1 hover:bg-primary/90"
+          onClick={() => handleOnClickAddAppointment(params.mentorId)}
+          >Add Schedule
             <Plus />
           </button>
         </div>
