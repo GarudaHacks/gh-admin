@@ -31,7 +31,7 @@ export default function MentorListComponent() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold">All Mentors</h1>
+        <h1 className="text-xl font-semibold">All Mentors ({mentors?.length})</h1>
         <div className="rounded-xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           {mentors?.map((m, index) => (
             <MentorItemComponent key={index} mentor={m} />

@@ -5,6 +5,9 @@ module.exports = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: ['firebasestorage.googleapis.com']
+    domains: [
+      'firebasestorage.googleapis.com',
+      'garudahacks.com'
+    ]
   }
 };

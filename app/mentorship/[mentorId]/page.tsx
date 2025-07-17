@@ -47,18 +47,16 @@ export default function MentorDetailPage() {
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-bold">Mentor Details</h1>
         <div className="flex flex-col gap-2 border p-4 rounded-xl">
-          {mentorUrl && (
-            <Image
-              src={mentorUrl}
-              alt={`Profile picture of ${mentor?.name || 'mentor'}`}
-              width={200}
-              height={200}
-              onError={() => {
-                setMentorUrl(ghq.src)
-              }}
-              className="rounded-full"
-            />
-          )}
+          <Image
+            src={mentorUrl || "https://garudahacks.com/images/logo/ghq.png"}
+            alt={`Profile picture of ${mentor?.name || 'mentor'}`}
+            width={200}
+            height={200}
+            onError={() => {
+              setMentorUrl(ghq.src)
+            }}
+            className="rounded-full w-64 aspect-square"
+          />
           <h2 className="text-2xl font-bold">{mentor?.name}</h2>
           <h3 className="text-muted-foreground">{mentor?.email}</h3>
           <p className="">
