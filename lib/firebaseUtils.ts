@@ -8,6 +8,7 @@ import {
   Timestamp,
   where,
   orderBy,
+  addDoc,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import {
@@ -19,6 +20,7 @@ import {
   FirestoreMentor,
   MentorshipAppointment,
 } from "./types";
+import { ONE_SLOT_INTERVAL_MINUTES } from "@/config";
 
 export { APPLICATION_STATUS } from "./types";
 export type { CombinedApplicationData } from "./types";
@@ -482,10 +484,10 @@ export async function fetchMentorById(uid: string): Promise<FirestoreMentor | nu
  */
 export async function fetchMentorshipAppointmentsByMentorId(mentorId: string) {
   try {
-    const usersRef = collection(db, 'mentorships');
+    const mentorshipRef = collection(db, 'mentorships');
 
     const firebaseQuery = query(
-      usersRef, 
+      mentorshipRef,
       where('mentorId', '==', mentorId),
       orderBy('startTime', 'asc')
     );
@@ -503,5 +505,26 @@ export async function fetchMentorshipAppointmentsByMentorId(mentorId: string) {
   } catch (error) {
     console.log("Error", error)
     throw new Error('Failed to fetch mentors');
+  }
+}
+
+/**
+ * Add mentorship appointment.
+ */
+export async function addMentorshipAppointment(startDate: number, mentorId: string, location: string) {
+  try {
+    var endDate = startDate + (ONE_SLOT_INTERVAL_MINUTES * 60)
+    var mentorshipAppointment: MentorshipAppointment = {
+      startTime: startDate,
+      endTime: endDate,
+      mentorId: mentorId,
+      location: location
+    }
+    const mentorshipRef = collection(db, 'mentorships');
+    const docRef = await addDoc(mentorshipRef, mentorshipAppointment)
+    return docRef.id
+  } catch (error) {
+    console.log(error)
+    throw new Error('Failed to add a new mentorship appointment slot')
   }
 }
