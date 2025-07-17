@@ -1,5 +1,6 @@
 "use client"
 
+import MentorshipAppointmentCardComponent from "@/components/MentorshipAppointmentCardComponent"
 import { fetchMentorshipAppointmentsByMentorId, fetchMentorById } from "@/lib/firebaseUtils"
 import { FirestoreMentor, MentorshipAppointment } from "@/lib/types"
 import { useParams } from "next/navigation"
@@ -40,7 +41,9 @@ export default function MentorDetailPage() {
       <div className="flex flex-col gap-4">
         <h2 className="font-bold">Mentoring Schedule</h2>
         <div>
-
+          {mentorshipAppointments?.map((mentorshipAppointment) => (
+            <MentorshipAppointmentCardComponent key={mentorshipAppointment.id} mentorshipAppointment={mentorshipAppointment} />
+          ))}
         </div>
       </div>
     </div>

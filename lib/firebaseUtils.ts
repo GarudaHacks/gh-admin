@@ -5,9 +5,9 @@ import {
   getDoc,
   updateDoc,
   query,
-  orderBy,
   Timestamp,
   where,
+  orderBy,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import {
@@ -483,7 +483,12 @@ export async function fetchMentorById(uid: string): Promise<FirestoreMentor | nu
 export async function fetchMentorshipAppointmentsByMentorId(mentorId: string) {
   try {
     const usersRef = collection(db, 'mentorships');
-    const firebaseQuery = query(usersRef, where('mentorId', '==', mentorId));
+
+    const firebaseQuery = query(
+      usersRef, 
+      where('mentorId', '==', mentorId),
+      orderBy('startTime', 'asc')
+    );
     const querySnapshot = await getDocs(firebaseQuery);
 
     const users: MentorshipAppointment[] = [];
@@ -495,7 +500,8 @@ export async function fetchMentorshipAppointmentsByMentorId(mentorId: string) {
     });
 
     return users;
-  } catch {
+  } catch (error) {
+    console.log("Error", error)
     throw new Error('Failed to fetch mentors');
   }
 }
