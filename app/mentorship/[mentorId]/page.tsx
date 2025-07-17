@@ -71,7 +71,7 @@ export default function MentorDetailPage() {
 
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center">
-          <h2 className="font-bold">Mentoring Schedule</h2>
+          <h2 className="font-bold">Mentoring Schedule ({mentorshipAppointments?.length})</h2>
           <button className="flex items-center gap-1 text-sm border rounded-full px-3 py-1 hover:bg-primary/90"
             onClick={() => handleOnClickAddAppointment(params.mentorId)}
           >Add Schedule

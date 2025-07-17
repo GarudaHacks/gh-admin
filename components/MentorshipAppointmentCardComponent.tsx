@@ -41,11 +41,19 @@ export default function MentorshipAppointmentCardComponent({
   return (
     <div className="border bg-zinc-50/10 rounded-xl p-4 flex flex-col gap-4">
       <div className="flex justify-between items-center">
+        <div className='flex flex-row items-center gap-1'>
         {mentorshipAppointment.hackerId ? (
           <span className="border rounded-full py-1 px-2 text-xs bg-green-500">Booked</span>
         ) : (
           <span className="border rounded-full py-1 px-2 text-xs">Available</span>
         )}
+        {mentorshipAppointment.location === 'online' ? (
+          <span className="border rounded-full py-1 px-2 text-xs bg-yellow-700">Online</span>
+        ) : (
+          <span className="border rounded-full py-1 px-2 text-xs bg-blue-700">Offline</span>
+        )}
+
+        </div>
         <p className="text-end text-sm text-muted-foreground">
           Mentoring ID: {mentorshipAppointment.id}
         </p>
@@ -54,8 +62,8 @@ export default function MentorshipAppointmentCardComponent({
         {epochToStringDate(mentorshipAppointment.startTime)} -{' '}
         {epochToStringDate(mentorshipAppointment.endTime)}{' '}
         <span className="font-bold">
-          {(mentorshipAppointment.endTime - mentorshipAppointment.startTime) / 60}{' '}
-          minutes
+          ({(mentorshipAppointment.endTime - mentorshipAppointment.startTime) / 60}{' '}
+          minutes)
         </span>
       </div>
       <Separator />
