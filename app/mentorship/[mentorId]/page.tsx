@@ -3,6 +3,7 @@
 import MentorshipAppointmentCardComponent from "@/components/MentorshipAppointmentCardComponent"
 import { fetchMentorshipAppointmentsByMentorId, fetchMentorById } from "@/lib/firebaseUtils"
 import { FirestoreMentor, MentorshipAppointment } from "@/lib/types"
+import { Plus } from "lucide-react"
 import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -39,7 +40,12 @@ export default function MentorDetailPage() {
       </div>
 
       <div className="flex flex-col gap-4">
-        <h2 className="font-bold">Mentoring Schedule</h2>
+        <div className="flex justify-between items-center">
+          <h2 className="font-bold">Mentoring Schedule</h2>
+          <button className="flex items-center gap-1 text-sm border bg-primary rounded-full px-2 py-1 hover:bg-primary/90">Add Schedule
+            <Plus />
+          </button>
+        </div>
         <div>
           {mentorshipAppointments?.map((mentorshipAppointment) => (
             <MentorshipAppointmentCardComponent key={mentorshipAppointment.id} mentorshipAppointment={mentorshipAppointment} />
