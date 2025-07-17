@@ -45,11 +45,13 @@ export interface FirestoreUser {
  * Mentor type of user.
  */
 export interface FirestoreMentor {
-  id: string;
+  id?: string;
   email: string;
   name: string;
   mentor: boolean;
   specialization: string;
+  discordUsername: string;
+  intro: string; // introduction given by mentor
 }
 
 /**

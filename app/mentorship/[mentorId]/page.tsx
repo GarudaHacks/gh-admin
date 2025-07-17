@@ -38,7 +38,13 @@ export default function MentorDetailPage() {
         <div className="flex flex-col gap-2 border p-4 rounded-xl">
           <h2 className="text-2xl font-bold">{mentor?.name}</h2>
           <h3 className="text-muted-foreground">{mentor?.email}</h3>
+          <p className="">
+            Discord: <span className="text-muted-foreground font-mono w-fit p-1 rounded-full text-sm">{mentor?.discordUsername}</span></p>
           <p className="">Specialization: {mentor?.specialization.toUpperCase()}</p>
+          <div>
+            <p className="font-semibold text-muted-foreground">Intro</p>
+            <p className="text-sm">{mentor?.intro}</p>
+          </div>
         </div>
       </div>
 
@@ -51,6 +57,7 @@ export default function MentorDetailPage() {
             <Plus />
           </button>
         </div>
+
         <div className="flex flex-col gap-4">
           {mentorshipAppointments?.map((mentorshipAppointment) => (
             <MentorshipAppointmentCardComponent key={mentorshipAppointment.id} mentorshipAppointment={mentorshipAppointment} />
