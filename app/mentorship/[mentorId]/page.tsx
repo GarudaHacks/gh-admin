@@ -1,9 +1,7 @@
 "use client"
 
-import DrawMentorshipSlot from "@/components/DrawMentorshipSlot"
-import MentoringSlotsContainer from "@/components/MentoringSlotsContainer"
-import { fetchBookedMentorshipSlotsByMentorId, fetchMentorById } from "@/lib/firebaseUtils"
-import { AvailableMentoring, FirestoreMentor, MentorshipAppointment } from "@/lib/types"
+import { fetchMentorshipAppointmentsByMentorId, fetchMentorById } from "@/lib/firebaseUtils"
+import { FirestoreMentor, MentorshipAppointment } from "@/lib/types"
 import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -11,21 +9,19 @@ export default function MentorDetailPage() {
   const params = useParams<{ mentorId: string }>()
 
   const [mentor, setMentor] = useState<FirestoreMentor>()
-  const [availableMentorings, setAvailableMentorings] = useState<AvailableMentoring[]>()
 
-  const [bookedSlots, setBookedSlots] = useState<MentorshipAppointment[]>()
+  const [mentorshipAppointments, setMentorshipAppointments] = useState<MentorshipAppointment[]>()
 
   useEffect(() => {
     fetchMentorById(params.mentorId).then((m) => {
       if (m) {
         setMentor(m)
-        setAvailableMentorings(m.availableMentorings)
       }
     })
 
-    fetchBookedMentorshipSlotsByMentorId(params.mentorId).then((m) => {
+    fetchMentorshipAppointmentsByMentorId(params.mentorId).then((m) => {
       if (m) {
-        setBookedSlots(m)
+        setMentorshipAppointments(m)
       }
     })
   }, [params.mentorId])
@@ -43,19 +39,9 @@ export default function MentorDetailPage() {
 
       <div className="flex flex-col gap-4">
         <h2 className="font-bold">Mentoring Schedule</h2>
-        <MentoringSlotsContainer>
-          {availableMentorings && availableMentorings.map((availableMentoring, index) => (
-            <DrawMentorshipSlot key={index} index={index} startTime={availableMentoring.startTime} endTime={availableMentoring.endTime}>
-              <p>Mentor is available <span className="font-bold">{availableMentoring.location}</span></p>
-            </DrawMentorshipSlot>
-          ))}
+        <div>
 
-          {bookedSlots?.map((bookedSlot, index) => (
-            <DrawMentorshipSlot key={index} index={index} startTime={bookedSlot.startTime} endTime={bookedSlot.endTime} asBooking>
-              <p>{bookedSlot.hackerDescription}</p>
-            </DrawMentorshipSlot>
-          ))}
-        </MentoringSlotsContainer>
+        </div>
       </div>
     </div>
   )

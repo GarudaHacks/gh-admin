@@ -480,7 +480,7 @@ export async function fetchMentorById(uid: string): Promise<FirestoreMentor | nu
 /**
  * Fetch booked mentorship schedules.
  */
-export async function fetchBookedMentorshipSlotsByMentorId(mentorId: string) {
+export async function fetchMentorshipAppointmentsByMentorId(mentorId: string) {
   try {
     const usersRef = collection(db, 'mentorships');
     const firebaseQuery = query(usersRef, where('mentorId', '==', mentorId));

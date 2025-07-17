@@ -50,13 +50,6 @@ export interface FirestoreMentor {
   name: string;
   mentor: boolean;
   specialization: string;
-  availableMentorings: AvailableMentoring[];
-}
-
-export interface AvailableMentoring {
-  startTime: number;
-  endTime: number;
-  location: string;
 }
 
 /**
@@ -67,8 +60,9 @@ export interface MentorshipAppointment {
   startTime: number;
   endTime: number;
   mentorId: string;
-  hackerId: string; // a hacker book for one team
-  hackerDescription: string; // inquiry needed by hacker
+  hackerId: string; // a hacker book for the whole team
+  hackerDescription: string; // desc given needed by hacker
+  location: string;
 }
 
 /**
