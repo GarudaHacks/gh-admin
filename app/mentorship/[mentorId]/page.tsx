@@ -51,7 +51,7 @@ export default function MentorDetailPage() {
             <Plus />
           </button>
         </div>
-        <div>
+        <div className="flex flex-col gap-4">
           {mentorshipAppointments?.map((mentorshipAppointment) => (
             <MentorshipAppointmentCardComponent key={mentorshipAppointment.id} mentorshipAppointment={mentorshipAppointment} />
           ))}

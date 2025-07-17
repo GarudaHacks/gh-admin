@@ -1,5 +1,6 @@
 "use client"
 
+import { ONE_SLOT_INTERVAL_MINUTES } from "@/config"
 import { addMentorshipAppointment, fetchMentorById } from "@/lib/firebaseUtils"
 import { dateToStringTime, epochToStringDate } from "@/lib/helpers"
 import { FirestoreMentor, MentorshipAppointment } from "@/lib/types"
@@ -53,9 +54,12 @@ export default function AddMentorshipAppointmentPage() {
         setError('Location cannot be empty')
         return
       }
-      addMentorshipAppointment(startDate.getTime() / 1000, mentorId, appointmentType).then((res) => {
-        router.replace(`/mentorship/${mentorId}`)
-      })
+      for (let index = 0; index < nTime; index++) {
+        const INTERVALS_SECONDS = ONE_SLOT_INTERVAL_MINUTES * 60 * index;
+        addMentorshipAppointment((startDate.getTime() / 1000) + INTERVALS_SECONDS, mentorId, appointmentType).then((res) => {
+          router.replace(`/mentorship/${mentorId}`)
+        })
+      }
     } catch (error) {
       console.log(error)
     } finally {
