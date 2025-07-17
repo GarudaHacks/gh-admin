@@ -1,9 +1,19 @@
-import React from 'react'
+"use client";
 
-function MentorshipPage() {
+import MentorListComponent from "@/components/MentorList";
+import PageHeader from "@/components/PageHeader";
+import { useAuth } from "@/contexts/AuthContext";
+
+export default function Mentorship() {
   return (
-    <div>MentorshipPage</div>
-  )
+    <div className="space-y-6">
+      <PageHeader
+        title="Mentorship"
+        subtitle="Connect mentors with participants and manage mentorship programs."
+      />
+      <div>
+        <MentorListComponent />
+      </div>
+    </div>
+  );
 }
-
-export default MentorshipPage
