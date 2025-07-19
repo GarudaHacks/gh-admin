@@ -57,11 +57,10 @@ export default function MentorDetailPage() {
             }}
             className="rounded-full w-64 aspect-square"
           />
-          <h2 className="text-2xl font-bold">{mentor?.name}</h2>
-          <h3 className="text-muted-foreground">{mentor?.email}</h3>
-          <p className="">
-            Discord: <span className="text-muted-foreground font-mono w-fit p-1 rounded-full text-sm">{mentor?.discordUsername}</span></p>
-          <p className="">Specialization: {mentor?.specialization.toUpperCase()}</p>
+          {mentor?.name && <h2 className="text-2xl font-bold">{mentor?.name}</h2>}
+          {mentor?.email && <h3 className="text-muted-foreground">{mentor?.email}</h3>}
+          {mentor?.discordUsername && <p className="">Discord: <span className="text-muted-foreground font-mono w-fit p-1 rounded-full text-sm">{mentor?.discordUsername}</span></p>}
+          {mentor?.specialization && <p className="">Specialization: {mentor?.specialization.toUpperCase()}</p>}
           <div>
             <p className="font-semibold text-muted-foreground">Intro</p>
             <p className="text-sm">{mentor?.intro}</p>
