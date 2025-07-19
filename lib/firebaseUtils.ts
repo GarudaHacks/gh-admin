@@ -455,8 +455,8 @@ export async function fetchMentors(): Promise<FirestoreMentor[]> {
     });
 
     return users;
-  } catch {
-    throw new Error('Failed to fetch mentors');
+  } catch (error){
+    throw new Error(`Error when trying to fetch mentors: ${error}`);
   }
 }
 

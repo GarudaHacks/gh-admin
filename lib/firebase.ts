@@ -30,11 +30,14 @@ googleProvider.setCustomParameters({
   hd: "garudahacks.com",
 });
 
-if (process.env.NEXT_PUBLIC_ENVIRONMENT === "development") {
+let emulatorsConnected = false;
+
+if (process.env.NEXT_PUBLIC_ENVIRONMENT === "development" && !emulatorsConnected) {
   connectAuthEmulator(auth, "http://localhost:9099", {
     disableWarnings: false,
   });
   connectFirestoreEmulator(db, "localhost", 8080);
+  emulatorsConnected = true;
   console.log("Connected to Firebase emulators");
 }
 
