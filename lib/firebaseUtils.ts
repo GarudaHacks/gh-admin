@@ -5,18 +5,24 @@ import {
   getDoc,
   updateDoc,
   query,
-  orderBy,
   Timestamp,
   where,
+  orderBy,
+  addDoc,
+  deleteDoc,
 } from "firebase/firestore";
-import { db, auth } from "./firebase";
+import { db, auth, storage } from "./firebase";
 import {
   FirestoreApplication,
   FirestoreUser,
   CombinedApplicationData,
   PortalConfig,
   Question,
+  FirestoreMentor,
+  MentorshipAppointment,
 } from "./types";
+import { ONE_SLOT_INTERVAL_MINUTES } from "@/config";
+import { getDownloadURL, ref } from "firebase/storage";
 
 export { APPLICATION_STATUS } from "./types";
 export type { CombinedApplicationData } from "./types";
@@ -32,7 +38,7 @@ export async function fetchAllApplications(): Promise<FirestoreApplication[]> {
     const applicationsRef = collection(db, 'applications');
     const q = query(applicationsRef, orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    
+
     const applications: FirestoreApplication[] = [];
     querySnapshot.forEach((doc) => {
       applications.push({
@@ -40,7 +46,7 @@ export async function fetchAllApplications(): Promise<FirestoreApplication[]> {
         ...doc.data()
       } as FirestoreApplication);
     });
-    
+
     return applications;
   } catch (error) {
     console.error('Error fetching applications:', error);
@@ -56,7 +62,7 @@ export async function fetchAllUsers(status?: string): Promise<FirestoreUser[]> {
     const usersRef = collection(db, 'users');
     const firebaseQuery = status ? query(usersRef, where('status', '==', status)) : usersRef;
     const querySnapshot = await getDocs(firebaseQuery);
-    
+
     const users: FirestoreUser[] = [];
     querySnapshot.forEach((doc) => {
       users.push({
@@ -64,7 +70,7 @@ export async function fetchAllUsers(status?: string): Promise<FirestoreUser[]> {
         ...doc.data()
       } as FirestoreUser);
     });
-    
+
     return users;
   } catch {
     throw new Error('Failed to fetch users');
@@ -78,7 +84,7 @@ export async function fetchUserById(userId: string): Promise<FirestoreUser | nul
   try {
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
-    
+
     if (userSnap.exists()) {
       return {
         id: userSnap.id,
@@ -120,15 +126,15 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
     users.forEach(user => {
       usersMap.set(user.id, user);
     });
-    
+
     const combinedData: CombinedApplicationData[] = applications
       .map(application => {
         const user = usersMap.get(application.id);
-        
+
         if (!user) {
           return null;
         }
-        
+
         return {
           id: application.id,
           accommodations: application.accommodations,
@@ -166,7 +172,7 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
       .filter((item): item is CombinedApplicationData => item !== null);
 
     return combinedData;
-    
+
   } catch {
     throw new Error('Failed to fetch applications with users');
   }
@@ -182,7 +188,7 @@ export function getEducationLevel(education: string): string {
     'University / College (Graduate)': 'Graduate',
     'Other': 'Other'
   };
-  
+
   return educationMap[education] || education;
 }
 
@@ -220,7 +226,7 @@ export async function getPortalConfig(): Promise<PortalConfig | null> {
   try {
     const configRef = doc(db, 'config', 'portalConfig');
     const configSnap = await getDoc(configRef);
-    
+
     if (!configSnap.exists()) {
       return null;
     }
@@ -238,7 +244,7 @@ export async function getPortalConfig(): Promise<PortalConfig | null> {
     };
 
     return config;
-    
+
   } catch {
     return null;
   }
@@ -251,7 +257,7 @@ export async function getPortalConfig(): Promise<PortalConfig | null> {
 export async function updatePortalConfig(config: PortalConfig): Promise<boolean> {
   try {
     const configRef = doc(db, 'config', 'portalConfig');
-    
+
     // Convert Date objects to Firestore timestamps
     const firestoreData = {
       applicationCloseDate: Timestamp.fromDate(config.applicationCloseDate),
@@ -264,7 +270,7 @@ export async function updatePortalConfig(config: PortalConfig): Promise<boolean>
 
     await updateDoc(configRef, firestoreData);
     return true;
-    
+
   } catch {
     return false;
   }
@@ -292,22 +298,22 @@ export async function updateUserStatus(userId: string, status: string): Promise<
  * @param evaluationNotes - Optional evaluation notes
  */
 export async function updateApplicationScore(
-  applicationId: string, 
-  score: number, 
+  applicationId: string,
+  score: number,
   evaluationNotes?: string
 ): Promise<boolean> {
   try {
     const applicationRef = doc(db, 'applications', applicationId);
-    
+
     const updateData: { score: number; evaluationNotes?: string; updatedAt: string } = {
       score,
       updatedAt: new Date().toISOString()
     };
-    
+
     if (evaluationNotes && evaluationNotes.trim() !== '') {
       updateData.evaluationNotes = evaluationNotes.trim();
     }
-    
+
     await updateDoc(applicationRef, updateData);
     return true;
   } catch {
@@ -348,7 +354,7 @@ export async function fetchQuestions(): Promise<Map<string, Question>> {
   try {
     const questionsRef = collection(db, 'questions');
     const querySnapshot = await getDocs(questionsRef);
-    
+
     const questions = new Map<string, Question>();
     querySnapshot.forEach((doc) => {
       questions.set(doc.id, {
@@ -356,7 +362,7 @@ export async function fetchQuestions(): Promise<Map<string, Question>> {
         ...doc.data()
       } as Question);
     });
-    
+
     questionsCache = questions;
     return questions;
   } catch (error) {
@@ -372,11 +378,11 @@ export async function getQuestionText(questionId: string): Promise<string> {
   try {
     const questions = await fetchQuestions();
     const question = questions.get(questionId);
-    
+
     if (question) {
       return question.text;
     }
-    
+
     // Fallback: format the ID as a readable title
     return formatQuestionId(questionId);
   } catch (error) {
@@ -428,5 +434,126 @@ export async function updateApplicationAcceptanceEmail(userId: string): Promise<
   } catch (error) {
     console.error(`Error updating application acceptance email for ${userId}:`, error);
     return false;
+  }
+}
+
+/**
+ * Fetch list of mentors from database.
+ */
+export async function fetchMentors(): Promise<FirestoreMentor[]> {
+  try {
+    const usersRef = collection(db, 'users');
+    const firebaseQuery = query(usersRef, where('mentor', '==', true));
+    const querySnapshot = await getDocs(firebaseQuery);
+
+    const users: FirestoreMentor[] = [];
+    querySnapshot.forEach((doc) => {
+      users.push({
+        id: doc.id,
+        ...doc.data()
+      } as FirestoreMentor);
+    });
+
+    return users;
+  } catch (error){
+    throw new Error(`Error when trying to fetch mentors: ${error}`);
+  }
+}
+
+/**
+ * Fetch mentor from db provided user id.
+ */
+export async function fetchMentorById(uid: string): Promise<FirestoreMentor | null> {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      return {
+        id: userSnap.id,
+        ...userSnap.data()
+      } as FirestoreMentor;
+    } else {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch booked mentorship schedules.
+ */
+export async function fetchMentorshipAppointmentsByMentorId(mentorId: string) {
+  try {
+    const mentorshipRef = collection(db, 'mentorships');
+
+    const firebaseQuery = query(
+      mentorshipRef,
+      where('mentorId', '==', mentorId),
+      orderBy('startTime', 'asc')
+    );
+    const querySnapshot = await getDocs(firebaseQuery);
+
+    const users: MentorshipAppointment[] = [];
+    querySnapshot.forEach((doc) => {
+      users.push({
+        id: doc.id,
+        ...doc.data()
+      } as MentorshipAppointment);
+    });
+
+    return users;
+  } catch (error) {
+    console.log("Error", error)
+    throw new Error('Failed to fetch mentors');
+  }
+}
+
+/**
+ * Add mentorship appointment.
+ */
+export async function addMentorshipAppointment(startDate: number, mentorId: string, location: string) {
+  try {
+    var endDate = startDate + (ONE_SLOT_INTERVAL_MINUTES * 60)
+    var mentorshipAppointment: MentorshipAppointment = {
+      startTime: startDate,
+      endTime: endDate,
+      mentorId: mentorId,
+      location: location
+    }
+    const mentorshipRef = collection(db, 'mentorships');
+    const docRef = await addDoc(mentorshipRef, mentorshipAppointment)
+    return docRef.id
+  } catch (error) {
+    console.log(error)
+    throw new Error('Failed to add a new mentorship appointment slot')
+  }
+}
+
+/**
+ * Delete mentorship slot.
+ */
+export async function deleteMentorshipAppointment(mentorshipId: string) {
+  try {
+    const docRef = doc(db, 'mentorships', mentorshipId);
+    await deleteDoc(docRef);
+    return true
+  } catch (error) {
+    console.error(error)
+    throw new Error('Error when deleting a mentorship appointment')
+  }
+}
+
+/**
+ * Fetch mentor image
+ */
+export async function getMentorProfilePicture(mentor_name: string) {
+  try{
+    const imageRef = ref(storage, `/mentors/${mentor_name}.png`)
+    const url = await getDownloadURL(imageRef)
+    return url
+  } catch (error) {
+    return ''
   }
 }

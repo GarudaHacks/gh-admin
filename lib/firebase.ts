@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { connectAuthEmulator, getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,9 +22,23 @@ export const auth = getAuth(app);
 // Initialize Firestore
 export const db = getFirestore(app);
 
+// Initialize storage
+export const storage = getStorage(app)
+
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   hd: "garudahacks.com",
 });
+
+let emulatorsConnected = false;
+
+if (process.env.NEXT_PUBLIC_ENVIRONMENT === "development" && !emulatorsConnected) {
+  connectAuthEmulator(auth, "http://localhost:9099", {
+    disableWarnings: false,
+  });
+  connectFirestoreEmulator(db, "localhost", 8080);
+  emulatorsConnected = true;
+  console.log("Connected to Firebase emulators");
+}
 
 export default app;
