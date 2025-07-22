@@ -44,26 +44,51 @@ export default function MentorDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-bold">Mentor Details</h1>
-        <div className="flex flex-col gap-2 border p-4 rounded-xl">
-          <Image
-            src={mentorUrl || "https://garudahacks.com/images/logo/ghq.png"}
-            alt={`Profile picture of ${mentor?.name || 'mentor'}`}
-            width={200}
-            height={200}
-            onError={() => {
-              setMentorUrl(ghq.src)
-            }}
-            className="rounded-full w-64 aspect-square"
-          />
-          {mentor?.name && <h2 className="text-2xl font-bold">{mentor?.name}</h2>}
-          {mentor?.email && <h3 className="text-muted-foreground">{mentor?.email}</h3>}
-          {mentor?.discordUsername && <p className="">Discord: <span className="text-muted-foreground font-mono w-fit p-1 rounded-full text-sm">{mentor?.discordUsername}</span></p>}
-          {mentor?.specialization && <p className="">Specialization: {mentor?.specialization.toUpperCase()}</p>}
-          <div>
-            <p className="font-semibold text-muted-foreground">Intro</p>
-            <p className="text-sm">{mentor?.intro}</p>
+
+      <div className="flex flex-col gap-6 p-6 max-w-3xl mx-auto">
+        <h1 className="text-2xl font-bold ">Mentor Profile</h1>
+        <div className="flex flex-col md:flex-row gap-6 shadow-lg rounded-xl p-6 border border-gray-100">
+          <div className="flex-shrink-0 flex justify-center">
+            <Image
+              src={mentorUrl || "https://garudahacks.com/images/logo/ghq.png"}
+              alt={`Profile picture of ${mentor?.name || 'mentor'}`}
+              width={160}
+              height={160}
+              onError={() => setMentorUrl(ghq.src)}
+              className="rounded-full w-40 h-40 object-cover border-2 border-gray-200"
+            />
+          </div>
+          <div className="flex flex-col gap-4 w-full">
+            {mentor?.name && (
+              <h2 className="text-2xl font-semibold ">{mentor.name}</h2>
+            )}
+            {mentor?.email && (
+              <p className=" text-sm">
+                <span className="font-medium">Email:</span> {mentor.email}
+              </p>
+            )}
+            {mentor?.discordUsername && (
+              <p className=" text-sm">
+                <span className="font-medium">Discord:</span>{' '}
+                <span className=" font-mono px-2 py-1 rounded-md text-sm">
+                  {mentor.discordUsername}
+                </span>
+              </p>
+            )}
+            {mentor?.specialization && (
+              <p className=" text-sm">
+                <span className="font-medium">Specialization:</span>{' '}
+                <span className="uppercase font-semibold ">
+                  {mentor.specialization}
+                </span>
+              </p>
+            )}
+            {mentor?.intro && (
+              <div className="mt-2">
+                <p className="font-medium ">Introduction</p>
+                <p className="text-sm leading-relaxed">{mentor.intro}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -78,7 +103,7 @@ export default function MentorDetailPage() {
           </button>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {mentorshipAppointments?.map((mentorshipAppointment) => (
             <MentorshipAppointmentCardComponent key={mentorshipAppointment.id} mentorshipAppointment={mentorshipAppointment} />
           ))}

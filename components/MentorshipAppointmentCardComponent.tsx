@@ -26,7 +26,6 @@ export default function MentorshipAppointmentCardComponent({
     try {
       deleteMentorshipAppointment(mentorshipAppointment.id!).then((res) => {
         if (res) {
-          alert('Success deleted mentorship appointment!')
           window.location.reload()
         }
       })
@@ -54,7 +53,7 @@ export default function MentorshipAppointmentCardComponent({
         )}
 
         </div>
-        <p className="text-end text-sm text-muted-foreground">
+        <p className="text-end text-xs text-muted-foreground">
           Mentoring ID: {mentorshipAppointment.id}
         </p>
       </div>
@@ -66,7 +65,6 @@ export default function MentorshipAppointmentCardComponent({
           minutes)
         </span>
       </div>
-      <Separator />
       {mentorshipAppointment.hackerDescription && (
         <div className="text-sm flex flex-col gap-4">
           <p className="text-muted-foreground text-sm">Hacker's Inquiry:</p>
