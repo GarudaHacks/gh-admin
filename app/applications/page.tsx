@@ -41,7 +41,7 @@ export default function Applications() {
   const [isSortDescending, setIsSortDescending] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"evaluate" | "issues">("evaluate");
   const [activeIssueType, setActiveIssueType] = useState<
-    "duplicates" | "oversize-team"
+    "duplicates" | "oversize-team" | "missing-fields"
   >("duplicates");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -586,6 +586,62 @@ export default function Applications() {
     0
   );
 
+  // Issue detection: missing required fields
+  const REQUIRED_FIELDS: { key: keyof CombinedApplicationData; label: string }[] = [
+    { key: "firstName", label: "First Name" },
+    { key: "lastName", label: "Last Name" },
+    { key: "genderIdentity", label: "Gender Identity" },
+    { key: "dateOfBirth", label: "Date of Birth" },
+    { key: "nationality", label: "Nationality" },
+    { key: "countryOfResidence", label: "Country of Residence" },
+    { key: "preferredLanguage", label: "Preferred Language" },
+    { key: "currentOccupation", label: "Current Occupation" },
+    { key: "occupationPlace", label: "School / Company" },
+    { key: "occupationDetail", label: "Major / Position" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+    { key: "teamFormation", label: "Team Formation" },
+    { key: "teamName", label: "Team Name" },
+    { key: "interestedTrack", label: "Interested Track" },
+    { key: "primaryRole", label: "Primary Role" },
+    { key: "roleProficiency", label: "Role Proficiency" },
+    { key: "toolsUsed", label: "Tools Used" },
+    { key: "resume", label: "Resume" },
+    { key: "qDreamCreation", label: "Dream Creation Essay" },
+    { key: "qProudestMoment", label: "Proudest Moment Essay" },
+    { key: "qWhyGarudaHacks", label: "Why Garuda Hacks Essay" },
+    { key: "overnightPlan", label: "Overnight Plan" },
+    { key: "leaveLetter", label: "Leave Letter" },
+    { key: "phoneEmergency", label: "Emergency Phone" },
+    { key: "emergencyWays", label: "Emergency Contact Methods" },
+    { key: "emergencyRelation", label: "Emergency Relation" },
+    { key: "signedConsent", label: "Signed Consent" },
+    { key: "hackathonCount", label: "Hackathon Count" },
+    { key: "ghCount", label: "GH Iterations" },
+    { key: "joinSource", label: "Join Source" },
+    { key: "referralSource", label: "Referral Source" },
+    { key: "joinReason", label: "Join Reason" },
+  ];
+
+  const missingFieldsApps = applicationsOriginal
+    .map((app) => {
+      const missing = REQUIRED_FIELDS.filter((field) => {
+        const val = app[field.key];
+        if (val === undefined || val === null) return true;
+        if (typeof val === "string" && val.trim() === "") return true;
+        if (Array.isArray(val) && val.length === 0) return true;
+        return false;
+      });
+      if (missing.length > 0) {
+        return { application: app, missingFields: missing.map((f) => f.label) };
+      }
+      return null;
+    })
+    .filter(Boolean) as {
+    application: CombinedApplicationData;
+    missingFields: string[];
+  }[];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -620,9 +676,13 @@ export default function Applications() {
           }`}
         >
           Potential Issues
-          {(duplicateGroups.length > 0 || oversizeTeams.length > 0) && (
+          {(duplicateGroups.length > 0 ||
+            oversizeTeams.length > 0 ||
+            missingFieldsApps.length > 0) && (
             <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-400">
-              {duplicateGroups.length + oversizeTeams.length}
+              {duplicateGroups.length +
+                oversizeTeams.length +
+                missingFieldsApps.length}
             </span>
           )}
         </button>
@@ -781,13 +841,13 @@ export default function Applications() {
           {activeTab === "issues" && (
             <>
               <div className="card py-4 px-3 mb-6">
-                <div className="grid grid-cols-2 gap-4 divide-x divide-white/10">
+                <div className="grid grid-cols-3 gap-4 divide-x divide-white/10">
                   <div className="text-center px-2">
                     <div className="text-xl font-bold mb-1 text-amber-400">
                       {duplicateGroups.length}
                     </div>
                     <div className="text-xs text-white/70">
-                      Duplicate Groups ({totalDuplicateApps} apps)
+                      Duplicates ({totalDuplicateApps} apps)
                     </div>
                   </div>
                   <div className="text-center px-2">
@@ -795,7 +855,15 @@ export default function Applications() {
                       {oversizeTeams.length}
                     </div>
                     <div className="text-xs text-white/70">
-                      Oversize Teams (&gt;{MAX_TEAM_SIZE})
+                      Oversize (&gt;{MAX_TEAM_SIZE})
+                    </div>
+                  </div>
+                  <div className="text-center px-2">
+                    <div className="text-xl font-bold mb-1 text-red-400">
+                      {missingFieldsApps.length}
+                    </div>
+                    <div className="text-xs text-white/70">
+                      Missing Fields
                     </div>
                   </div>
                 </div>
@@ -827,7 +895,20 @@ export default function Applications() {
                       : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
                   }`}
                 >
-                  Oversize Teams ({oversizeTeams.length})
+                  Oversize ({oversizeTeams.length})
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveIssueType("missing-fields");
+                    setSelectedApplication(null);
+                  }}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    activeIssueType === "missing-fields"
+                      ? "bg-red-500/20 text-red-400 border border-red-500/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Missing ({missingFieldsApps.length})
                 </button>
               </div>
 
@@ -961,6 +1042,46 @@ export default function Applications() {
                       )}
                     </>
                   )}
+
+                  {activeIssueType === "missing-fields" && (
+                    <>
+                      {missingFieldsApps.length === 0 ? (
+                        <div className="p-6 text-center text-white/70">
+                          No applications with missing required fields
+                        </div>
+                      ) : (
+                        missingFieldsApps.map((entry) => (
+                          <div
+                            key={entry.application.id}
+                            onClick={() =>
+                              handleApplicationSelect(entry.application)
+                            }
+                            className={`p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
+                              selectedApplication?.id === entry.application.id
+                                ? "bg-primary/10 border-primary/30"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-medium text-sm text-white truncate">
+                                {entry.application.firstName ||
+                                  entry.application.email ||
+                                  "Unknown"}{" "}
+                                {entry.application.lastName || ""}
+                              </h4>
+                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/50">
+                                {entry.missingFields.length} missing
+                              </span>
+                            </div>
+                            <p className="text-xs text-red-400/70 truncate">
+                              {entry.missingFields.slice(0, 3).join(", ")}
+                              {entry.missingFields.length > 3 && "..."}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </>
@@ -1021,6 +1142,32 @@ export default function Applications() {
                                 className="text-orange-300 text-sm font-mono bg-orange-900/20 px-2 py-1 rounded"
                               >
                                 {i + 1}. {m}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })()}
+                  {activeTab === "issues" &&
+                    activeIssueType === "missing-fields" &&
+                    (() => {
+                      const entry = missingFieldsApps.find(
+                        (e) => e.application.id === selectedApplication.id
+                      );
+                      if (!entry) return null;
+                      return (
+                        <div className="p-3 bg-red-600/10 border border-red-600/30 rounded-md">
+                          <p className="text-red-400 text-sm font-medium">
+                            {entry.missingFields.length} Required Field
+                            {entry.missingFields.length > 1 ? "s" : ""} Missing
+                          </p>
+                          <ul className="mt-2 space-y-1">
+                            {entry.missingFields.map((field) => (
+                              <li
+                                key={field}
+                                className="text-red-300 text-sm font-mono bg-red-900/20 px-2 py-1 rounded"
+                              >
+                                {field}
                               </li>
                             ))}
                           </ul>

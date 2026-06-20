@@ -1,3 +1,5 @@
+export const eventName = "Garuda Hacks 7.0"
+
 export const EPOCH_START_MENTORING = 1753340400;
 export const EPOCH_ENDS_MENTORING = 1753448400;
 
