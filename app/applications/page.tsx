@@ -39,6 +39,25 @@ export default function Applications() {
   const [searchName, setSearchName] = useState<string>("");
   const [searchSort, setSearchSort] = useState<string>("");
   const [isSortDescending, setIsSortDescending] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"evaluate" | "issues">("evaluate");
+  const [activeIssueType, setActiveIssueType] = useState<
+    "duplicates" | "oversize-team"
+  >("duplicates");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  const MAX_TEAM_SIZE = 4;
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   const onChangeSearchQuery = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchName(e.target.value);
@@ -525,6 +544,48 @@ export default function Applications() {
     (app) => app.status === APPLICATION_STATUS.CONFIRMED_RSVP
   );
 
+  // Issue detection: potential duplicates (same first+last name and phone)
+  const duplicateGroups = (() => {
+    const groups = new Map<string, CombinedApplicationData[]>();
+    for (const app of applicationsOriginal) {
+      const firstName = (app.firstName || "").trim().toLowerCase();
+      const lastName = (app.lastName || "").trim().toLowerCase();
+      const phone = (app.phone || "").trim().replace(/\s+/g, "");
+      if (!firstName || !lastName || !phone) continue;
+      const key = `${firstName}|${lastName}|${phone}`;
+      const group = groups.get(key) || [];
+      group.push(app);
+      groups.set(key, group);
+    }
+    return Array.from(groups.entries())
+      .filter(([, apps]) => apps.length > 1)
+      .map(([key, apps]) => ({ key, applications: apps }));
+  })();
+
+  // Issue detection: oversize teams (more than MAX_TEAM_SIZE members listed)
+  const oversizeTeams = applicationsOriginal
+    .map((app) => {
+      if (!app.teamMembers) return null;
+      const members = app.teamMembers
+        .split(",")
+        .map((m) => m.trim())
+        .filter((m) => m.length > 0);
+      if (members.length > MAX_TEAM_SIZE) {
+        return { application: app, members, count: members.length };
+      }
+      return null;
+    })
+    .filter(Boolean) as {
+    application: CombinedApplicationData;
+    members: string[];
+    count: number;
+  }[];
+
+  const totalDuplicateApps = duplicateGroups.reduce(
+    (sum, g) => sum + g.applications.length,
+    0
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -532,166 +593,441 @@ export default function Applications() {
         subtitle="Evaluate and score participant applications for Garuda Hacks 7.0."
       />
 
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-white/10">
+        <button
+          onClick={() => {
+            setActiveTab("evaluate");
+            setSelectedApplication(null);
+          }}
+          className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+            activeTab === "evaluate"
+              ? "bg-white/10 text-white border-b-2 border-primary"
+              : "text-white/50 hover:text-white/80 hover:bg-white/5"
+          }`}
+        >
+          Evaluate
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab("issues");
+            setSelectedApplication(null);
+          }}
+          className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 ${
+            activeTab === "issues"
+              ? "bg-white/10 text-white border-b-2 border-primary"
+              : "text-white/50 hover:text-white/80 hover:bg-white/5"
+          }`}
+        >
+          Potential Issues
+          {(duplicateGroups.length > 0 || oversizeTeams.length > 0) && (
+            <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-400">
+              {duplicateGroups.length + oversizeTeams.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <div className="card py-4 px-3 mb-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/10">
-              <div className="text-center py-2 md:py-0 px-2">
-                <div
-                  className={`text-xl font-bold mb-1 ${getStatusTextColor(
-                    APPLICATION_STATUS.SUBMITTED
-                  )}`}
-                >
-                  {pendingApplications.length}
-                </div>
-                <div className="text-xs text-white/70">Pending</div>
-              </div>
-              <div className="text-center py-2 md:py-0 px-2">
-                <div
-                  className={`text-xl font-bold mb-1 ${getStatusTextColor(
-                    APPLICATION_STATUS.REJECTED
-                  )}`}
-                >
-                  {rejectedApplications.length}
-                </div>
-                <div className="text-xs text-white/70">Rejected</div>
-              </div>
-              <div className="text-center py-2 md:py-0 px-2">
-                <div
-                  className={`text-xl font-bold mb-1 ${getStatusTextColor(
-                    APPLICATION_STATUS.ACCEPTED
-                  )}`}
-                >
-                  {approvedApplications.length}
-                </div>
-                <div className="text-xs text-white/70">Accepted</div>
-              </div>
-              <div className="text-center py-2 md:py-0 px-2">
-                <div
-                  className={`text-xl font-bold mb-1 ${getStatusTextColor(
-                    APPLICATION_STATUS.CONFIRMED_RSVP
-                  )}`}
-                >
-                  {confirmedRSVPApplications.length}
-                </div>
-                <div className="text-xs text-white/70">Confirmed RSVP</div>
-              </div>
-            </div>
-          </div>
-          <div
-            className="card flex flex-col"
-            style={{ height: "calc(100vh - 400px)" }}
-          >
-            <div className="p-4 flex flex-col gap-2">
-              <input
-                onChange={onChangeSearchQuery}
-                value={searchName}
-                className="input input-bordered input-primary w-full"
-                type="text"
-                placeholder="Search by keyword"
-              />
-              <p className="text-xs text-white/80">
-                Name, email, status, occupation, role, team, nationality,
-                country, track, age.
-              </p>
-
-              <div className="flex flex-row justify-end gap-4">
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm font-bold text-white/75">Sort by</p>
-                  <select
-                    className="bg-transparent text-sm border rounded-lg px-2"
-                    value={searchSort}
-                    onChange={onChangeSearchSort}
-                  >
-                    <option value={"none"}>None</option>
-                    <option value={"firstName"}>First Name</option>
-                    <option value={"lastName"}>Last Name</option>
-                    <option value={"email"}>Email</option>
-                    <option value={"score"}>Score</option>
-                    <option value={"applicationCreatedAt"}>Created At</option>
-                    <option value={"applicationUpdatedAt"}>Updated At</option>
-                  </select>
-                </div>
-                <div className="flex items-center flex-col gap-2">
-                  <p className="text-sm font-bold text-white/75">Desc</p>
-                  <input type="checkbox" onChange={onChangeIsSortDescending} />
-                </div>
-              </div>
-            </div>
-            <div className="p-6 border-b border-white/10 flex-shrink-0">
-              <h3 className="text-lg font-semibold text-white">
-                Applications List ({displayableApplications.length})
-              </h3>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {displayableApplications.length === 0 ? (
-                <div className="p-6 text-center text-white/70">
-                  No applications found
-                </div>
-              ) : (
-                displayableApplications.map((application) => (
-                  <div
-                    key={application.id}
-                    onClick={() => handleApplicationSelect(application)}
-                    className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
-                      selectedApplication?.id === application.id
-                        ? "bg-primary/10 border-primary/30"
-                        : ""
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-medium text-sm text-white truncate">
-                        {application.firstName} {application.lastName}
-                      </h4>
-                      <div className="text-right min-w-[30%] ">
-                        {application.score ? (
-                          <div className="text-sm font-bold text-white">
-                            {application.score}/
-                            {config?.maxApplicationEvaluationScore || 20}
-                          </div>
-                        ) : (
-                          <div className="text-white/50 text-sm">
-                            Not scored
-                          </div>
-                        )}
-                      </div>
+          {activeTab === "evaluate" && (
+            <>
+              <div className="card py-4 px-3 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/10">
+                  <div className="text-center py-2 md:py-0 px-2">
+                    <div
+                      className={`text-xl font-bold mb-1 ${getStatusTextColor(
+                        APPLICATION_STATUS.SUBMITTED
+                      )}`}
+                    >
+                      {pendingApplications.length}
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(
-                          getDisplayStatus(application)
-                        )}`}
+                    <div className="text-xs text-white/70">Pending</div>
+                  </div>
+                  <div className="text-center py-2 md:py-0 px-2">
+                    <div
+                      className={`text-xl font-bold mb-1 ${getStatusTextColor(
+                        APPLICATION_STATUS.REJECTED
+                      )}`}
+                    >
+                      {rejectedApplications.length}
+                    </div>
+                    <div className="text-xs text-white/70">Rejected</div>
+                  </div>
+                  <div className="text-center py-2 md:py-0 px-2">
+                    <div
+                      className={`text-xl font-bold mb-1 ${getStatusTextColor(
+                        APPLICATION_STATUS.ACCEPTED
+                      )}`}
+                    >
+                      {approvedApplications.length}
+                    </div>
+                    <div className="text-xs text-white/70">Accepted</div>
+                  </div>
+                  <div className="text-center py-2 md:py-0 px-2">
+                    <div
+                      className={`text-xl font-bold mb-1 ${getStatusTextColor(
+                        APPLICATION_STATUS.CONFIRMED_RSVP
+                      )}`}
+                    >
+                      {confirmedRSVPApplications.length}
+                    </div>
+                    <div className="text-xs text-white/70">Confirmed RSVP</div>
+                  </div>
+                </div>
+              </div>
+              <div
+                className="card flex flex-col"
+                style={{ height: "calc(100vh - 440px)" }}
+              >
+                <div className="p-4 flex flex-col gap-2">
+                  <input
+                    onChange={onChangeSearchQuery}
+                    value={searchName}
+                    className="input input-bordered input-primary w-full"
+                    type="text"
+                    placeholder="Search by keyword"
+                  />
+                  <p className="text-xs text-white/80">
+                    Name, email, status, occupation, role, team, nationality,
+                    country, track, age.
+                  </p>
+
+                  <div className="flex flex-row justify-end gap-4">
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm font-bold text-white/75">Sort by</p>
+                      <select
+                        className="bg-transparent text-sm border rounded-lg px-2"
+                        value={searchSort}
+                        onChange={onChangeSearchSort}
                       >
-                        {getDisplayStatus(application)}
-                      </span>
+                        <option value={"none"}>None</option>
+                        <option value={"firstName"}>First Name</option>
+                        <option value={"lastName"}>Last Name</option>
+                        <option value={"email"}>Email</option>
+                        <option value={"score"}>Score</option>
+                        <option value={"applicationCreatedAt"}>Created At</option>
+                        <option value={"applicationUpdatedAt"}>Updated At</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center flex-col gap-2">
+                      <p className="text-sm font-bold text-white/75">Desc</p>
+                      <input type="checkbox" onChange={onChangeIsSortDescending} />
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
+                </div>
+                <div className="p-6 border-b border-white/10 flex-shrink-0">
+                  <h3 className="text-lg font-semibold text-white">
+                    Applications List ({displayableApplications.length})
+                  </h3>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {displayableApplications.length === 0 ? (
+                    <div className="p-6 text-center text-white/70">
+                      No applications found
+                    </div>
+                  ) : (
+                    displayableApplications.map((application) => (
+                      <div
+                        key={application.id}
+                        onClick={() => handleApplicationSelect(application)}
+                        className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
+                          selectedApplication?.id === application.id
+                            ? "bg-primary/10 border-primary/30"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium text-sm text-white truncate">
+                            {application.firstName} {application.lastName}
+                          </h4>
+                          <div className="text-right min-w-[30%] ">
+                            {application.score ? (
+                              <div className="text-sm font-bold text-white">
+                                {application.score}/
+                                {config?.maxApplicationEvaluationScore || 20}
+                              </div>
+                            ) : (
+                              <div className="text-white/50 text-sm">
+                                Not scored
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(
+                              getDisplayStatus(application)
+                            )}`}
+                          >
+                            {getDisplayStatus(application)}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
 
-          <button
-            onClick={() => setShowAcceptModal(true)}
-            className="w-full mt-6 px-4 py-3 bg-accent-accessible/20 border-2 border-grey text-grey-500 rounded-lg hover:bg-accent-accessible/30 hover:opacity-80 font-semibold transition-colors"
-          >
-            Bulk Accept
-          </button>
+              <button
+                onClick={() => setShowAcceptModal(true)}
+                className="w-full mt-6 px-4 py-3 bg-accent-accessible/20 border-2 border-grey text-grey-500 rounded-lg hover:bg-accent-accessible/30 hover:opacity-80 font-semibold transition-colors"
+              >
+                Bulk Accept
+              </button>
+            </>
+          )}
+
+          {activeTab === "issues" && (
+            <>
+              <div className="card py-4 px-3 mb-6">
+                <div className="grid grid-cols-2 gap-4 divide-x divide-white/10">
+                  <div className="text-center px-2">
+                    <div className="text-xl font-bold mb-1 text-amber-400">
+                      {duplicateGroups.length}
+                    </div>
+                    <div className="text-xs text-white/70">
+                      Duplicate Groups ({totalDuplicateApps} apps)
+                    </div>
+                  </div>
+                  <div className="text-center px-2">
+                    <div className="text-xl font-bold mb-1 text-orange-400">
+                      {oversizeTeams.length}
+                    </div>
+                    <div className="text-xs text-white/70">
+                      Oversize Teams (&gt;{MAX_TEAM_SIZE})
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Issue sub-tabs */}
+              <div className="flex gap-1 mb-4">
+                <button
+                  onClick={() => {
+                    setActiveIssueType("duplicates");
+                    setSelectedApplication(null);
+                  }}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    activeIssueType === "duplicates"
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Duplicates ({duplicateGroups.length})
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveIssueType("oversize-team");
+                    setSelectedApplication(null);
+                  }}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    activeIssueType === "oversize-team"
+                      ? "bg-orange-500/20 text-orange-400 border border-orange-500/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Oversize Teams ({oversizeTeams.length})
+                </button>
+              </div>
+
+              <div
+                className="card flex flex-col"
+                style={{ height: "calc(100vh - 480px)" }}
+              >
+                <div className="flex-1 overflow-y-auto">
+                  {activeIssueType === "duplicates" && (
+                    <>
+                      {duplicateGroups.length === 0 ? (
+                        <div className="p-6 text-center text-white/70">
+                          No potential duplicates found
+                        </div>
+                      ) : (
+                        duplicateGroups.map((group) => {
+                          const isExpanded = expandedGroups.has(group.key);
+                          const firstApp = group.applications[0];
+                          return (
+                            <div
+                              key={group.key}
+                              className="border-b border-white/10"
+                            >
+                              <button
+                                onClick={() => toggleGroup(group.key)}
+                                className="w-full p-4 text-left hover:bg-white/5 transition-colors"
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <h4 className="font-medium text-sm text-white">
+                                      {firstApp.firstName} {firstApp.lastName}
+                                    </h4>
+                                    <p className="text-xs text-white/50 mt-0.5">
+                                      {firstApp.phone}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/50">
+                                      {group.applications.length} entries
+                                    </span>
+                                    <svg
+                                      className={`w-4 h-4 text-white/50 transition-transform ${
+                                        isExpanded ? "rotate-180" : ""
+                                      }`}
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 9l-7 7-7-7"
+                                      />
+                                    </svg>
+                                  </div>
+                                </div>
+                              </button>
+                              {isExpanded &&
+                                group.applications.map((app) => (
+                                  <div
+                                    key={app.id}
+                                    onClick={() =>
+                                      handleApplicationSelect(app)
+                                    }
+                                    className={`pl-8 pr-4 py-3 cursor-pointer transition-colors hover:bg-white/5 border-t border-white/5 ${
+                                      selectedApplication?.id === app.id
+                                        ? "bg-primary/10"
+                                        : ""
+                                    }`}
+                                  >
+                                    <div className="flex justify-between items-center">
+                                      <div>
+                                        <p className="text-sm text-white/80">
+                                          {app.email}
+                                        </p>
+                                        <p className="text-xs text-white/40 mt-0.5">
+                                          {app.teamName || "No team"}
+                                        </p>
+                                      </div>
+                                      <span
+                                        className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(
+                                          getDisplayStatus(app)
+                                        )}`}
+                                      >
+                                        {getDisplayStatus(app)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          );
+                        })
+                      )}
+                    </>
+                  )}
+
+                  {activeIssueType === "oversize-team" && (
+                    <>
+                      {oversizeTeams.length === 0 ? (
+                        <div className="p-6 text-center text-white/70">
+                          No oversize teams found
+                        </div>
+                      ) : (
+                        oversizeTeams.map((entry) => (
+                          <div
+                            key={entry.application.id}
+                            onClick={() =>
+                              handleApplicationSelect(entry.application)
+                            }
+                            className={`p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
+                              selectedApplication?.id === entry.application.id
+                                ? "bg-primary/10 border-primary/30"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-medium text-sm text-white truncate">
+                                {entry.application.firstName}{" "}
+                                {entry.application.lastName}
+                              </h4>
+                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-orange-500/20 text-orange-400 border border-orange-500/50">
+                                {entry.count} members
+                              </span>
+                            </div>
+                            <p className="text-xs text-white/50 truncate">
+                              {entry.application.teamName || "No team name"}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="lg:col-span-2">
           <div
             className="card flex flex-col"
-            style={{ height: "calc(100vh - 240px)" }}
+            style={{ height: "calc(100vh - 280px)" }}
           >
             <div className="p-6 border-b border-white/10 flex-shrink-0">
               <h3 className="text-lg font-semibold text-white">
-                Application Evaluator
+                {activeTab === "evaluate"
+                  ? "Application Evaluator"
+                  : "Application Detail"}
               </h3>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
               {selectedApplication ? (
                 <div className="space-y-6">
+                  {/* Issue banners (only shown on issues tab) */}
+                  {activeTab === "issues" &&
+                    activeIssueType === "duplicates" && (
+                      <div className="p-3 bg-amber-600/10 border border-amber-600/30 rounded-md">
+                        <p className="text-amber-400 text-sm font-medium">
+                          Potential Duplicate
+                        </p>
+                        <p className="text-amber-400/70 text-xs mt-1">
+                          This application shares the same name and phone number
+                          with another entry.
+                        </p>
+                      </div>
+                    )}
+                  {activeTab === "issues" &&
+                    activeIssueType === "oversize-team" &&
+                    (() => {
+                      const members = (
+                        selectedApplication.teamMembers || ""
+                      )
+                        .split(",")
+                        .map((m) => m.trim())
+                        .filter((m) => m.length > 0);
+                      return (
+                        <div className="p-3 bg-orange-600/10 border border-orange-600/30 rounded-md">
+                          <p className="text-orange-400 text-sm font-medium">
+                            Oversize Team &mdash; {members.length} members
+                            listed (max {MAX_TEAM_SIZE})
+                          </p>
+                          <p className="text-orange-400/70 text-xs mt-1">
+                            The applicant may or may not be included in this
+                            list.
+                          </p>
+                          <ul className="mt-2 space-y-1">
+                            {members.map((m, i) => (
+                              <li
+                                key={i}
+                                className="text-orange-300 text-sm font-mono bg-orange-900/20 px-2 py-1 rounded"
+                              >
+                                {i + 1}. {m}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })()}
+
                   {/* PROFILE */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
