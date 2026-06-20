@@ -9,6 +9,7 @@ import {
   debugAuthToken,
   updateUserStatus,
   updateApplicationScore,
+  resetApplicationStatus,
   getPortalConfig,
 } from "@/lib/firebaseUtils";
 import {
@@ -35,6 +36,7 @@ export default function Applications() {
   const [evaluationNotes, setEvaluationNotes] = useState<string>("");
   const [rejecting, setRejecting] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [searchName, setSearchName] = useState<string>("");
   const [searchSort, setSearchSort] = useState<string>("");
@@ -383,6 +385,45 @@ export default function Applications() {
     }
   };
 
+  const handleResetStatus = async () => {
+    if (!selectedApplication) return;
+
+    try {
+      setResetting(true);
+      const success = await resetApplicationStatus(selectedApplication.id);
+
+      if (success) {
+        const updatedRetryCount = (selectedApplication.retryCount || 0) + 1;
+
+        setApplications((prev) =>
+          prev.map((app) =>
+            app.id === selectedApplication.id
+              ? { ...app, status: APPLICATION_STATUS.NOT_APPLICABLE, retryCount: updatedRetryCount }
+              : app
+          )
+        );
+
+        setApplicationsOriginal((prev) =>
+          prev.map((app) =>
+            app.id === selectedApplication.id
+              ? { ...app, status: APPLICATION_STATUS.NOT_APPLICABLE, retryCount: updatedRetryCount }
+              : app
+          )
+        );
+
+        setSelectedApplication((prev) =>
+          prev ? { ...prev, status: APPLICATION_STATUS.NOT_APPLICABLE, retryCount: updatedRetryCount } : null
+        );
+      } else {
+        console.error("Failed to reset application status");
+      }
+    } catch (error) {
+      console.error("Error resetting application status:", error);
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const getDisplayStatus = (application: CombinedApplicationData): string => {
     if (
       application.status === APPLICATION_STATUS.SUBMITTED &&
@@ -655,6 +696,37 @@ export default function Applications() {
     missingFields: string[];
   }[];
 
+  const getApplicationIssues = (appId: string): ("duplicates" | "oversize-team" | "missing-fields")[] => {
+    const issues: ("duplicates" | "oversize-team" | "missing-fields")[] = [];
+    if (duplicateGroups.some((g) => g.applications.some((a) => a.id === appId))) {
+      issues.push("duplicates");
+    }
+    if (oversizeTeams.some((e) => e.application.id === appId)) {
+      issues.push("oversize-team");
+    }
+    if (missingFieldsApps.some((e) => e.application.id === appId)) {
+      issues.push("missing-fields");
+    }
+    return issues;
+  };
+
+  const navigateToIssue = (appId: string, issueType: "duplicates" | "oversize-team" | "missing-fields") => {
+    setActiveTab("issues");
+    setActiveIssueType(issueType);
+    const app = applicationsOriginal.find((a) => a.id === appId);
+    if (app) {
+      setSelectedApplication(app);
+      setEvaluationScore(app.score?.toString() || "");
+      setEvaluationNotes(app.evaluationNotes || "");
+    }
+    if (issueType === "duplicates") {
+      const group = duplicateGroups.find((g) => g.applications.some((a) => a.id === appId));
+      if (group) {
+        setExpandedGroups((prev) => new Set(prev).add(group.key));
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -835,6 +907,25 @@ export default function Applications() {
                           >
                             {getDisplayStatus(application)}
                           </span>
+                          {(() => {
+                            const issues = getApplicationIssues(application.id);
+                            if (issues.length === 0) return null;
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigateToIssue(application.id, issues[0]);
+                                }}
+                                className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/50 hover:bg-amber-500/30 transition-colors"
+                                title={`Issues: ${issues.join(", ")}`}
+                              >
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                </svg>
+                                {issues.length}
+                              </button>
+                            );
+                          })()}
                         </div>
                       </div>
                     ))
@@ -1188,6 +1279,24 @@ export default function Applications() {
                       );
                     })()}
 
+                  {/* Reset Status (only in issues tab) */}
+                  {activeTab === "issues" && (
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={handleResetStatus}
+                        disabled={resetting || selectedApplication.status === APPLICATION_STATUS.NOT_APPLICABLE}
+                        className="px-4 py-2.5 bg-amber-600/20 border border-amber-600/50 text-amber-400 rounded-md hover:bg-amber-600/30 hover:text-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold text-sm"
+                      >
+                        {resetting ? "Resetting..." : "Reset Status to Not Applicable"}
+                      </button>
+                      {selectedApplication.retryCount !== undefined && selectedApplication.retryCount > 0 && (
+                        <span className="text-xs text-white/50">
+                          Retry count: {selectedApplication.retryCount}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   {/* PROFILE */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -1196,6 +1305,10 @@ export default function Applications() {
                         {selectedApplication.lastName}
                       </h4>
                       <div className="space-y-1">
+                        <InfoRow
+                          label="User ID"
+                          value={selectedApplication.id}
+                        />
                         <InfoRow
                           label="Email"
                           value={selectedApplication.email}

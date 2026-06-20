@@ -45,6 +45,9 @@ export interface FirestoreApplication {
   // Evaluation
   score?: number;
   evaluationNotes?: string;
+
+  // Retry
+  retryCount?: number;
 }
 
 export interface FirestoreUser {
@@ -176,6 +179,9 @@ export interface CombinedApplicationData {
   // Evaluation
   score?: number;
   evaluationNotes?: string;
+
+  // Retry
+  retryCount?: number;
 }
 
 export interface PortalConfig {

@@ -197,6 +197,9 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
           // Evaluation
           score: application.score || null,
           evaluationNotes: application.evaluationNotes || null,
+
+          // Retry
+          retryCount: application.retryCount || 0,
         } as CombinedApplicationData;
       })
       .filter((item): item is CombinedApplicationData => item !== null);
@@ -363,6 +366,26 @@ export async function updateApplicationStatus(userId: string, status: string): P
     return true;
   } catch (error) {
     console.error(`Error updating application status for ${userId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Resets a user's status to NOT_APPLICABLE and increments the application's retryCount by 1.
+ */
+export async function resetApplicationStatus(userId: string): Promise<boolean> {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, { status: 'not applicable' });
+
+    const applicationRef = doc(db, 'applications', userId);
+    const applicationSnap = await getDoc(applicationRef);
+    const currentRetryCount = applicationSnap.exists() ? (applicationSnap.data().retryCount || 0) : 0;
+    await updateDoc(applicationRef, { retryCount: currentRetryCount + 1 });
+
+    return true;
+  } catch (error) {
+    console.error(`Error resetting application status for ${userId}:`, error);
     return false;
   }
 }
