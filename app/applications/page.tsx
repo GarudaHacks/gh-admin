@@ -603,9 +603,6 @@ export default function Applications() {
     { key: "teamFormation", label: "Team Formation" },
     { key: "teamName", label: "Team Name" },
     { key: "interestedTrack", label: "Interested Track" },
-    { key: "primaryRole", label: "Primary Role" },
-    { key: "roleProficiency", label: "Role Proficiency" },
-    { key: "toolsUsed", label: "Tools Used" },
     { key: "resume", label: "Resume" },
     { key: "qDreamCreation", label: "Dream Creation Essay" },
     { key: "qProudestMoment", label: "Proudest Moment Essay" },
@@ -623,15 +620,31 @@ export default function Applications() {
     { key: "joinReason", label: "Join Reason" },
   ];
 
+  const SPEED_DATING_FIELDS: { key: keyof CombinedApplicationData; label: string }[] = [
+    { key: "primaryRole", label: "Primary Role" },
+    { key: "roleProficiency", label: "Role Proficiency" },
+    { key: "toolsUsed", label: "Tools Used" },
+  ];
+
+  const isFieldEmpty = (val: CombinedApplicationData[keyof CombinedApplicationData]) => {
+    if (val === undefined || val === null) return true;
+    if (typeof val === "string" && val.trim() === "") return true;
+    if (Array.isArray(val) && val.length === 0) return true;
+    return false;
+  };
+
   const missingFieldsApps = applicationsOriginal
     .map((app) => {
-      const missing = REQUIRED_FIELDS.filter((field) => {
-        const val = app[field.key];
-        if (val === undefined || val === null) return true;
-        if (typeof val === "string" && val.trim() === "") return true;
-        if (Array.isArray(val) && val.length === 0) return true;
-        return false;
-      });
+      const choosesSpeedDating =
+        (app.teamFormation || "").toLowerCase().includes("speed dating");
+
+      const fieldsToCheck = choosesSpeedDating
+        ? [...REQUIRED_FIELDS, ...SPEED_DATING_FIELDS]
+        : REQUIRED_FIELDS;
+
+      const missing = fieldsToCheck.filter((field) =>
+        isFieldEmpty(app[field.key])
+      );
       if (missing.length > 0) {
         return { application: app, missingFields: missing.map((f) => f.label) };
       }
