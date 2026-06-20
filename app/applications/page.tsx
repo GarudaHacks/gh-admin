@@ -5,13 +5,10 @@ import PageHeader from "@/components/PageHeader";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   fetchApplicationsWithUsers,
-  getEducationLevel,
   formatApplicationDate,
-  getYearSuffix,
   debugAuthToken,
   updateUserStatus,
   updateApplicationScore,
-  getQuestionText,
   getPortalConfig,
 } from "@/lib/firebaseUtils";
 import {
@@ -39,85 +36,39 @@ export default function Applications() {
   const [rejecting, setRejecting] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
-  const [questionTexts, setQuestionTexts] = useState<{
-    motivation: string;
-    bigProblem: string;
-    interestingProject: string;
-    listTeammates: string;
-  }>({
-    motivation: "Motivation",
-    bigProblem: "Problem to Solve",
-    interestingProject: "Interesting Project",
-    listTeammates: "List of Teammates",
-  });
   const [searchName, setSearchName] = useState<string>("");
   const [searchSort, setSearchSort] = useState<string>("");
   const [isSortDescending, setIsSortDescending] = useState<boolean>(false);
 
   const onChangeSearchQuery = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchName(e.target.value);
+    const q = e.target.value.toLowerCase();
 
-    // possible for gender
-    const genderFiltered = applicationsOriginal.filter((app) =>
-      app.gender_identity?.toLowerCase().includes(e.target.value.toLowerCase())
-    );
+    if (!q) {
+      setApplications([...applicationsOriginal]);
+      return;
+    }
 
-    // for university
-    const uniFiltered = applicationsOriginal.filter((app) =>
-      app.school?.toLowerCase().includes(e.target.value.toLowerCase())
-    );
-
-    // for status
-    const statusFiltered = applicationsOriginal.filter((app) =>
-      app.status?.toLowerCase().includes(e.target.value.toLowerCase())
-    );
-
-    // for name
-    const nameFiltered = applicationsOriginal.filter((app) =>
-      app.firstName?.toLowerCase().includes(e.target.value.toLowerCase())
-    );
-
-    // for last name
-    const lastNameFiltered = applicationsOriginal.filter((app) =>
-      app.lastName?.toLowerCase().includes(e.target.value.toLowerCase())
-    );
-
-    // for email
-    const emailFiltered = applicationsOriginal.filter((app) =>
-      app.email?.toLowerCase().includes(e.target.value.toLowerCase())
-    );
-
-    // for desired role
-    const roleFiltered = applicationsOriginal.filter((app) =>
-      app.desiredRoles?.toLowerCase().includes(e.target.value.toLowerCase())
-    );
-
-    // for age
-    const ageFiltered = applicationsOriginal.filter((app) => {
-      const age = calculateAge(app.date_of_birth);
-      return age.toString().includes(e.target.value);
+    const results = applicationsOriginal.filter((app) => {
+      const age = calculateAge(app.dateOfBirth).toString();
+      return [
+        app.firstName,
+        app.lastName,
+        app.email,
+        app.status,
+        app.genderIdentity,
+        app.occupationPlace,
+        app.currentOccupation,
+        app.primaryRole,
+        app.teamName,
+        app.nationality,
+        app.countryOfResidence,
+        app.interestedTrack,
+        age,
+      ].some((field) => field?.toLowerCase().includes(q));
     });
 
-    // for year
-    const schoolYearFiltered = applicationsOriginal.filter((app) =>
-      app.year?.toString().includes(e.target.value)
-    );
-
-    const allResults = genderFiltered.concat(
-      uniFiltered,
-      statusFiltered,
-      nameFiltered,
-      lastNameFiltered,
-      emailFiltered,
-      roleFiltered,
-      ageFiltered,
-      schoolYearFiltered,
-      schoolYearFiltered
-    );
-    const uniqueResults = allResults.filter(
-      (app, index, self) => index === self.findIndex((a) => a.id === app.id)
-    );
-    setApplications(uniqueResults);
+    setApplications(results);
   };
 
   const getSortValue = (app: CombinedApplicationData, sortField: string) => {
@@ -179,7 +130,6 @@ export default function Applications() {
   useEffect(() => {
     loadConfig();
     loadApplications();
-    loadQuestionTexts();
   }, []);
 
   const loadConfig = async () => {
@@ -217,31 +167,6 @@ export default function Applications() {
     }
   };
 
-  const loadQuestionTexts = async () => {
-    try {
-      const [
-        motivationText,
-        bigProblemText,
-        interestingProjectText,
-        listTeammatesText,
-      ] = await Promise.all([
-        getQuestionText("motivation"),
-        getQuestionText("bigProblem"),
-        getQuestionText("interestingProject"),
-        getQuestionText("list_teammates"),
-      ]);
-
-      setQuestionTexts({
-        motivation: motivationText,
-        bigProblem: bigProblemText,
-        interestingProject: interestingProjectText,
-        listTeammates: listTeammatesText,
-      });
-    } catch (error) {
-      console.error("Error loading question texts:", error);
-    }
-  };
-
   const handleApplicationSelect = (application: CombinedApplicationData) => {
     setSelectedApplication(application);
     setEvaluationScore(application.score?.toString() || "");
@@ -261,7 +186,6 @@ export default function Applications() {
         );
 
         if (success) {
-          // Update local state to reflect the changes
           setApplications((prev) =>
             prev.map((app) =>
               app.id === selectedApplication.id
@@ -270,12 +194,10 @@ export default function Applications() {
             )
           );
 
-          // Update selected application
           setSelectedApplication((prev) =>
             prev ? { ...prev, score, evaluationNotes } : null
           );
 
-          // Clear the notes field after successful submission
           setEvaluationNotes("");
         } else {
           console.error("Failed to save score and notes");
@@ -496,12 +418,74 @@ export default function Applications() {
     }
   };
 
+  const InfoRow = ({
+    label,
+    value,
+  }: {
+    label: string;
+    value?: string | null;
+  }) =>
+    value ? (
+      <p className="text-white/70 text-sm">
+        <span className="font-medium text-white/90">{label}:</span> {value}
+      </p>
+    ) : null;
+
+  const LinkRow = ({
+    href,
+    label,
+  }: {
+    href?: string | null;
+    label: string;
+  }) =>
+    href ? (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 text-accent-accessible hover:text-accent-accessible/80 text-sm"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
+            clipRule="evenodd"
+          />
+        </svg>
+        {label}
+      </a>
+    ) : null;
+
+  const SectionHeader = ({ title }: { title: string }) => (
+    <h5 className="font-semibold text-white mb-2 text-sm border-b border-white/10 pb-1">
+      {title}
+    </h5>
+  );
+
+  const EssayField = ({
+    label,
+    value,
+  }: {
+    label: string;
+    value?: string | null;
+  }) => (
+    <div>
+      <div className="font-semibold text-white mb-2 text-sm">{label}</div>
+      <textarea
+        value={value || "No response"}
+        readOnly
+        className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
+        style={{ maxHeight: "500px", minHeight: "150px" }}
+      />
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="space-y-6">
         <PageHeader
           title="Applications"
-          subtitle="Evaluate and score participant applications for Garuda Hacks 6.0."
+          subtitle="Evaluate and score participant applications for Garuda Hacks 7.0."
         />
         <LoadingSpinner text="Loading applications..." />
       </div>
@@ -513,7 +497,7 @@ export default function Applications() {
       <div className="space-y-6">
         <PageHeader
           title="Applications"
-          subtitle="Evaluate and score participant applications for Garuda Hacks 6.0."
+          subtitle="Evaluate and score participant applications for Garuda Hacks 7.0."
         />
         <div className="card p-6 text-center">
           <div className="text-destructive mb-4">{error}</div>
@@ -531,9 +515,6 @@ export default function Applications() {
   const approvedApplications = applications.filter(
     (app) => app.status === APPLICATION_STATUS.ACCEPTED
   );
-  const waitlistedApplications = applications.filter(
-    (app) => app.status === APPLICATION_STATUS.WAITLISTED
-  );
   const rejectedApplications = applications.filter(
     (app) => app.status === APPLICATION_STATUS.REJECTED
   );
@@ -548,7 +529,7 @@ export default function Applications() {
     <div className="space-y-6">
       <PageHeader
         title="Applications"
-        subtitle="Evaluate and score participant applications for Garuda Hacks 6.0."
+        subtitle="Evaluate and score participant applications for Garuda Hacks 7.0."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -565,16 +546,6 @@ export default function Applications() {
                 </div>
                 <div className="text-xs text-white/70">Pending</div>
               </div>
-              {/* <div className="text-center py-2 md:py-0 px-2">
-                <div
-                  className={`text-xl font-bold mb-1 ${getStatusTextColor(
-                    APPLICATION_STATUS.WAITLISTED
-                  )}`}
-                >
-                  {waitlistedApplications.length}
-                </div>
-                <div className="text-xs text-white/70">Waitlist</div>
-              </div> */}
               <div className="text-center py-2 md:py-0 px-2">
                 <div
                   className={`text-xl font-bold mb-1 ${getStatusTextColor(
@@ -620,8 +591,8 @@ export default function Applications() {
                 placeholder="Search by keyword"
               />
               <p className="text-xs text-white/80">
-                Support name, email, status, university, gender, role, age,
-                school year.
+                Name, email, status, occupation, role, team, nationality,
+                country, track, age.
               </p>
 
               <div className="flex flex-row justify-end gap-4">
@@ -652,15 +623,7 @@ export default function Applications() {
                 Applications List ({displayableApplications.length})
               </h3>
             </div>
-            <div
-              className="flex-1 overflow-y-auto"
-              // style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              {/* <style jsx>{`
-                div::-webkit-scrollbar {
-                  display: none;
-                }
-              `}</style> */}
+            <div className="flex-1 overflow-y-auto">
               {displayableApplications.length === 0 ? (
                 <div className="p-6 text-center text-white/70">
                   No applications found
@@ -729,242 +692,246 @@ export default function Applications() {
             <div className="flex-1 overflow-y-auto p-6">
               {selectedApplication ? (
                 <div className="space-y-6">
+                  {/* PROFILE */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h4 className="text-xl font-bold text-white mb-2">
-                        {selectedApplication.firstName}
+                        {selectedApplication.firstName}{" "}
+                        {selectedApplication.lastName}
                       </h4>
-                      <div className="space-y-1 text-sm">
-                        <p className="text-white/70">
-                          <span className="font-medium">Email:</span>{" "}
-                          {selectedApplication.email}
-                        </p>
-                        <p className="text-white/70">
-                          <span className="font-medium">Gender:</span>{" "}
-                          {selectedApplication.gender_identity}
-                        </p>
-                        <p className="text-white/70">
-                          <span className="font-medium">School:</span>{" "}
-                          {selectedApplication.school}
-                        </p>
-                        <p className="text-white/70">
-                          <span className="font-medium">Education:</span>{" "}
-                          {getEducationLevel(selectedApplication.education)}
-                        </p>
-                        <p className="text-white/70">
-                          <span className="font-medium">Year:</span>{" "}
-                          {getYearSuffix(selectedApplication.year)}
-                        </p>
-                        <p className="text-white/70">
-                          <span className="font-medium">Age:</span>{" "}
-                          {calculateAge(selectedApplication.date_of_birth)}
-                        </p>
-                        <p className="text-white/70">
-                          <span className="font-medium">Hackathons:</span>{" "}
-                          {selectedApplication.hackathonCount} previous
-                        </p>
-                        <p className="text-white/70">
-                          <span className="font-medium">Desired Roles:</span>{" "}
-                          {selectedApplication.desiredRoles}
-                        </p>
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Email"
+                          value={selectedApplication.email}
+                        />
+                        <InfoRow
+                          label="Phone"
+                          value={selectedApplication.phone}
+                        />
+                        <InfoRow
+                          label="Gender"
+                          value={selectedApplication.genderIdentity}
+                        />
+                        <InfoRow
+                          label="Age"
+                          value={`${calculateAge(selectedApplication.dateOfBirth)}`}
+                        />
+                        <InfoRow
+                          label="Date of Birth"
+                          value={selectedApplication.dateOfBirth}
+                        />
+                        <InfoRow
+                          label="Nationality"
+                          value={selectedApplication.nationality}
+                        />
+                        <InfoRow
+                          label="Country of Residence"
+                          value={selectedApplication.countryOfResidence}
+                        />
+                        <InfoRow
+                          label="Preferred Language"
+                          value={selectedApplication.preferredLanguage}
+                        />
                       </div>
                     </div>
                     <div>
-                      <h5 className="font-semibold text-white mb-2">
-                        Links & Documents
-                      </h5>
-                      <div className="space-y-2">
-                        {selectedApplication.resume && (
-                          <a
-                            href={selectedApplication.resume}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 text-accent-accessible hover:text-accent-accessible/80 text-sm"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                            Resume (PDF)
-                          </a>
-                        )}
-                        {selectedApplication.portfolio &&
-                          selectedApplication.portfolio !== "X" && (
-                            <a
-                              href={selectedApplication.portfolio}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 text-accent-accessible hover:text-accent-accessible/80 text-sm"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                              Portfolio
-                            </a>
-                          )}
-                        {selectedApplication.github &&
-                          selectedApplication.github !== "X" && (
-                            <a
-                              href={selectedApplication.github}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 text-accent-accessible hover:text-accent-accessible/80 text-sm"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                              GitHub
-                            </a>
-                          )}
-                        {selectedApplication.linkedin &&
-                          selectedApplication.linkedin !== "X" && (
-                            <a
-                              href={selectedApplication.linkedin}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 text-accent-accessible hover:text-accent-accessible/80 text-sm"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M16.338 16.338H13.67V12.16c0-.995-.017-2.277-1.387-2.277-1.39 0-1.601 1.086-1.601 2.207v4.248H8.014v-8.59h2.559v1.174h.037c.356-.675 1.227-1.387 2.526-1.387 2.703 0 3.203 1.778 3.203 4.092v4.711zM5.005 6.575a1.548 1.548 0 11-.003-3.096 1.548 1.548 0 01.003 3.096zm-1.337 9.763H6.34v-8.59H3.667v8.59zM17.668 1H2.328C1.595 1 1 1.581 1 2.298v15.403C1 18.418 1.595 19 2.328 19h15.34c.734 0 1.332-.582 1.332-1.299V2.298C19 1.581 18.402 1 17.668 1z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                              LinkedIn
-                            </a>
-                          )}
+                      <SectionHeader title="Occupation" />
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Level"
+                          value={selectedApplication.currentOccupation}
+                        />
+                        <InfoRow
+                          label="School / Company"
+                          value={selectedApplication.occupationPlace}
+                        />
+                        <InfoRow
+                          label="Major / Position"
+                          value={selectedApplication.occupationDetail}
+                        />
+                        <InfoRow
+                          label="University Year"
+                          value={selectedApplication.universityYear}
+                        />
                       </div>
                     </div>
                   </div>
 
+                  {/* TEAM */}
                   <div>
-                    <div className="font-semibold text-white mb-2 text-sm">
-                      {questionTexts.motivation}
+                    <SectionHeader title="Team" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Team Formation"
+                          value={selectedApplication.teamFormation}
+                        />
+                        <InfoRow
+                          label="Team Name"
+                          value={selectedApplication.teamName}
+                        />
+                        <InfoRow
+                          label="Interested Track"
+                          value={selectedApplication.interestedTrack}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Team Members"
+                          value={selectedApplication.teamMembers}
+                        />
+                      </div>
                     </div>
-                    <textarea
-                      value={selectedApplication.motivation || "No response"}
-                      readOnly
-                      className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
-                      style={{ maxHeight: "500px", minHeight: "250px" }}
-                    />
                   </div>
 
+                  {/* SPEED DATING */}
                   <div>
-                    <div className="font-semibold text-white mb-2 text-sm">
-                      {questionTexts.bigProblem}
+                    <SectionHeader title="Speed Dating" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Primary Role"
+                          value={selectedApplication.primaryRole}
+                        />
+                        <InfoRow
+                          label="Proficiency"
+                          value={selectedApplication.roleProficiency}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Tools / Languages"
+                          value={selectedApplication.toolsUsed}
+                        />
+                        <InfoRow
+                          label="Past Projects"
+                          value={selectedApplication.pastProjects}
+                        />
+                      </div>
                     </div>
-                    <textarea
-                      value={selectedApplication.bigProblem || "No response"}
-                      readOnly
-                      className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
-                      style={{ maxHeight: "500px", minHeight: "250px" }}
-                    />
                   </div>
 
+                  {/* LINKS & DOCUMENTS */}
                   <div>
-                    <div className="font-semibold text-white mb-2 text-sm">
-                      {questionTexts.interestingProject}
+                    <SectionHeader title="Links & Documents" />
+                    <div className="flex flex-wrap gap-4">
+                      <LinkRow
+                        href={selectedApplication.resume}
+                        label="Resume (PDF)"
+                      />
+                      <LinkRow
+                        href={selectedApplication.github}
+                        label="GitHub"
+                      />
+                      <LinkRow
+                        href={selectedApplication.linkedin}
+                        label="LinkedIn"
+                      />
+                      <LinkRow
+                        href={selectedApplication.devpost}
+                        label="DevPost"
+                      />
+                      <LinkRow
+                        href={selectedApplication.signedConsent}
+                        label="Signed Consent Form"
+                      />
                     </div>
-                    <textarea
-                      value={
-                        selectedApplication.interestingProject || "No response"
-                      }
-                      readOnly
-                      className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
-                      style={{ maxHeight: "500px", minHeight: "250px" }}
-                    />
                   </div>
 
+                  {/* ESSAY QUESTIONS */}
+                  <EssayField
+                    label="Your Dream Creation"
+                    value={selectedApplication.qDreamCreation}
+                  />
+                  <EssayField
+                    label="Your Proudest Moment"
+                    value={selectedApplication.qProudestMoment}
+                  />
+                  <EssayField
+                    label="Why Garuda Hacks"
+                    value={selectedApplication.qWhyGarudaHacks}
+                  />
+
+                  {/* LOGISTICS */}
                   <div>
-                    <h5 className="font-semibold text-white mb-2">
-                      Additional Info
-                    </h5>
+                    <SectionHeader title="Logistics" />
+                    <div className="space-y-1">
+                      <InfoRow
+                        label="Overnight Plan"
+                        value={selectedApplication.overnightPlan}
+                      />
+                      <InfoRow
+                        label="Leave Letter"
+                        value={selectedApplication.leaveLetter}
+                      />
+                    </div>
+                  </div>
+
+                  {/* EMERGENCY CONTACT */}
+                  <div>
+                    <SectionHeader title="Emergency Contact" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Phone"
+                          value={selectedApplication.phoneEmergency}
+                        />
+                        <InfoRow
+                          label="Other Contact Methods"
+                          value={selectedApplication.emergencyWays}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Relationship"
+                          value={selectedApplication.emergencyRelation}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ADDITIONAL INFO */}
+                  <div>
+                    <SectionHeader title="Additional Info" />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-white/90">
-                          Referral Source:
-                        </span>
-                        <p className="text-white/70">
-                          {selectedApplication.referralSource}
-                        </p>
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Hackathon Count"
+                          value={selectedApplication.hackathonCount}
+                        />
+                        <InfoRow
+                          label="Previous GH Iterations"
+                          value={selectedApplication.ghCount?.join(", ")}
+                        />
+                        <InfoRow
+                          label="Referral Source"
+                          value={selectedApplication.referralSource}
+                        />
+                        <InfoRow
+                          label="How They Heard About GH"
+                          value={selectedApplication.joinSource?.join("; ")}
+                        />
+                        <InfoRow
+                          label="Referral Code"
+                          value={selectedApplication.referralCode}
+                        />
                       </div>
-                      <div>
-                        <span className="font-medium text-white/90">
-                          Application Date:
-                        </span>
-                        <p className="text-white/70">
-                          {formatApplicationDate(
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Join Reason"
+                          value={selectedApplication.joinReason}
+                        />
+                        <InfoRow
+                          label="Application Date"
+                          value={formatApplicationDate(
                             selectedApplication.applicationCreatedAt
                           )}
-                        </p>
+                        />
                       </div>
-                      {selectedApplication.accommodations &&
-                        selectedApplication.accommodations !== "m" && (
-                          <div>
-                            <span className="font-medium text-white/90">
-                              Accommodations:
-                            </span>
-                            <p className="text-white/70">
-                              {selectedApplication.accommodations}
-                            </p>
-                          </div>
-                        )}
-                      {selectedApplication.dietary_restrictions &&
-                        selectedApplication.dietary_restrictions !== "m" && (
-                          <div>
-                            <span className="font-medium text-white/90">
-                              Dietary Restrictions:
-                            </span>
-                            <p className="text-white/70">
-                              {selectedApplication.dietary_restrictions}
-                            </p>
-                          </div>
-                        )}
                     </div>
                   </div>
 
-                  <div>
-                    <div className="font-semibold text-white mb-2 text-sm">
-                      {questionTexts.listTeammates}
-                    </div>
-                    <textarea
-                      value={
-                        selectedApplication.list_teammates || "No response"
-                      }
-                      readOnly
-                      className="input w-full resize-none bg-white/5 border-white/20 text-white/80 text-sm leading-relaxed overflow-y-auto"
-                      style={{ maxHeight: "150px", minHeight: "100px" }}
-                    />
-                  </div>
-
+                  {/* EVALUATION */}
                   <div className="border-t border-white/10 pt-6">
                     <h5 className="font-semibold text-white mb-4">
                       Evaluation
@@ -972,17 +939,18 @@ export default function Applications() {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-white mb-2">
-                          Score (0-20)
+                          Score (0-
+                          {config?.maxApplicationEvaluationScore || 20})
                         </label>
                         <input
                           type="number"
                           min="0"
-                          max="20"
+                          max={config?.maxApplicationEvaluationScore || 20}
                           step="0.1"
                           value={evaluationScore}
                           onChange={(e) => setEvaluationScore(e.target.value)}
                           className="input w-full"
-                          placeholder="Enter score (0-20)"
+                          placeholder={`Enter score (0-${config?.maxApplicationEvaluationScore || 20})`}
                         />
                       </div>
                       <div>
@@ -1011,6 +979,7 @@ export default function Applications() {
                     </div>
                   </div>
 
+                  {/* STATUS OVERRIDES */}
                   <div className="border-t border-white/10 pt-6">
                     <h5 className="font-semibold text-white mb-4">
                       Status Overrides
