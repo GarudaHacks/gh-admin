@@ -1,44 +1,73 @@
 export interface FirestoreApplication {
   id: string;
-  accommodations: string;
-  bigProblem: string;
   createdAt: string;
-  desiredRoles: string;
-  dietary_restrictions: string;
-  hackathonCount: number;
-  interestingProject: string;
-  motivation: string;
-  referralSource: string;
-  resume: string;
   updatedAt: string;
+
+  // Team
+  teamFormation: string;
+  teamName: string;
+  teamMembers?: string;
+  interestedTrack: string;
+
+  // Speed Dating
+  primaryRole: string;
+  roleProficiency: string;
+  toolsUsed: string;
+  pastProjects?: string;
+
+  // Application
+  resume: string;
+  github?: string;
+  linkedin?: string;
+  devpost?: string;
+  qDreamCreation: string;
+  qProudestMoment: string;
+  qWhyGarudaHacks: string;
+
+  // Logistical
+  overnightPlan: string;
+  leaveLetter: string;
+
+  // Emergency & Consent
+  phoneEmergency: string;
+  emergencyWays: string;
+  emergencyRelation: string;
+  signedConsent: string;
+  referralCode?: string;
+
+  // Additional
+  hackathonCount: string;
+  ghCount: string[];
+  joinSource: string[];
+  referralSource: string;
+  joinReason: string;
+
+  // Evaluation
   score?: number;
   evaluationNotes?: string;
-  list_teammates?: string;
 }
 
 export interface FirestoreUser {
   id: string;
   admin: boolean;
   createdAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  dateOfBirth: string;
-  date_of_birth: string;
-  education: string;
-  email: string;
-  firstName: string;
-  first_name: string;
-  genderIdentity: string;
-  gender_identity: string;
-  github: string;
-  grade: number | null;
-  lastName: string;
-  last_name: string;
-  linkedin: string;
-  portfolio: string;
-  preferredName: string;
-  school: string;
-  status: string;
   updatedAt: string;
-  year: number;
+  status: string;
+
+  // Profile
+  firstName: string;
+  lastName: string;
+  genderIdentity: string;
+  dateOfBirth: string;
+  nationality: string;
+  countryOfResidence: string;
+  preferredLanguage: string;
+  currentOccupation: string;
+  occupationPlace: string;
+  occupationDetail: string;
+  universityYear?: string;
+  email: string;
+  phone: string;
 }
 
 /**
@@ -84,36 +113,69 @@ export enum APPLICATION_STATUS {
 
 export interface CombinedApplicationData {
   id: string;
-  accommodations: string;
-  bigProblem: string;
-  desiredRoles: string;
-  dietary_restrictions: string;
-  hackathonCount: number;
-  interestingProject: string;
-  motivation: string;
-  referralSource: string;
-  resume: string;
+  status: string;
   applicationCreatedAt: string;
   applicationUpdatedAt: string;
-  firstName: string;
-  lastName: string;
-  preferredName: string;
-  email: string;
-  education: string;
-  school: string;
-  github: string;
-  linkedin: string;
-  portfolio: string;
-  year: number;
-  date_of_birth: string;
-  gender_identity: string;
-  status: string;
   userCreatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   userUpdatedAt: string;
+
+  // Profile (from users)
+  firstName: string;
+  lastName: string;
+  genderIdentity: string;
+  dateOfBirth: string;
+  nationality: string;
+  countryOfResidence: string;
+  preferredLanguage: string;
+  currentOccupation: string;
+  occupationPlace: string;
+  occupationDetail: string;
+  universityYear?: string;
+  email: string;
+  phone: string;
+
+  // Team (from applications)
+  teamFormation: string;
+  teamName: string;
+  teamMembers?: string;
+  interestedTrack: string;
+
+  // Speed Dating (from applications)
+  primaryRole: string;
+  roleProficiency: string;
+  toolsUsed: string;
+  pastProjects?: string;
+
+  // Application (from applications)
+  resume: string;
+  github?: string;
+  linkedin?: string;
+  devpost?: string;
+  qDreamCreation: string;
+  qProudestMoment: string;
+  qWhyGarudaHacks: string;
+
+  // Logistical (from applications)
+  overnightPlan: string;
+  leaveLetter: string;
+
+  // Emergency & Consent (from applications)
+  phoneEmergency: string;
+  emergencyWays: string;
+  emergencyRelation: string;
+  signedConsent: string;
+  referralCode?: string;
+
+  // Additional (from applications)
+  hackathonCount: string;
+  ghCount: string[];
+  joinSource: string[];
+  referralSource: string;
+  joinReason: string;
+
+  // Evaluation
   score?: number;
   evaluationNotes?: string;
-  evaluationStatus?: "pending" | "approved" | "rejected";
-  list_teammates?: string;
 }
 
 export interface PortalConfig {
@@ -126,15 +188,3 @@ export interface PortalConfig {
   maxApplicationEvaluationScore: number;
 }
 
-export interface Question {
-  id: string;
-  order: number;
-  placeholder: string;
-  state: string;
-  text: string;
-  type: string;
-  validation: {
-    maxLength?: number;
-    required?: boolean;
-  };
-}
