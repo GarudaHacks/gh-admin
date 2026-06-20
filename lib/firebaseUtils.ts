@@ -17,7 +17,6 @@ import {
   FirestoreUser,
   CombinedApplicationData,
   PortalConfig,
-  Question,
   FirestoreMentor,
   MentorshipAppointment,
 } from "./types";
@@ -27,8 +26,6 @@ import { getDownloadURL, ref } from "firebase/storage";
 export { APPLICATION_STATUS } from "./types";
 export type { CombinedApplicationData } from "./types";
 
-// Cache for questions to avoid repeated Firebase calls
-let questionsCache: Map<string, Question> | null = null;
 
 /**
  * Fetches all applications from Firestore, ordered by creation date (newest first)
@@ -137,36 +134,69 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
 
         return {
           id: application.id,
-          accommodations: application.accommodations,
-          bigProblem: application.bigProblem,
-          desiredRoles: application.desiredRoles,
-          dietary_restrictions: application.dietary_restrictions,
-          hackathonCount: application.hackathonCount,
-          interestingProject: application.interestingProject,
-          motivation: application.motivation,
-          referralSource: application.referralSource,
-          resume: application.resume,
+          status: user.status || 'not applicable',
           applicationCreatedAt: application.createdAt,
           applicationUpdatedAt: application.updatedAt,
-          score: application.score || null,
-          evaluationNotes: application.evaluationNotes || null,
-          firstName: user.firstName || user.first_name,
-          lastName: user.lastName || user.last_name,
-          preferredName: user.preferredName,
-          email: user.email,
-          education: user.education,
-          school: user.school,
-          github: user.github,
-          linkedin: user.linkedin,
-          portfolio: user.portfolio,
-          year: user.year,
-          date_of_birth: user.date_of_birth,
-          gender_identity: user.gender_identity,
-          status: user.status || 'not applicable',
           userCreatedAt: user.createdAt,
           userUpdatedAt: user.updatedAt,
-          evaluationStatus: 'pending',
-          list_teammates: application.list_teammates
+
+          // Profile
+          firstName: user.firstName,
+          lastName: user.lastName,
+          genderIdentity: user.genderIdentity,
+          dateOfBirth: user.dateOfBirth,
+          nationality: user.nationality,
+          countryOfResidence: user.countryOfResidence,
+          preferredLanguage: user.preferredLanguage,
+          currentOccupation: user.currentOccupation,
+          occupationPlace: user.occupationPlace,
+          occupationDetail: user.occupationDetail,
+          universityYear: user.universityYear,
+          email: user.email,
+          phone: user.phone,
+
+          // Team
+          teamFormation: application.teamFormation,
+          teamName: application.teamName,
+          teamMembers: application.teamMembers,
+          interestedTrack: application.interestedTrack,
+
+          // Speed Dating
+          primaryRole: application.primaryRole,
+          roleProficiency: application.roleProficiency,
+          toolsUsed: application.toolsUsed,
+          pastProjects: application.pastProjects,
+
+          // Application
+          resume: application.resume,
+          github: application.github,
+          linkedin: application.linkedin,
+          devpost: application.devpost,
+          qDreamCreation: application.qDreamCreation,
+          qProudestMoment: application.qProudestMoment,
+          qWhyGarudaHacks: application.qWhyGarudaHacks,
+
+          // Logistical
+          overnightPlan: application.overnightPlan,
+          leaveLetter: application.leaveLetter,
+
+          // Emergency & Consent
+          phoneEmergency: application.phoneEmergency,
+          emergencyWays: application.emergencyWays,
+          emergencyRelation: application.emergencyRelation,
+          signedConsent: application.signedConsent,
+          referralCode: application.referralCode,
+
+          // Additional
+          hackathonCount: application.hackathonCount,
+          ghCount: application.ghCount,
+          joinSource: application.joinSource,
+          referralSource: application.referralSource,
+          joinReason: application.joinReason,
+
+          // Evaluation
+          score: application.score || null,
+          evaluationNotes: application.evaluationNotes || null,
         } as CombinedApplicationData;
       })
       .filter((item): item is CombinedApplicationData => item !== null);
@@ -176,20 +206,6 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
   } catch {
     throw new Error('Failed to fetch applications with users');
   }
-}
-
-/**
- * Converts education level strings to readable display format
- */
-export function getEducationLevel(education: string): string {
-  const educationMap: { [key: string]: string } = {
-    'High School / Equivalent': 'High School',
-    'University / College (Undergraduate)': 'Undergraduate',
-    'University / College (Graduate)': 'Graduate',
-    'Other': 'Other'
-  };
-
-  return educationMap[education] || education;
 }
 
 /**
@@ -206,17 +222,6 @@ export function formatApplicationDate(dateString: string): string {
   } catch {
     return dateString;
   }
-}
-
-/**
- * Converts year number to ordinal string (e.g., 1 → "1st Year", 2 → "2nd Year")
- */
-export function getYearSuffix(year: number): string {
-  if (year === 1) return '1st Year';
-  if (year === 2) return '2nd Year';
-  if (year === 3) return '3rd Year';
-  if (year >= 4) return `${year}th Year`;
-  return `Year ${year}`;
 }
 
 /**
@@ -343,63 +348,6 @@ export async function debugAuthToken() {
   }
 }
 
-/**
- * Fetches all questions from Firestore and caches them
- */
-export async function fetchQuestions(): Promise<Map<string, Question>> {
-  if (questionsCache) {
-    return questionsCache;
-  }
-
-  try {
-    const questionsRef = collection(db, 'questions');
-    const querySnapshot = await getDocs(questionsRef);
-
-    const questions = new Map<string, Question>();
-    querySnapshot.forEach((doc) => {
-      questions.set(doc.id, {
-        id: doc.id,
-        ...doc.data()
-      } as Question);
-    });
-
-    questionsCache = questions;
-    return questions;
-  } catch (error) {
-    console.error('Error fetching questions:', error);
-    return new Map();
-  }
-}
-
-/**
- * Gets question text by ID, with fallback to formatted ID if not found
- */
-export async function getQuestionText(questionId: string): Promise<string> {
-  try {
-    const questions = await fetchQuestions();
-    const question = questions.get(questionId);
-
-    if (question) {
-      return question.text;
-    }
-
-    // Fallback: format the ID as a readable title
-    return formatQuestionId(questionId);
-  } catch (error) {
-    console.error(`Error getting question text for ${questionId}:`, error);
-    return formatQuestionId(questionId);
-  }
-}
-
-/**
- * Formats question ID as a readable title (fallback)
- */
-function formatQuestionId(questionId: string): string {
-  return questionId
-    .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-    .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
-    .trim();
-}
 
 /**
  * Change an application's status in Firestore
