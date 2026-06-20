@@ -588,7 +588,7 @@ export default function Applications() {
   // Issue detection: potential duplicates (same first+last name and phone)
   const duplicateGroups = (() => {
     const groups = new Map<string, CombinedApplicationData[]>();
-    for (const app of applicationsOriginal) {
+    for (const app of applicationsOriginal.filter((a) => a.status === APPLICATION_STATUS.SUBMITTED)) {
       const firstName = (app.firstName || "").trim().toLowerCase();
       const lastName = (app.lastName || "").trim().toLowerCase();
       const phone = (app.phone || "").trim().replace(/\s+/g, "");
@@ -605,6 +605,7 @@ export default function Applications() {
 
   // Issue detection: oversize teams (more than MAX_TEAM_SIZE members listed)
   const oversizeTeams = applicationsOriginal
+    .filter((app) => app.status === APPLICATION_STATUS.SUBMITTED)
     .map((app) => {
       if (!app.teamMembers) return null;
       const members = app.teamMembers
@@ -675,6 +676,7 @@ export default function Applications() {
   };
 
   const missingFieldsApps = applicationsOriginal
+    .filter((app) => app.status === APPLICATION_STATUS.SUBMITTED)
     .map((app) => {
       const choosesSpeedDating =
         (app.teamFormation || "").toLowerCase().includes("speed dating");
