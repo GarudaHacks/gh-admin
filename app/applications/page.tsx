@@ -39,13 +39,14 @@ export default function Applications() {
   const [resetting, setResetting] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [searchName, setSearchName] = useState<string>("");
-  const [searchSort, setSearchSort] = useState<string>("");
-  const [isSortDescending, setIsSortDescending] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<"evaluate" | "issues">("evaluate");
+  const [searchSort, setSearchSort] = useState<string>("applicationUpdatedAt");
+  const [isSortDescending, setIsSortDescending] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<"evaluate" | "issues" | "in-progress">("evaluate");
   const [activeIssueType, setActiveIssueType] = useState<
     "duplicates" | "oversize-team" | "missing-fields"
   >("duplicates");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const MAX_TEAM_SIZE = 4;
 
@@ -173,7 +174,10 @@ export default function Applications() {
       await debugAuthToken();
 
       const data = await fetchApplicationsWithUsers();
-      setApplications(data);
+      const sorted = [...data].sort((a, b) => {
+        return new Date(b.applicationUpdatedAt).getTime() - new Date(a.applicationUpdatedAt).getTime();
+      });
+      setApplications(sorted);
       setApplicationsOriginal(data);
       if (data.length > 0) {
         setSelectedApplication(data[0]);
@@ -584,6 +588,19 @@ export default function Applications() {
   const confirmedRSVPApplications = applications.filter(
     (app) => app.status === APPLICATION_STATUS.CONFIRMED_RSVP
   );
+  const inProgressApplications = applicationsOriginal.filter(
+    (app) =>
+      app.status === APPLICATION_STATUS.NOT_APPLICABLE ||
+      app.status === APPLICATION_STATUS.DRAFT
+  );
+  const filteredDisplayableApplications = (() => {
+    if (statusFilter === "all") return displayableApplications;
+    if (statusFilter === "pending") return pendingApplications;
+    if (statusFilter === "rejected") return rejectedApplications;
+    if (statusFilter === "accepted") return approvedApplications;
+    if (statusFilter === "confirmed-rsvp") return confirmedRSVPApplications;
+    return displayableApplications;
+  })();
 
   // Issue detection: potential duplicates (same first+last name and phone)
   const duplicateGroups = (() => {
@@ -773,6 +790,24 @@ export default function Applications() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => {
+            setActiveTab("in-progress");
+            setSelectedApplication(null);
+          }}
+          className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 ${
+            activeTab === "in-progress"
+              ? "bg-white/10 text-white border-b-2 border-primary"
+              : "text-white/50 hover:text-white/80 hover:bg-white/5"
+          }`}
+        >
+          In Progress
+          {inProgressApplications.length > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-400">
+              {inProgressApplications.length}
+            </span>
+          )}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -823,6 +858,58 @@ export default function Applications() {
                   </div>
                 </div>
               </div>
+              <div className="flex gap-1 mb-4 flex-wrap">
+                <button
+                  onClick={() => setStatusFilter("all")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    statusFilter === "all"
+                      ? "bg-white/20 text-white border border-white/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  All ({displayableApplications.length})
+                </button>
+                <button
+                  onClick={() => setStatusFilter("pending")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    statusFilter === "pending"
+                      ? "bg-fuchsia-500/20 text-fuchsia-500 border border-fuchsia-500/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Pending ({pendingApplications.length})
+                </button>
+                <button
+                  onClick={() => setStatusFilter("rejected")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    statusFilter === "rejected"
+                      ? "bg-destructive/20 text-violet-600 border border-violet-600/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Rejected ({rejectedApplications.length})
+                </button>
+                <button
+                  onClick={() => setStatusFilter("accepted")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    statusFilter === "accepted"
+                      ? "bg-accent-foreground/20 text-accent-accessible border border-accent-accessible/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Accepted ({approvedApplications.length})
+                </button>
+                <button
+                  onClick={() => setStatusFilter("confirmed-rsvp")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    statusFilter === "confirmed-rsvp"
+                      ? "bg-green-500/20 text-purple-500 border border-purple-500/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  RSVP ({confirmedRSVPApplications.length})
+                </button>
+              </div>
               <div
                 className="card flex flex-col"
                 style={{ height: "calc(100vh - 440px)" }}
@@ -865,16 +952,16 @@ export default function Applications() {
                 </div>
                 <div className="p-6 border-b border-white/10 flex-shrink-0">
                   <h3 className="text-lg font-semibold text-white">
-                    Applications List ({displayableApplications.length})
+                    Applications List ({filteredDisplayableApplications.length})
                   </h3>
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                  {displayableApplications.length === 0 ? (
+                  {filteredDisplayableApplications.length === 0 ? (
                     <div className="p-6 text-center text-white/70">
                       No applications found
                     </div>
                   ) : (
-                    displayableApplications.map((application) => (
+                    filteredDisplayableApplications.map((application) => (
                       <div
                         key={application.id}
                         onClick={() => handleApplicationSelect(application)}
@@ -1187,6 +1274,64 @@ export default function Applications() {
                         ))
                       )}
                     </>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === "in-progress" && (
+            <>
+              <div
+                className="card flex flex-col"
+                style={{ height: "calc(100vh - 440px)" }}
+              >
+                <div className="p-6 border-b border-white/10 flex-shrink-0">
+                  <h3 className="text-lg font-semibold text-white">
+                    In Progress ({inProgressApplications.length})
+                  </h3>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {inProgressApplications.length === 0 ? (
+                    <div className="p-6 text-center text-white/70">
+                      No in-progress applications
+                    </div>
+                  ) : (
+                    inProgressApplications.map((application) => (
+                      <div
+                        key={application.id}
+                        onClick={() => handleApplicationSelect(application)}
+                        className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
+                          selectedApplication?.id === application.id
+                            ? "bg-primary/10 border-primary/30"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium text-sm text-white truncate">
+                            {application.firstName} {application.lastName}
+                          </h4>
+                          <div className="text-right min-w-[30%]">
+                            {application.score ? (
+                              <div className="text-sm font-bold text-white">
+                                {application.score}/{config?.maxApplicationEvaluationScore || 20}
+                              </div>
+                            ) : (
+                              <div className="text-white/50 text-sm">Not scored</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(
+                              getDisplayStatus(application)
+                            )}`}
+                          >
+                            {getDisplayStatus(application)}
+                          </span>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
