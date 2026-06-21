@@ -167,6 +167,9 @@ export interface CombinedApplicationData {
   emergencyWays: string;
   emergencyRelation: string;
   signedConsent: string;
+  allergies?: string;
+  dietaryRestrictions?: string;
+  medicalConditions?: string;
   referralCode?: string;
 
   // Additional (from applications)

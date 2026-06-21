@@ -59,7 +59,7 @@ export const allQuestionsData: ApplicationQuestion[] = [
     order: 5,
   },
   {
-    id: "countryOfresidence",
+    id: "countryOfResidence",
     text: "What is your country of residence? \nNote: If you are currently studying or working abroad, please fill in the country where you are currently studying or working at.",
     state: APPLICATION_STATES.PROFILE,
     type: QUESTION_TYPE.DROPDOWN,
@@ -361,7 +361,7 @@ export const allQuestionsData: ApplicationQuestion[] = [
   },
   {
     id: "teamMembers",
-    text: "Please list the full names of your team members, separated by commas (e.g., Budi Pratama, Siti Rahayu). Only fill this in if you are participating as a team. **Note that the maximum number of members is 4, including you.**",
+    text: "Please list the full names of your team members, separated by commas. (e.g. Dominic Kartadjoemena, Ben Sumali, Hafidz Rizky).",
     state: APPLICATION_STATES.TEAM,
     type: QUESTION_TYPE.STRING,
     required: false,
@@ -439,7 +439,7 @@ export const allQuestionsData: ApplicationQuestion[] = [
   },
   {
     id: "github",
-    text: "Please enter your GitHub profile URL (https://github.com/your-handle)",
+    text: "Please enter your GitHub profile URL",
     state: APPLICATION_STATES.APPLICATION,
     type: QUESTION_TYPE.STRING,
     placeholder: "https://github.com/your-handle",
@@ -452,7 +452,7 @@ export const allQuestionsData: ApplicationQuestion[] = [
   },
   {
     id: "linkedin",
-    text: "Please enter your LinkedIn profile URL (https://www.linkedin.com/in/your-handle)",
+    text: "Please enter your LinkedIn profile URL",
     state: APPLICATION_STATES.APPLICATION,
     type: QUESTION_TYPE.STRING,
     placeholder: "https://www.linkedin.com/in/your-handle",
@@ -465,7 +465,7 @@ export const allQuestionsData: ApplicationQuestion[] = [
   },
   {
     id: "devpost",
-    text: "Please enter your DevPost profile URL (https://devpost.com/your-handle)",
+    text: "Please enter your DevPost profile URL",
     state: APPLICATION_STATES.APPLICATION,
     type: QUESTION_TYPE.STRING,
     placeholder: "https://devpost.com/your-handle",
@@ -585,6 +585,39 @@ export const allQuestionsData: ApplicationQuestion[] = [
     order: 4,
   },
   {
+    id: "allergies",
+    text: "List any allergies you have, or leave blank if none.",
+    state: APPLICATION_STATES.EMERGENCY_AND_CONSENT,
+    type: QUESTION_TYPE.STRING,
+    required: false,
+    validation: {
+      maxLength: 200,
+    },
+    order: 5,
+  },
+  {
+    id: "dietaryRestrictions",
+    text: "List any dietary restrictions you have, or leave blank if none.",
+    state: APPLICATION_STATES.EMERGENCY_AND_CONSENT,
+    type: QUESTION_TYPE.STRING,
+    required: false,
+    validation: {
+      maxLength: 200,
+    },
+    order: 6,
+  },
+  {
+    id: "medicalConditions",
+    text: "List any medical conditions you have, or leave blank if none.",
+    state: APPLICATION_STATES.EMERGENCY_AND_CONSENT,
+    type: QUESTION_TYPE.STRING,
+    required: false,
+    validation: {
+      maxLength: 200,
+    },
+    order: 7,
+  },
+  {
     id: "referralCode",
     text: "Were you referred to join Garuda Hacks 7.0? If you were, please carefully enter your referral code below",
     state: APPLICATION_STATES.EMERGENCY_AND_CONSENT,
@@ -593,7 +626,7 @@ export const allQuestionsData: ApplicationQuestion[] = [
     validation: {
       maxLength: 50,
     },
-    order: 5,
+    order: 8,
   },
 
 

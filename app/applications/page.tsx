@@ -1644,6 +1644,26 @@ export default function Applications() {
                         />
                       </div>
                     </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Allergies"
+                          value={selectedApplication.allergies}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Dietary Restrictions"
+                          value={selectedApplication.dietaryRestrictions}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <InfoRow
+                          label="Medical Conditions"
+                          value={selectedApplication.medicalConditions}
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* ADDITIONAL INFO */}
