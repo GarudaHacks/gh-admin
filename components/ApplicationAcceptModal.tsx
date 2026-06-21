@@ -90,55 +90,49 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 		try {
 			const applications = toAcceptApplications.filter(app => app.score !== undefined && app.score >= minScore!)
 
-			const results = await Promise.allSettled(applications.map(async (application) => {
-				try {
-					const result = await updateApplicationStatus(application.id, APPLICATION_STATUS.ACCEPTED)
-					return { success: result, application };
-				} catch (error) {
-					return { success: false, application };
-				}
+			const statusResults = await Promise.allSettled(applications.map(async (application) => {
+				const result = await updateApplicationStatus(application.id, APPLICATION_STATUS.ACCEPTED)
+				if (!result) throw new Error("Status update failed");
+				return application;
 			}));
 
-			for (const result of results) {
-				if (result.status === 'fulfilled' && result.value) {
-					try {
-						const response = await fetch("/api/send-email", {
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-							},
-							body: JSON.stringify({
-								email: result.value.application.email,
-								rsvpDeadline: "2025-07-01",
-								teamDeadline: "2025-07-01",
-								eventStartDate: "2025-07-24",
-							}),
-						});
+			const acceptedApps = statusResults
+				.filter((r): r is PromiseFulfilledResult<CombinedApplicationData> => r.status === 'fulfilled')
+				.map(r => r.value);
 
-						if (!response.ok) {
-							const errorData = await response.json();
-							console.error("Failed to send acceptance email:", errorData);
-							failCount++
-							continue;
-						}
+			const statusFailCount = statusResults.filter(r => r.status === 'rejected').length;
+			failCount += statusFailCount;
 
-						try {
-							await updateApplicationAcceptanceEmail(result.value.application.id)
-						} catch (error) {
-							console.error(`Error updating application acceptance email for ${result.value.application.id}:`, error);
-							failCount++
-							continue;
-						}
-					} catch (emailError) {
-						console.error("Error sending acceptance email:", emailError);
+			if (acceptedApps.length > 0) {
+				try {
+					const response = await fetch("/api/send-email", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							emails: acceptedApps.map(app => app.email),
+							type: "accepted",
+						}),
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						successCount = data.succeeded || 0;
+						failCount += data.failed || 0;
+					} else {
+						console.error("Failed to send bulk acceptance emails");
+						failCount += acceptedApps.length;
 					}
-					successCount++;
-				} else {
-					failCount++;
+				} catch (emailError) {
+					console.error("Error sending bulk acceptance emails:", emailError);
+					failCount += acceptedApps.length;
 				}
+
+				await Promise.allSettled(
+					acceptedApps.map(app => updateApplicationAcceptanceEmail(app.id))
+				);
 			}
 
-			toast((t) => (
+			toast(() => (
 				<div>
 					<p className="">Successfully  <span className="text-green-600 font-semibold"> accepted {successCount} applications.</span></p>
 					<p><span className="text-red-600 font-semibold">{failCount} applications failed</span> to process.</p>
@@ -155,7 +149,6 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 			console.log(`Error when bulk accept: ${error}`)
 			toast.error("Something went wrong. Please check log.")
 		} finally {
-			console.log('Finally block executing');
 			setShowAcceptModal(false)
 			setPreviewModalActive(false)
 			setConfirmationModalActive(false)

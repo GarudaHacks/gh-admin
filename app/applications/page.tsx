@@ -252,7 +252,6 @@ export default function Applications() {
             },
             body: JSON.stringify({
               email: selectedApplication.email,
-              type: "rejected",
             }),
           });
 
@@ -304,7 +303,6 @@ export default function Applications() {
             },
             body: JSON.stringify({
               email: selectedApplication.email,
-              type: "accepted",
             }),
           });
 
@@ -337,57 +335,7 @@ export default function Applications() {
     }
   };
 
-  const handleWaitlistParticipant = async () => {
-    if (!selectedApplication) return;
 
-    try {
-      setRejecting(true);
-      const success = await updateUserStatus(
-        selectedApplication.id,
-        APPLICATION_STATUS.WAITLISTED
-      );
-
-      if (success) {
-        try {
-          const response = await fetch("/api/send-email", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: selectedApplication.email,
-              type: "waitlisted",
-            }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error("Failed to send waitlist email:", errorData);
-          }
-        } catch (emailError) {
-          console.error("Error sending waitlist email:", emailError);
-        }
-
-        setApplications((prev) =>
-          prev.map((app) =>
-            app.id === selectedApplication.id
-              ? { ...app, status: APPLICATION_STATUS.WAITLISTED }
-              : app
-          )
-        );
-
-        setSelectedApplication((prev) =>
-          prev ? { ...prev, status: APPLICATION_STATUS.WAITLISTED } : null
-        );
-      } else {
-        console.error("Failed to waitlist participant");
-      }
-    } catch (error) {
-      console.error("Error waitlisting participant:", error);
-    } finally {
-      setRejecting(false);
-    }
-  };
 
   const handleResetStatus = async () => {
     if (!selectedApplication) return;
