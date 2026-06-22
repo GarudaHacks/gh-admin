@@ -6,7 +6,6 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   fetchApplicationsWithUsers,
   formatApplicationDate,
-  debugAuthToken,
   updateUserStatus,
   updateApplicationScore,
   resetApplicationStatus,
@@ -170,8 +169,6 @@ export default function Applications() {
     try {
       setLoading(true);
       setError(null);
-
-      await debugAuthToken();
 
       const data = await fetchApplicationsWithUsers();
       const sorted = [...data].sort((a, b) => {

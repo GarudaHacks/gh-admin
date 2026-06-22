@@ -329,28 +329,6 @@ export async function updateApplicationScore(
   }
 }
 
-/**
- * Debug utility to log current authentication token details
- * @deprecated TODO: Remove after testing
- */
-export async function debugAuthToken() {
-  const user = auth.currentUser;
-  if (user) {
-    console.log('Current user email:', user.email);
-    console.log('Email verified:', user.emailVerified);
-    try {
-      const token = await user.getIdTokenResult();
-      console.log('Auth token claims:', token.claims);
-      console.log('Token email:', token.claims.email);
-      console.log('Token email_verified:', token.claims.email_verified);
-    } catch (error) {
-      console.error('Error getting token:', error);
-    }
-  } else {
-    console.log('No user signed in');
-  }
-}
-
 
 /**
  * Change an application's status in Firestore
