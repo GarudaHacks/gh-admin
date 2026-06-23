@@ -10,6 +10,7 @@ import {
   orderBy,
   addDoc,
   deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db, auth, storage } from "./firebase";
 import {
@@ -19,6 +20,7 @@ import {
   PortalConfig,
   FirestoreMentor,
   MentorshipAppointment,
+  APPLICATION_STATUS,
 } from "./types";
 import { ONE_SLOT_INTERVAL_MINUTES } from "@/config";
 import { getDownloadURL, ref } from "firebase/storage";
@@ -212,18 +214,18 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
 }
 
 /**
- * Formats date string to human-readable format (e.g., "Jan 15, 2024")
+ * Formats a Firestore Timestamp or ISO string to human-readable format (e.g., "Jan 15, 2024")
  */
-export function formatApplicationDate(dateString: string): string {
+export function formatApplicationDate(value: any): string { // eslint-disable-line @typescript-eslint/no-explicit-any
   try {
-    const date = new Date(dateString);
+    const date = value?.toDate ? value.toDate() : new Date(value);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
   } catch {
-    return dateString;
+    return String(value);
   }
 }
 
@@ -287,11 +289,15 @@ export async function updatePortalConfig(config: PortalConfig): Promise<boolean>
 /**
  * Updates a user's status in Firestore given their ID and new status
  */
-export async function updateUserStatus(userId: string, status: string): Promise<boolean> {
+export async function updateUserStatus(userId: string, status: APPLICATION_STATUS.ACCEPTED | APPLICATION_STATUS.REJECTED): Promise<boolean> {
   try {
     const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, { status, acceptedAt: new Date });
-    console.log(`User ${userId} status updated to: ${status}`);
+    if (status === APPLICATION_STATUS.ACCEPTED) {
+      await updateDoc(userRef, { status, acceptedAt: serverTimestamp() });
+    } else if (status === APPLICATION_STATUS.REJECTED) {
+      await updateDoc(userRef, { status, acceptedAt: serverTimestamp() });
+    }
+    console.debug(`User ${userId} status updated to: ${status}`);
     return true;
   } catch (error) {
     console.error(`Error updating user ${userId} status:`, error);
@@ -313,9 +319,9 @@ export async function updateApplicationScore(
   try {
     const applicationRef = doc(db, 'applications', applicationId);
 
-    const updateData: { score: number; evaluationNotes?: string; updatedAt: string } = {
+    const updateData: { score: number; evaluationNotes?: string; updatedAt: ReturnType<typeof serverTimestamp> } = {
       score,
-      updatedAt: new Date().toISOString()
+      updatedAt: serverTimestamp()
     };
 
     if (evaluationNotes && evaluationNotes.trim() !== '') {
@@ -325,25 +331,6 @@ export async function updateApplicationScore(
     await updateDoc(applicationRef, updateData);
     return true;
   } catch {
-    return false;
-  }
-}
-
-
-/**
- * Change an application's status in Firestore
- */
-export async function updateApplicationStatus(userId: string, status: string): Promise<boolean> {
-  try {
-    const applicationRef = doc(db, 'users', userId);
-    const updatedData = {
-      status: status,
-      acceptedAt: new Date().toISOString()
-    };
-    await updateDoc(applicationRef, updatedData);
-    return true;
-  } catch (error) {
-    console.error(`Error updating application status for ${userId}:`, error);
     return false;
   }
 }
@@ -376,7 +363,7 @@ export async function updateApplicationAcceptanceEmail(userId: string): Promise<
     const applicationRef = doc(db, 'users', userId);
     const updatedData = {
       acceptanceEmailSent: true,
-      acceptanceEmailSentAt: new Date().toISOString()
+      acceptanceEmailSentAt: serverTimestamp()
     };
     await updateDoc(applicationRef, updatedData);
     return true;

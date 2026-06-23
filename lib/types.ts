@@ -1,7 +1,7 @@
 export interface FirestoreApplication {
   id: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  updatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // Team
   teamFormation: string;
@@ -54,7 +54,7 @@ export interface FirestoreUser {
   id: string;
   admin: boolean;
   createdAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  updatedAt: string;
+  updatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   status: string;
 
   // Profile
@@ -117,10 +117,10 @@ export enum APPLICATION_STATUS {
 export interface CombinedApplicationData {
   id: string;
   status: string;
-  applicationCreatedAt: string;
-  applicationUpdatedAt: string;
+  applicationCreatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  applicationUpdatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   userCreatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  userUpdatedAt: string;
+  userUpdatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // Profile (from users)
   firstName: string;

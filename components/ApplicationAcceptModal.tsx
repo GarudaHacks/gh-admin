@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getPortalConfig, updateApplicationAcceptanceEmail, updateApplicationStatus } from "@/lib/firebaseUtils"
+import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getPortalConfig, updateApplicationAcceptanceEmail, updateUserStatus } from "@/lib/firebaseUtils"
 import AcceptingApplicationRowComponent from "./lists/AcceptingApplicationRow"
 import LoadingSpinner from "./LoadingSpinner"
 import { Loader2, X } from "lucide-react"
@@ -26,17 +26,17 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 	const [isAcceptingLoading, setIsAcceptingLoading] = useState(false)
 
 	const loadConfig = async () => {
-    try {
-      setIsLoading(true);
-      const portalConfig = await getPortalConfig();
-      setConfig(portalConfig);
-    } catch {
-      setConfigError("Failed to load portal configuration");
+		try {
+			setIsLoading(true);
+			const portalConfig = await getPortalConfig();
+			setConfig(portalConfig);
+		} catch {
+			setConfigError("Failed to load portal configuration");
 			console.log("Failed to load portal config.")
-    } finally {
-      setIsLoading(false);
-    }
-  };
+		} finally {
+			setIsLoading(false);
+		}
+	};
 
 	const onChangeMinScore = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = Number(e.target.value)
@@ -91,7 +91,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 			const applications = toAcceptApplications.filter(app => app.score !== undefined && app.score >= minScore!)
 
 			const statusResults = await Promise.allSettled(applications.map(async (application) => {
-				const result = await updateApplicationStatus(application.id, APPLICATION_STATUS.ACCEPTED)
+				const result = await updateUserStatus(application.id, APPLICATION_STATUS.ACCEPTED)
 				if (!result) throw new Error("Status update failed");
 				return application;
 			}));
