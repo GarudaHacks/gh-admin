@@ -28,7 +28,7 @@ const createResultsAreHereMailOptions = (email: string): MailOptions => ({
   from: fromAddress,
   to: email,
   subject: "Garuda Hacks 7.0 - Your Results Are Here!",
-  html: resultsAreHere({ actionUrl: `https://${process.env.NEXT_PUBLIC_URL}` || "https://portal.garudahacks.com" }),
+  html: resultsAreHere({ actionUrl: `https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}` || "https://portal.garudahacks.com" }),
   text: `Results Are Here!\n\nThe wait is finally over! Head to the portal to see your application result. Whatever happens, we're rooting for you 🚀\n\nOpen Portal: https://portal.garudahacks.com\n\nRegards,\nGaruda Hacks 7.0 Committee\n\n© 2026 Garuda Hacks. All rights reserved.`,
 });
 
