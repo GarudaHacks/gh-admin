@@ -312,6 +312,32 @@ export async function updateUserStatus(userId: string, status: APPLICATION_STATU
 }
 
 /**
+ * Reverts a user's status one step backwards in the flow:
+ * confirmed rsvp → accepted, accepted/rejected → submitted.
+ */
+export async function revertUserStatus(userId: string, currentStatus: string): Promise<boolean> {
+  try {
+    const userRef = doc(db, 'users', userId);
+    let newStatus: string;
+
+    if (currentStatus === APPLICATION_STATUS.CONFIRMED_RSVP) {
+      newStatus = APPLICATION_STATUS.ACCEPTED;
+    } else if (currentStatus === APPLICATION_STATUS.ACCEPTED || currentStatus === APPLICATION_STATUS.REJECTED) {
+      newStatus = APPLICATION_STATUS.SUBMITTED;
+    } else {
+      return false;
+    }
+
+    await updateDoc(userRef, { status: newStatus });
+    console.debug(`User ${userId} status reverted from ${currentStatus} to ${newStatus}`);
+    return true;
+  } catch (error) {
+    console.error(`Error reverting user ${userId} status:`, error);
+    return false;
+  }
+}
+
+/**
  * Updates an application's score and evaluation notes in Firestore
  * @param applicationId - The ID of the application to update
  * @param score - The numerical score (0-20)

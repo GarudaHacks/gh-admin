@@ -9,6 +9,7 @@ import {
   updateUserStatus,
   updateApplicationScore,
   resetApplicationStatus,
+  revertUserStatus,
   getPortalConfig,
 } from "@/lib/firebaseUtils";
 import {
@@ -36,6 +37,7 @@ export default function Applications() {
   const [rejecting, setRejecting] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [reverting, setReverting] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [searchName, setSearchName] = useState<string>("");
   const [searchSort, setSearchSort] = useState<string>("applicationUpdatedAt");
@@ -370,6 +372,41 @@ export default function Applications() {
       console.error("Error resetting application status:", error);
     } finally {
       setResetting(false);
+    }
+  };
+
+  const isDevEnvironment = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === "garuda-hacks-development";
+
+  const getRevertedStatus = (currentStatus: string): string | null => {
+    if (currentStatus === APPLICATION_STATUS.CONFIRMED_RSVP) return APPLICATION_STATUS.ACCEPTED;
+    if (currentStatus === APPLICATION_STATUS.ACCEPTED || currentStatus === APPLICATION_STATUS.REJECTED) return APPLICATION_STATUS.SUBMITTED;
+    return null;
+  };
+
+  const handleRevertStatus = async () => {
+    if (!selectedApplication) return;
+
+    const newStatus = getRevertedStatus(selectedApplication.status);
+    if (!newStatus) return;
+
+    try {
+      setReverting(true);
+      const success = await revertUserStatus(selectedApplication.id, selectedApplication.status);
+
+      if (success) {
+        const updateStatus = (app: CombinedApplicationData) =>
+          app.id === selectedApplication.id ? { ...app, status: newStatus } : app;
+
+        setApplications((prev) => prev.map(updateStatus));
+        setApplicationsOriginal((prev) => prev.map(updateStatus));
+        setSelectedApplication((prev) => prev ? { ...prev, status: newStatus } : null);
+      } else {
+        console.error("Failed to revert status");
+      }
+    } catch (error) {
+      console.error("Error reverting status:", error);
+    } finally {
+      setReverting(false);
     }
   };
 
@@ -1782,6 +1819,18 @@ export default function Applications() {
                             </span>
                           </p>
                         </div>
+                      )}
+
+                      {isDevEnvironment && getRevertedStatus(selectedApplication.status) && (
+                        <button
+                          onClick={handleRevertStatus}
+                          disabled={reverting}
+                          className="w-full px-4 py-3 bg-yellow-600/20 border border-yellow-600/50 text-yellow-400 rounded-md hover:bg-yellow-600/30 hover:text-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                        >
+                          {reverting
+                            ? "Reverting..."
+                            : `Revert to "${getRevertedStatus(selectedApplication.status)}"`}
+                        </button>
                       )}
                     </div>
                   </div>
