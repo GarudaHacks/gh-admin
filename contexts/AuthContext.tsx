@@ -49,6 +49,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (typeof window === "undefined") return false;
     return (
       window.location.hostname === "admin.garudahacks.com" ||
+      window.location.hostname === "staging-admin.garudahacks.com" ||
       window.location.hostname === "localhost" // TODO: Add flag for dev to toggle this
     );
   };
