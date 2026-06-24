@@ -141,6 +141,9 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
           applicationUpdatedAt: application.updatedAt,
           userCreatedAt: user.createdAt,
           userUpdatedAt: user.updatedAt,
+          acceptedAt: user.acceptedAt,
+          rejectedAt: user.rejectedAt,
+          confirmedRsvpAt: user.confirmedRsvpAt,
 
           // Profile
           firstName: user.firstName,
@@ -219,10 +222,13 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
 export function formatApplicationDate(value: any): string { // eslint-disable-line @typescript-eslint/no-explicit-any
   try {
     const date = value?.toDate ? value.toDate() : new Date(value);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
     });
   } catch {
     return String(value);
@@ -295,7 +301,7 @@ export async function updateUserStatus(userId: string, status: APPLICATION_STATU
     if (status === APPLICATION_STATUS.ACCEPTED) {
       await updateDoc(userRef, { status, acceptedAt: serverTimestamp() });
     } else if (status === APPLICATION_STATUS.REJECTED) {
-      await updateDoc(userRef, { status, acceptedAt: serverTimestamp() });
+      await updateDoc(userRef, { status, rejectedAt: serverTimestamp() });
     }
     console.debug(`User ${userId} status updated to: ${status}`);
     return true;

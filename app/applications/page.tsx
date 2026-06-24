@@ -1642,12 +1642,47 @@ export default function Applications() {
                           label="Join Reason"
                           value={selectedApplication.joinReason}
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TIMELINE */}
+                  <div>
+                    <SectionHeader title="Timeline" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="space-y-1">
                         <InfoRow
-                          label="Application Date"
-                          value={formatApplicationDate(
-                            selectedApplication.applicationCreatedAt
-                          )}
+                          label="Account Created"
+                          value={formatApplicationDate(selectedApplication.userCreatedAt)}
                         />
+                        <InfoRow
+                          label="Account Updated"
+                          value={formatApplicationDate(selectedApplication.userUpdatedAt)}
+                        />
+                        <InfoRow
+                          label="Application Submitted"
+                          value={formatApplicationDate(selectedApplication.applicationCreatedAt)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        {selectedApplication.acceptedAt && (
+                          <InfoRow
+                            label="Accepted At"
+                            value={formatApplicationDate(selectedApplication.acceptedAt)}
+                          />
+                        )}
+                        {selectedApplication.rejectedAt && (
+                          <InfoRow
+                            label="Rejected At"
+                            value={formatApplicationDate(selectedApplication.rejectedAt)}
+                          />
+                        )}
+                        {selectedApplication.confirmedRsvpAt && (
+                          <InfoRow
+                            label="Confirmed RSVP At"
+                            value={formatApplicationDate(selectedApplication.confirmedRsvpAt)}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>

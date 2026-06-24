@@ -55,6 +55,9 @@ export interface FirestoreUser {
   admin: boolean;
   createdAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   updatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  acceptedAt?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  rejectedAt?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  confirmedRsvpAt?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   status: string;
 
   // Profile
@@ -121,6 +124,9 @@ export interface CombinedApplicationData {
   applicationUpdatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   userCreatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   userUpdatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  acceptedAt?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  rejectedAt?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  confirmedRsvpAt?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // Profile (from users)
   firstName: string;
