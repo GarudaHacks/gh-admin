@@ -89,7 +89,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email, {
+        url: `${window.location.origin}/auth/login`,
+        handleCodeInApp: false,
+      });
     } catch (error: any) {
       throw new Error(error.message);
     }
