@@ -23,7 +23,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
+  // resetPassword: (email: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
 }
 
@@ -81,22 +81,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const resetPassword = async (email: string) => {
-    if (!isAllowedDomain(email)) {
-      throw new Error(
-        "Only @garudahacks.com email addresses are allowed for admin access"
-      );
-    }
+  // const resetPassword = async (email: string) => {
+  //   if (!isAllowedDomain(email)) {
+  //     throw new Error(
+  //       "Only @garudahacks.com email addresses are allowed for admin access"
+  //     );
+  //   }
 
-    try {
-      await sendPasswordResetEmail(auth, email, {
-        url: `${window.location.origin}/auth/login`,
-        handleCodeInApp: false,
-      });
-    } catch (error: any) {
-      throw new Error(error.message);
-    }
-  };
+  //   try {
+  //     await sendPasswordResetEmail(auth, email, {
+  //       url: `${window.location.origin}/auth/login`,
+  //       handleCodeInApp: false,
+  //     });
+  //   } catch (error: any) {
+  //     throw new Error(error.message);
+  //   }
+  // };
 
   const signInWithGoogle = async () => {
     try {
@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         loading,
         signIn,
         signOut,
-        resetPassword,
+        // resetPassword,
         signInWithGoogle,
       }}
     >
