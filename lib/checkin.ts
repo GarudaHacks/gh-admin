@@ -59,7 +59,10 @@ export function parseQr(raw: string): ParsedQr | null {
  *  2. Firestore (source of truth) — the user id must resolve to a real doc,
  *     the printed name must match, and the RSVP must be confirmed.
  */
-export async function validateAndCheckIn(raw: string): Promise<CheckInResponse> {
+export async function validateAndCheckIn(
+  raw: string,
+  checkedInBy: { uid: string; email: string }
+): Promise<CheckInResponse> {
   const parsed = parseQr(raw);
   if (!parsed) {
     return { ok: false, reason: "Not a Garuda Hacks check-in code." };
@@ -115,6 +118,8 @@ export async function validateAndCheckIn(raw: string): Promise<CheckInResponse> 
   await userRef.update({
     checkedInAt,
     checkedInAtServer: FieldValue.serverTimestamp(),
+    checkedInBy: checkedInBy.uid,
+    checkedInByEmail: checkedInBy.email,
   });
 
   return { ok: true, alreadyCheckedIn: false, checkedInAt, hacker: hacker };

@@ -5,11 +5,11 @@ import { requireAdmin } from "@/lib/requireAdmin";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const authError = await requireAdmin(req);
-  if (authError) {
+  const authResult = await requireAdmin(req);
+  if ("error" in authResult) {
     return NextResponse.json(
-      { ok: false, reason: authError.reason },
-      { status: authError.status }
+      { ok: false, reason: authResult.error.reason },
+      { status: authResult.error.status }
     );
   }
 
@@ -30,6 +30,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const result = await validateAndCheckIn(code);
+  const result = await validateAndCheckIn(code, authResult.admin);
   return NextResponse.json(result);
 }
