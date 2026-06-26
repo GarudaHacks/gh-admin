@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginForm from "./LoginForm";
 import LoadingSpinner from "./LoadingSpinner";
@@ -8,8 +10,22 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
+// Ushers (non-admin staff) may only use the check-in scanner.
+const USHER_ALLOWED_PATHS = ["/check-in"];
+
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const usherBlocked =
+    role === "usher" && !USHER_ALLOWED_PATHS.includes(pathname);
+
+  useEffect(() => {
+    if (!loading && usherBlocked) {
+      router.replace("/check-in");
+    }
+  }, [loading, usherBlocked, router]);
 
   if (loading) {
     return (
@@ -21,6 +37,15 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user) {
     return <LoginForm />;
+  }
+
+  // Avoid flashing a forbidden page
+  if (usherBlocked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <LoadingSpinner text="Redirecting…" />
+      </div>
+    );
   }
 
   return <>{children}</>;

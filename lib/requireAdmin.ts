@@ -31,7 +31,12 @@ export async function requireAdmin(
   try {
     const decoded = await adminAuth.verifyIdToken(token);
     const email = decoded.email ?? "";
-    if (!decoded.email_verified || !email.endsWith(ADMIN_EMAIL_DOMAIN)) {
+    const isAdmin =
+      decoded.email_verified === true && email.endsWith(ADMIN_EMAIL_DOMAIN);
+    // Ushers are non-admin staff granted check-in access via a custom claim,
+    // set server-side by an admin, so it's trusted regardless of email domain.
+    const isUsher = decoded.usher === true;
+    if (!isAdmin && !isUsher) {
       return { error: { status: 403, reason: "Not authorized for check-in." } };
     }
     return { admin: { uid: decoded.uid, email } };

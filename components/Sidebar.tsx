@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 
 export default function Sidebar() {
-  const { user, signOut } = useAuth();
+  const { user, role, signOut } = useAuth();
   const pathname = usePathname();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -170,7 +170,10 @@ export default function Sidebar() {
 
       <nav className="flex-1 py-2">
         <div className={`space-y-1 ${isCollapsed ? "px-2" : "px-3"}`}>
-          {navigation.map((item) => {
+          {(role === "usher"
+            ? navigation.filter((item) => item.href === "/check-in")
+            : navigation
+          ).map((item) => {
             const isActive = pathname === item.href;
             return (
               <div key={item.name} className="relative group">

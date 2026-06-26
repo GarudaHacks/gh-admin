@@ -28,8 +28,9 @@ export const db = getFirestore(app);
 export const storage = getStorage(app)
 
 export const googleProvider = new GoogleAuthProvider();
+// Authorization is enforced by resolveRole() after sign-in.
 googleProvider.setCustomParameters({
-  hd: "garudahacks.com",
+  prompt: "select_account",
 });
 
 let emulatorsConnected = false;

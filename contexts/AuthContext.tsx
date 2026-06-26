@@ -18,8 +18,11 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 
+export type Role = "admin" | "usher";
+
 interface AuthContextType {
   user: User | null;
+  role: Role | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -43,6 +46,7 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isAdminDomain = () => {
@@ -59,15 +63,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return email.endsWith("@garudahacks.com");
   };
 
-  const signIn = async (email: string, password: string) => {
-    if (!isAllowedDomain(email)) {
-      throw new Error(
-        "Only @garudahacks.com email addresses are allowed for admin access"
-      );
-    }
+  /**
+   * Determines a signed-in user's role:
+   *  - "admin": a @garudahacks.com account (full access)
+   *  - "usher": any account carrying the `usher: true` custom claim
+   *             (check-in page only)
+   *  - null: not authorized
+   */
+  const resolveRole = async (u: User): Promise<Role | null> => {
+    if (isAllowedDomain(u.email || "")) return "admin";
+    const { claims } = await u.getIdTokenResult();
+    if (claims.usher === true) return "usher";
+    return null;
+  };
 
+  const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const resolved = await resolveRole(cred.user);
+      if (!resolved) {
+        await firebaseSignOut(auth);
+        throw new Error("This account is not authorized for access.");
+      }
     } catch (error: any) {
       throw new Error(error.message);
     }
@@ -102,10 +119,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
 
-      // Double-check the domain after sign-in
-      if (!isAllowedDomain(result.user.email || "")) {
+      // Check role after sign-in (domain admin or usher claim)
+      const resolved = await resolveRole(result.user);
+      if (!resolved) {
         await firebaseSignOut(auth);
-        throw new Error("Only @garudahacks.com email addresses are allowed");
+        throw new Error("This account is not authorized for access");
       }
 
       const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -123,13 +141,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user && !isAllowedDomain(user.email || "")) {
-        firebaseSignOut(auth);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
         setUser(null);
-        console.error("User signed out: invalid domain");
+        setRole(null);
+        setLoading(false);
+        return;
+      }
+
+      const resolved = await resolveRole(user);
+      if (!resolved) {
+        await firebaseSignOut(auth);
+        setUser(null);
+        setRole(null);
+        console.error("User signed out: not authorized");
       } else {
         setUser(user);
+        setRole(resolved);
       }
       setLoading(false);
     });
@@ -141,6 +169,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     <AuthContext.Provider
       value={{
         user,
+        role,
         loading,
         signIn,
         signOut,

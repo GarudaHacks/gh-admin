@@ -75,10 +75,6 @@ export default function LoginForm() {
                 {loading ? "Signing in..." : "Sign in with Google"}
               </button>
             </div>
-
-            <div className="text-center text-xs text-muted-foreground">
-              <p>*Only @garudahacks.com accounts are authorized to access.</p>
-            </div>
           </div>
         </div>
       </div>
