@@ -67,6 +67,13 @@ export default function Sidebar() {
       ),
     },
     {
+      name: "Check-In",
+      href: "/check-in",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-scan-barcode-icon lucide-scan-barcode"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><path d="M8 7v10" /><path d="M12 7v10" /><path d="M17 7v10" /></svg>
+      ),
+    },
+    {
       name: "Mentorship",
       href: "/mentorship",
       icon: (
@@ -108,9 +115,8 @@ export default function Sidebar() {
 
   return (
     <div
-      className={`fixed left-0 top-0 h-screen bg-background-secondary border-r border-border flex flex-col z-50 transition-all duration-300 ease-in-out ${
-        isCollapsed ? "w-16" : "w-64"
-      }`}
+      className={`fixed left-0 top-0 h-screen bg-background-secondary border-r border-border flex flex-col z-50 transition-all duration-300 ease-in-out ${isCollapsed ? "w-16" : "w-64"
+        }`}
     >
       <div
         className={`p-6 border-b border-border ${isCollapsed ? "px-4" : ""}`}
@@ -137,9 +143,8 @@ export default function Sidebar() {
       </div>
 
       <div
-        className={`flex justify-end p-2 ${
-          isCollapsed ? "justify-center" : ""
-        }`}
+        className={`flex justify-end p-2 ${isCollapsed ? "justify-center" : ""
+          }`}
       >
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -147,9 +152,8 @@ export default function Sidebar() {
           title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <svg
-            className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${
-              isCollapsed ? "rotate-180" : ""
-            }`}
+            className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""
+              }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -175,20 +179,18 @@ export default function Sidebar() {
                   className={`
                     flex items-center text-sm font-medium rounded-lg transition-all duration-200 ease-in-out
                     ${isCollapsed ? "px-3 py-3 justify-center" : "px-4 py-3"}
-                    ${
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-lg transform scale-[1.02]"
-                        : "text-primary-foreground/70 hover:bg-primary/10 hover:text-primary-foreground hover:transform hover:scale-[1.01]"
+                    ${isActive
+                      ? "bg-primary text-primary-foreground shadow-lg transform scale-[1.02]"
+                      : "text-primary-foreground/70 hover:bg-primary/10 hover:text-primary-foreground hover:transform hover:scale-[1.01]"
                     }
                   `}
                   title={isCollapsed ? item.name : undefined}
                 >
                   <span
-                    className={`transition-colors flex-shrink-0 ${
-                      isActive
+                    className={`transition-colors flex-shrink-0 ${isActive
                         ? "text-primary-foreground"
                         : "text-muted-foreground group-hover:text-primary-foreground"
-                    } ${isCollapsed ? "" : "mr-3"}`}
+                      } ${isCollapsed ? "" : "mr-3"}`}
                   >
                     {item.icon}
                   </span>
@@ -225,9 +227,8 @@ export default function Sidebar() {
               </div>
               <div className="flex-shrink-0">
                 <svg
-                  className={`w-4 h-4 text-muted-foreground transition-transform ${
-                    showProfileMenu ? "rotate-180" : ""
-                  }`}
+                  className={`w-4 h-4 text-muted-foreground transition-transform ${showProfileMenu ? "rotate-180" : ""
+                    }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -271,11 +272,10 @@ export default function Sidebar() {
 
           {showProfileMenu && (
             <div
-              className={`absolute ${
-                isCollapsed
+              className={`absolute ${isCollapsed
                   ? "left-full ml-2"
                   : "bottom-full left-0 right-0 mb-2"
-              } bg-card border border-border rounded-lg shadow-xl py-2 z-50`}
+                } bg-card border border-border rounded-lg shadow-xl py-2 z-50`}
             >
               <div className="px-4 py-2 border-b border-border">
                 <p className="text-sm font-medium text-card-foreground">
