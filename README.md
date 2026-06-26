@@ -1,4 +1,4 @@
-# Garuda Hacks Admin Portal 🚀
+# Garuda Hacks Admin Portal 🚀 
 
 The official admin portal for Garuda Hacks 6.0, a premier hackathon event. Built with modern web technologies to provide a seamless experience for administrators.
 
