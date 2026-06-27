@@ -11,6 +11,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -18,6 +19,11 @@ export default function Sidebar() {
       isCollapsed ? "4rem" : "16rem"
     );
   }, [isCollapsed]);
+
+  // Close the mobile drawer whenever the route changes
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
 
   const handleSignOut = async () => {
     try {
@@ -114,38 +120,91 @@ export default function Sidebar() {
   ];
 
   return (
-    <div
-      className={`fixed left-0 top-0 h-screen bg-background-secondary border-r border-border flex flex-col z-50 transition-all duration-300 ease-in-out ${isCollapsed ? "w-16" : "w-64"
-        }`}
-    >
-      <div
-        className={`p-6 border-b border-border ${isCollapsed ? "px-4" : ""}`}
+    <>
+      {/* Mobile hamburger toggle (hidden on desktop) */}
+      <button
+        onClick={() => setIsMobileOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-30 p-2 rounded-lg bg-background-secondary border border-border text-primary-foreground shadow-lg hover:bg-white/10 transition-colors"
+        aria-label="Open menu"
       >
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 placeholder:flex items-center justify-center flex-shrink-0 overflow-hidden">
-            <Image
-              src="/assets/ghq.png"
-              alt="Garuda Hacks"
-              width={32}
-              height={32}
-              className="w-8 h-8 object-contain"
-            />
-          </div>
-          {!isCollapsed && (
-            <div className="min-w-0">
-              <h1 className="text-lg font-bold text-primary-foreground truncate">
-                Garuda Hacks
-              </h1>
-              <p className="text-xs text-muted-foreground">Admin Portal</p>
-            </div>
-          )}
-        </div>
-      </div>
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 6h16M4 12h16M4 18h16"
+          />
+        </svg>
+      </button>
+
+      {/* Mobile backdrop */}
+      {isMobileOpen && (
+        <div
+          onClick={() => setIsMobileOpen(false)}
+          className="lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
+          aria-hidden="true"
+        />
+      )}
 
       <div
-        className={`flex justify-end p-2 ${isCollapsed ? "justify-center" : ""
-          }`}
+        className={`fixed left-0 top-0 h-screen bg-background-secondary border-r border-border flex flex-col z-50 transition-transform lg:transition-all duration-300 ease-in-out
+          w-64 ${isCollapsed ? "lg:w-16" : "lg:w-64"}
+          ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       >
+        <div
+          className={`p-6 border-b border-border ${isCollapsed ? "lg:px-4" : ""}`}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 placeholder:flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <Image
+                src="/assets/ghq.png"
+                alt="Garuda Hacks"
+                width={32}
+                height={32}
+                className="w-8 h-8 object-contain"
+              />
+            </div>
+            {!isCollapsed && (
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-primary-foreground truncate">
+                  Garuda Hacks
+                </h1>
+                <p className="text-xs text-muted-foreground">Admin Portal</p>
+              </div>
+            )}
+            {/* Mobile close button */}
+            <button
+              onClick={() => setIsMobileOpen(false)}
+              className="lg:hidden ml-auto p-1.5 rounded-lg text-muted-foreground hover:bg-white/10 hover:text-primary-foreground transition-colors"
+              aria-label="Close menu"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Collapse toggle (desktop only) */}
+        <div
+          className={`hidden lg:flex justify-end p-2 ${isCollapsed ? "justify-center" : ""
+          }`}
+        >
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-2 rounded-lg hover:bg-white/10 transition-colors"
@@ -335,6 +394,7 @@ export default function Sidebar() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

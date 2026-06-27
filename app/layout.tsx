@@ -54,10 +54,9 @@ export default function RootLayout({
             <div className="min-h-screen bg-background">
               <Sidebar />
               <main
-                className="min-h-screen transition-all duration-300 ease-in-out"
-                style={{ marginLeft: "var(--sidebar-width, 16rem)" }}
+                className="min-h-screen transition-all duration-300 ease-in-out ml-0 lg:ml-[var(--sidebar-width,16rem)]"
               >
-                <div className="p-6">{children}</div>
+                <div className="p-6 pt-16 lg:pt-6">{children}</div>
               </main>
             </div>
           </ProtectedRoute>
