@@ -1,8 +1,8 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
-import { FirestoreUser, APPLICATION_STATUS } from "./types";
+import { FirestoreUser, FirestoreApplication, APPLICATION_STATUS } from "./types";
 import { isHmacEnabled, verifyCheckIn } from "./hmac";
-import { CheckInResponse } from "./checkin-types";
+import { CheckInResponse, CheckInContext } from "./checkin-types";
 
 // Server-only: imports node crypto (via ./hmac) and is invoked from the
 // /api/check-in route. Do not import this from a client component.
@@ -104,6 +104,16 @@ export async function validateAndCheckIn(
     status: user.status,
   };
 
+  // The application doc (team / speed-dating data) shares the user's id.
+  const appSnap = await adminDb
+    .collection("applications")
+    .doc(parsed.userId)
+    .get();
+  const application = appSnap.exists
+    ? (appSnap.data() as FirestoreApplication)
+    : undefined;
+  const context = deriveCheckInContext(user, application);
+
   // Idempotent: keep the first check-in time.
   if (user.checkedInAt) {
     return {
@@ -111,6 +121,7 @@ export async function validateAndCheckIn(
       alreadyCheckedIn: true,
       checkedInAt: user.checkedInAt,
       hacker: hacker,
+      context,
     };
   }
 
@@ -122,5 +133,36 @@ export async function validateAndCheckIn(
     checkedInByEmail: checkedInBy.email,
   });
 
-  return { ok: true, alreadyCheckedIn: false, checkedInAt, hacker: hacker };
+  return { ok: true, alreadyCheckedIn: false, checkedInAt, hacker: hacker, context };
+}
+
+/**
+ * Derives which guided check-in steps apply to a hacker. Team data comes from
+ * the application doc. `joiningSpeedDating` has no field yet, so it's false.
+ */
+function deriveCheckInContext(
+  user: FirestoreUser,
+  application?: FirestoreApplication
+): CheckInContext {
+  const inTeam =
+    !!application?.teamName?.trim() || !!application?.teamMembers?.trim();
+  return {
+    inTeam,
+    isUnderage: isUnderage(user.dateOfBirth),
+    joiningSpeedDating: false,
+  };
+}
+
+/** True when the hacker is under 18 on the date the function runs. */
+function isUnderage(dateOfBirth?: string): boolean {
+  if (!dateOfBirth) return false;
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return false;
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const monthDiff = now.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age < 18;
 }

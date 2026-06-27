@@ -1,7 +1,6 @@
 /**
  * Types shared between the check-in API route (server) and the scanner page
- * (client). This file must stay free of any server-only imports (e.g. node
- * crypto / firebase) so the client can `import type` from it safely.
+ * (client).
  */
 
 export interface CheckedInHacker {
@@ -11,11 +10,18 @@ export interface CheckedInHacker {
   status: string;
 }
 
+export interface CheckInContext {
+  inTeam: boolean;
+  isUnderage: boolean;
+  joiningSpeedDating: boolean;
+}
+
 export type CheckInResponse =
   | {
       ok: true;
       alreadyCheckedIn: boolean;
       checkedInAt: string; // ISO string
       hacker: CheckedInHacker;
+      context: CheckInContext;
     }
   | { ok: false; reason: string };
