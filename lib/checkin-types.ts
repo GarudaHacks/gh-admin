@@ -12,16 +12,15 @@ export interface CheckedInHacker {
 
 export interface CheckInContext {
   inTeam: boolean;
-  isUnderage: boolean;
   joiningSpeedDating: boolean;
 }
 
 export type CheckInResponse =
   | {
-      ok: true;
-      alreadyCheckedIn: boolean;
-      checkedInAt: string; // ISO string
-      hacker: CheckedInHacker;
-      context: CheckInContext;
-    }
+    ok: true;
+    alreadyCheckedIn: boolean;
+    checkedInAt: string; // ISO string
+    hacker: CheckedInHacker;
+    context: CheckInContext;
+  }
   | { ok: false; reason: string };

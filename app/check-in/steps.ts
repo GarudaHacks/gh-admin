@@ -45,20 +45,14 @@ export const CheckInSteps: CheckInStep[] = [
         showWhen: (ctx) => ctx.inTeam,
     },
     {
-        stepName: "underageOvernightSignedConsent",
-        friendlyName: "Signed Consent",
-        instruction: "Collect the signed overnight consent form.",
-        showWhen: (ctx) => ctx.isUnderage,
-    },
-    {
         stepName: "giveLanyard",
         friendlyName: "Give Lanyard",
-        instruction: "Hand over the lanyard and badge.",
+        instruction: "Hand over the lanyard",
     },
     {
         stepName: "giveFreebies",
         friendlyName: "Give Freebies",
-        instruction: "Hand over the swag bag and freebies.",
+        instruction: "Hand over the freebies.",
     },
     {
         stepName: "takePicture",

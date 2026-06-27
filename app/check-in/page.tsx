@@ -2,17 +2,18 @@
 
 import { useRef, useState } from "react";
 import { CheckCircle2, ScanLine, XCircle } from "lucide-react";
-import { auth } from "@/lib/firebase";
 import QrScanner from "./QrScanner";
 import { StepCard } from "./StepCard";
+import { GroupScanner, GroupRoster } from "./GroupCheckin";
 import { useCheckInFlow } from "./useCheckInFlow";
+import { useGroupCheckin } from "./useGroupCheckin";
+import { postCheckIn } from "./checkin-client";
 import type { CheckInContext, CheckInResponse } from "@/lib/checkin-types";
 
 // Sensible default before the first scan tells us who the hacker is. The flow
 // re-filters its steps once `setContext` runs with the scanned hacker's facts.
 const DEFAULT_CONTEXT: CheckInContext = {
   inTeam: false,
-  isUnderage: false,
   joiningSpeedDating: false,
 };
 
@@ -24,26 +25,14 @@ export default function CheckInPage() {
   const busyRef = useRef(false);
 
   const flow = useCheckInFlow(context);
+  const group = useGroupCheckin();
 
   const handleScan = async (value: string) => {
     if (busyRef.current) return;
     busyRef.current = true;
     setScanError(null);
     try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) {
-        setScanError("You must be signed in to check people in.");
-        return;
-      }
-      const res = await fetch("/api/check-in", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ code: value }),
-      });
-      const data = (await res.json()) as CheckInResponse;
+      const data = await postCheckIn(value);
       if (!data.ok) {
         setScanError(data.reason);
         return;
@@ -51,8 +40,6 @@ export default function CheckInPage() {
       setResult(data);
       setContext(data.context); // re-filters the flow to this hacker
       flow.next(); // advance off the scan step
-    } catch {
-      setScanError("Something went wrong. Try again.");
     } finally {
       busyRef.current = false;
     }
@@ -64,6 +51,7 @@ export default function CheckInPage() {
     setScanError(null);
     setContext(DEFAULT_CONTEXT);
     busyRef.current = false;
+    group.reset();
     flow.reset();
   };
 
@@ -93,6 +81,8 @@ export default function CheckInPage() {
             getHackerInformations: result?.ok ? (
               <HackerSummary result={result} />
             ) : null,
+            doGroupCheckin: <GroupScanner group={group} />,
+            checkOtherMembers: <GroupRoster group={group} mode="verify" />,
           }}
         />
       </div>
