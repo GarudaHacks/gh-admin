@@ -736,13 +736,13 @@ export default function Applications() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-white/10">
+      <div className="flex gap-2 border-b border-white/10 overflow-x-auto">
         <button
           onClick={() => {
             setActiveTab("evaluate");
             setSelectedApplication(null);
           }}
-          className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+          className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap shrink-0 ${
             activeTab === "evaluate"
               ? "bg-white/10 text-white border-b-2 border-primary"
               : "text-white/50 hover:text-white/80 hover:bg-white/5"
@@ -755,7 +755,7 @@ export default function Applications() {
             setActiveTab("issues");
             setSelectedApplication(null);
           }}
-          className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 ${
+          className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${
             activeTab === "issues"
               ? "bg-white/10 text-white border-b-2 border-primary"
               : "text-white/50 hover:text-white/80 hover:bg-white/5"
@@ -777,7 +777,7 @@ export default function Applications() {
             setActiveTab("in-progress");
             setSelectedApplication(null);
           }}
-          className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 ${
+          className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${
             activeTab === "in-progress"
               ? "bg-white/10 text-white border-b-2 border-primary"
               : "text-white/50 hover:text-white/80 hover:bg-white/5"
@@ -792,8 +792,8 @@ export default function Applications() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-start">
+        <div className="lg:col-span-4 lg:sticky lg:top-6 lg:self-start">
           {activeTab === "evaluate" && (
             <>
               <div className="card py-4 px-3 mb-6">
@@ -892,10 +892,7 @@ export default function Applications() {
                   RSVP ({confirmedRSVPApplications.length})
                 </button>
               </div>
-              <div
-                className="card flex flex-col"
-                style={{ height: "calc(100vh - 440px)" }}
-              >
+              <div className="card flex flex-col h-[60vh] lg:h-[calc(100vh-27rem)]">
                 <div className="p-4 flex flex-col gap-2">
                   <input
                     onChange={onChangeSearchQuery}
@@ -1087,10 +1084,7 @@ export default function Applications() {
                 </button>
               </div>
 
-              <div
-                className="card flex flex-col"
-                style={{ height: "calc(100vh - 480px)" }}
-              >
+              <div className="card flex flex-col h-[60vh] lg:h-[calc(100vh-29rem)]">
                 <div className="flex-1 overflow-y-auto">
                   {activeIssueType === "duplicates" && (
                     <>
@@ -1264,10 +1258,7 @@ export default function Applications() {
 
           {activeTab === "in-progress" && (
             <>
-              <div
-                className="card flex flex-col"
-                style={{ height: "calc(100vh - 440px)" }}
-              >
+              <div className="card flex flex-col h-[60vh] lg:h-[calc(100vh-27rem)]">
                 <div className="p-6 border-b border-white/10 flex-shrink-0">
                   <h3 className="text-lg font-semibold text-white">
                     In Progress ({inProgressApplications.length})
@@ -1321,11 +1312,8 @@ export default function Applications() {
           )}
         </div>
 
-        <div className="lg:col-span-2">
-          <div
-            className="card flex flex-col"
-            style={{ height: "calc(100vh - 280px)" }}
-          >
+        <div className="lg:col-span-8">
+          <div className="card flex flex-col lg:h-[calc(100vh-17rem)]">
             <div className="p-6 border-b border-white/10 flex-shrink-0">
               <h3 className="text-lg font-semibold text-white">
                 {activeTab === "evaluate"
@@ -1333,7 +1321,7 @@ export default function Applications() {
                   : "Application Detail"}
               </h3>
             </div>
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="lg:flex-1 lg:overflow-y-auto p-6">
               {selectedApplication ? (
                 <div className="space-y-6">
                   {/* Issue banners (only shown on issues tab) */}
