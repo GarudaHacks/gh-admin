@@ -190,6 +190,9 @@ export async function fetchApplicationsWithUsers(status?: string, minScore?: num
           emergencyWays: application.emergencyWays,
           emergencyRelation: application.emergencyRelation,
           signedConsent: application.signedConsent,
+          allergies: application.allergies,
+          dietaryRestrictions: application.dietaryRestrictions,
+          medicalConditions: application.medicalConditions,
           referralCode: application.referralCode,
 
           // Additional

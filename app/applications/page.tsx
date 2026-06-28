@@ -570,6 +570,9 @@ export default function Applications() {
   const confirmedRSVPApplications = applications.filter(
     (app) => app.status === APPLICATION_STATUS.CONFIRMED_RSVP
   );
+  const speedDatingApplications = displayableApplications.filter((app) =>
+    (app.teamFormation || "").toLowerCase().includes("speed dating")
+  );
   const inProgressApplications = applicationsOriginal.filter(
     (app) =>
       app.status === APPLICATION_STATUS.NOT_APPLICABLE ||
@@ -581,6 +584,7 @@ export default function Applications() {
     if (statusFilter === "rejected") return rejectedApplications;
     if (statusFilter === "accepted") return approvedApplications;
     if (statusFilter === "confirmed-rsvp") return confirmedRSVPApplications;
+    if (statusFilter === "speed-dating") return speedDatingApplications;
     return displayableApplications;
   })();
 
@@ -890,6 +894,16 @@ export default function Applications() {
                   }`}
                 >
                   RSVP ({confirmedRSVPApplications.length})
+                </button>
+                <button
+                  onClick={() => setStatusFilter("speed-dating")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    statusFilter === "speed-dating"
+                      ? "bg-pink-500/20 text-pink-500 border border-pink-500/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Speed Dating ({speedDatingApplications.length})
                 </button>
               </div>
               <div className="card flex flex-col h-[60vh] lg:h-[calc(100vh-27rem)]">
