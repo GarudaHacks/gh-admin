@@ -917,8 +917,8 @@ export default function Applications() {
                     placeholder="Search by keyword"
                   />
                   <p className="text-xs text-white/80">
-                    Name, email, status, occupation, role, team, nationality,
-                    country, track, age.
+                    First/last name, email, status, occupation, role, team, nationality,
+                    country, track, age, referral code.
                   </p>
 
                   <div className="flex flex-row justify-end gap-4">
