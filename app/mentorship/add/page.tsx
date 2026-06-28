@@ -71,7 +71,7 @@ export default function AddMentorshipAppointmentPage() {
     if (mentorId) {
       fetchMentorById(mentorId).then((result) => {
         setMentor(result)
-        setMentorName(result?.name)
+        setMentorName(result?.displayName)
       })
     }
   }, [mentorId])
