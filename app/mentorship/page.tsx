@@ -9,7 +9,7 @@ export default function Mentorship() {
     <div className="space-y-6">
       <PageHeader
         title="Mentorship"
-        subtitle="Connect mentors with participants and manage mentorship programs."
+        subtitle="Add mentor, create schedules, and see ongoing mentoring."
       />
       <div>
         <MentorListComponent />

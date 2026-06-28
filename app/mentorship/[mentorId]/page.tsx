@@ -21,7 +21,7 @@ export default function MentorDetailPage() {
       if (m) {
         setMentor(m)
 
-        getMentorProfilePicture(m.name).then((pp) => {
+        getMentorProfilePicture(m.displayName).then((pp) => {
           if (pp) {
             setMentorUrl(pp)
           }
@@ -51,7 +51,7 @@ export default function MentorDetailPage() {
           <div className="flex-shrink-0 flex justify-center">
             <Image
               src={mentorUrl || "https://garudahacks.com/images/logo/ghq.png"}
-              alt={`Profile picture of ${mentor?.name || 'mentor'}`}
+              alt={`Profile picture of ${mentor?.displayName || 'mentor'}`}
               width={160}
               height={160}
               onError={() => setMentorUrl(ghq.src)}
@@ -59,8 +59,8 @@ export default function MentorDetailPage() {
             />
           </div>
           <div className="flex flex-col gap-4 w-full">
-            {mentor?.name && (
-              <h2 className="text-2xl font-semibold ">{mentor.name}</h2>
+            {mentor?.displayName && (
+              <h2 className="text-2xl font-semibold ">{mentor.displayName}</h2>
             )}
             {mentor?.email && (
               <p className=" text-sm">
