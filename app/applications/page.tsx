@@ -87,6 +87,7 @@ export default function Applications() {
         app.nationality,
         app.countryOfResidence,
         app.interestedTrack,
+        app.referralCode,
         age,
       ].some((field) => field?.toLowerCase().includes(q));
     });
