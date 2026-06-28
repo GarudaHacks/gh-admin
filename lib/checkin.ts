@@ -148,21 +148,6 @@ function deriveCheckInContext(
     !!application?.teamName?.trim() || !!application?.teamMembers?.trim();
   return {
     inTeam,
-    isUnderage: isUnderage(user.dateOfBirth),
     joiningSpeedDating: false,
   };
-}
-
-/** True when the hacker is under 18 on the date the function runs. */
-function isUnderage(dateOfBirth?: string): boolean {
-  if (!dateOfBirth) return false;
-  const dob = new Date(dateOfBirth);
-  if (Number.isNaN(dob.getTime())) return false;
-  const now = new Date();
-  let age = now.getFullYear() - dob.getFullYear();
-  const monthDiff = now.getMonth() - dob.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
-    age--;
-  }
-  return age < 18;
 }
