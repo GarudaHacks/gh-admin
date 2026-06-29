@@ -8,7 +8,8 @@
 //      convert it to PDF with LibreOffice, and write ./export/<uid>_leaveLetter.pdf
 //   4. Upload the PDF to Cloud Storage at
 //      users/generated/7.0/<uid>_leaveLetter.pdf (bucket from the env).
-//   5. Stamp users/{uid}.leaveLetterSentAt with a server timestamp.
+//   5. Stamp users/{uid}.leaveLetterGeneratedAt with a server timestamp.
+//      (The email send, from the admin Mailing page, stamps leaveLetterSentAt.)
 //
 // Requires LibreOffice (`soffice`) for the docx -> pdf conversion.
 //
@@ -192,7 +193,7 @@ for (const appDoc of snap.docs) {
     const pdfName = `${uid}_${slug(firstName)}_${slug(lastName)}_leaveLetter.pdf`;
     if (dryRun) {
       console.log(
-        `  [dry-run] ${uid}: would write ${pdfName} (name="${participantName}", place="${place}"), upload to gs://${BUCKET_NAME}/${STORAGE_PREFIX}/${pdfName}, set leaveLetterUrl=https://storage.googleapis.com/${BUCKET_NAME}/${STORAGE_PREFIX}/${pdfName} and stamp leaveLetterSentAt`
+        `  [dry-run] ${uid}: would write ${pdfName} (name="${participantName}", place="${place}"), upload to gs://${BUCKET_NAME}/${STORAGE_PREFIX}/${pdfName}, set leaveLetterUrl=https://storage.googleapis.com/${BUCKET_NAME}/${STORAGE_PREFIX}/${pdfName} and stamp leaveLetterGeneratedAt`
       );
       ok++;
       continue;
@@ -219,7 +220,7 @@ for (const appDoc of snap.docs) {
     const leaveLetterUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${destination}`;
     await db.collection("users").doc(uid).set(
       {
-        leaveLetterSentAt: FieldValue.serverTimestamp(),
+        leaveLetterGeneratedAt: FieldValue.serverTimestamp(),
         leaveLetterUrl,
       },
       { merge: true }
