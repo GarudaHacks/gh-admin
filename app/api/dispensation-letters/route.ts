@@ -1,8 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebaseAdmin";
+import { requireAdmin } from "@/lib/requireAdmin";
 import { dispensationLetter } from "@/templates/dispensationLetter";
+
+// firebase-admin needs the Node runtime, and this route reads live Firestore
+// data so it must never be statically prerendered at build time.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 // The exact application answer that flags a leave-letter request. Must match the
 // value used by scripts/generate-leave-letters.mjs so the candidate sets agree.
@@ -49,7 +55,15 @@ function toMillis(value: unknown): number | null {
  * GET — list every confirmed-RSVP user who requested a dispensation letter,
  * together with their generated letter URL and last-sent timestamp.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const authResult = await requireAdmin(req);
+  if ("error" in authResult) {
+    return NextResponse.json(
+      { error: authResult.error.reason },
+      { status: authResult.error.status }
+    );
+  }
+
   try {
     const appsSnap = await adminDb
       .collection("applications")
@@ -162,7 +176,15 @@ async function runWithConcurrency<T>(
  * POST — send the dispensation-letter email to one user (`{ uid }`) or many
  * (`{ uids: [...] }`). Stamps leaveLetterSentAt on each success.
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authResult = await requireAdmin(request);
+  if ("error" in authResult) {
+    return NextResponse.json(
+      { error: authResult.error.reason },
+      { status: authResult.error.status }
+    );
+  }
+
   try {
     const body = await request.json();
     const uids: string[] = body.uids || (body.uid ? [body.uid] : []);

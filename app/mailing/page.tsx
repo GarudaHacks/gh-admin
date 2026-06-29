@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import PageHeader from "@/components/PageHeader";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { auth } from "@/lib/firebase";
 
 interface Candidate {
   uid: string;
@@ -25,6 +26,13 @@ function formatSentAt(millis: number | null): string {
   });
 }
 
+// Build auth headers with the current admin's Firebase ID token; the API
+// routes require a verified @garudahacks.com session.
+async function authHeaders(): Promise<Record<string, string>> {
+  const token = await auth.currentUser?.getIdToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export default function MailingPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +46,9 @@ export default function MailingPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/dispensation-letters");
+      const res = await fetch("/api/dispensation-letters", {
+        headers: await authHeaders(),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.details || data.error || "Failed to load");
       setCandidates(data.candidates as Candidate[]);
@@ -96,7 +106,7 @@ export default function MailingPage() {
     try {
       const res = await fetch("/api/dispensation-letters", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
         body: JSON.stringify({ uid }),
       });
       const data = await res.json();
@@ -121,7 +131,7 @@ export default function MailingPage() {
     try {
       const res = await fetch("/api/dispensation-letters", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
         body: JSON.stringify({ uids }),
       });
       const data = await res.json();
