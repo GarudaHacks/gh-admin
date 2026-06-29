@@ -391,19 +391,19 @@ export async function resetApplicationStatus(userId: string): Promise<boolean> {
 }
 
 /**
- * Change an application's acceptance email bool in Firestore
+ * Marks that the results email (same template for accept/reject) was sent to a user in Firestore
  */
-export async function updateApplicationAcceptanceEmail(userId: string): Promise<boolean> {
+export async function updateApplicationResultEmail(userId: string): Promise<boolean> {
   try {
     const applicationRef = doc(db, 'users', userId);
     const updatedData = {
-      acceptanceEmailSent: true,
-      acceptanceEmailSentAt: serverTimestamp()
+      resultEmailSent: true,
+      resultEmailSentAt: serverTimestamp()
     };
     await updateDoc(applicationRef, updatedData);
     return true;
   } catch (error) {
-    console.error(`Error updating application acceptance email for ${userId}:`, error);
+    console.error(`Error updating application result email for ${userId}:`, error);
     return false;
   }
 }

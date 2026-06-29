@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getPortalConfig, updateApplicationAcceptanceEmail, updateUserStatus } from "@/lib/firebaseUtils"
+import { APPLICATION_STATUS, CombinedApplicationData, fetchApplicationsWithUsers, formatApplicationDate, getPortalConfig, updateApplicationResultEmail, updateUserStatus } from "@/lib/firebaseUtils"
 import AcceptingApplicationRowComponent from "./lists/AcceptingApplicationRow"
 import LoadingSpinner from "./LoadingSpinner"
 import { Loader2, X } from "lucide-react"
@@ -128,7 +128,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 				}
 
 				await Promise.allSettled(
-					acceptedApps.map(app => updateApplicationAcceptanceEmail(app.id))
+					acceptedApps.map(app => updateApplicationResultEmail(app.id))
 				);
 			}
 

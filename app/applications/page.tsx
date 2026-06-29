@@ -7,6 +7,7 @@ import {
   fetchApplicationsWithUsers,
   formatApplicationDate,
   updateUserStatus,
+  updateApplicationResultEmail,
   updateApplicationScore,
   resetApplicationStatus,
   revertUserStatus,
@@ -255,7 +256,9 @@ export default function Applications() {
             }),
           });
 
-          if (!response.ok) {
+          if (response.ok) {
+            await updateApplicationResultEmail(selectedApplication.id);
+          } else {
             const errorData = await response.json();
             console.error("Failed to send rejection email:", errorData);
           }
@@ -306,7 +309,9 @@ export default function Applications() {
             }),
           });
 
-          if (!response.ok) {
+          if (response.ok) {
+            await updateApplicationResultEmail(selectedApplication.id);
+          } else {
             const errorData = await response.json();
             console.error("Failed to send acceptance email:", errorData);
           }
