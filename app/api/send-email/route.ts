@@ -23,6 +23,7 @@ const transporter = nodemailer.createTransport({
 const fromAddress =
   process.env.SES_FROM_EMAIL ||
   "Garuda Hacks <no-reply@send.garudahacks.com>";
+const actionUrl = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === "garuda-hacks-development" ? "https://staging-portal.garudahacks.com" : "https://portal.garudahacks.com"
 
 const createResultsAreHereMailOptions = (email: string): MailOptions => ({
   from: fromAddress,
