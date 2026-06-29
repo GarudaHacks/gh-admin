@@ -12,10 +12,11 @@ interface Candidate {
   email: string;
   occupationPlace: string;
   leaveLetterUrl: string | null;
+  leaveLetterGeneratedAt: number | null;
   leaveLetterSentAt: number | null;
 }
 
-function formatSentAt(millis: number | null): string {
+function formatTimestamp(millis: number | null): string {
   if (!millis) return "—";
   return new Date(millis).toLocaleString("en-US", {
     year: "numeric",
@@ -220,6 +221,7 @@ export default function MailingPage() {
                   <th className="px-4 py-3 text-left">Email</th>
                   <th className="px-4 py-3 text-left">Occupation Place</th>
                   <th className="px-4 py-3 text-left">Letter</th>
+                  <th className="px-4 py-3 text-left">Generated</th>
                   <th className="px-4 py-3 text-left">Last Sent</th>
                   <th className="px-4 py-3 text-right">Action</th>
                 </tr>
@@ -228,7 +230,7 @@ export default function MailingPage() {
                 {candidates.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="px-4 py-10 text-center text-muted-foreground"
                     >
                       No confirmed-RSVP participants have requested a dispensation
@@ -278,7 +280,10 @@ export default function MailingPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
-                          {formatSentAt(c.leaveLetterSentAt)}
+                          {formatTimestamp(c.leaveLetterGeneratedAt)}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {formatTimestamp(c.leaveLetterSentAt)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button

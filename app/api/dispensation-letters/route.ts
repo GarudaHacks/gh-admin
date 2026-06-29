@@ -37,6 +37,8 @@ interface Candidate {
   email: string;
   occupationPlace: string;
   leaveLetterUrl: string | null;
+  // Epoch millis of when the PDF was generated, or null if never.
+  leaveLetterGeneratedAt: number | null;
   // Epoch millis of when the letter email was last sent, or null if never.
   leaveLetterSentAt: number | null;
 }
@@ -90,6 +92,7 @@ export async function GET(req: NextRequest) {
           email: String(user.email ?? ""),
           occupationPlace: String(user.occupationPlace ?? ""),
           leaveLetterUrl: (user.leaveLetterUrl as string) || null,
+          leaveLetterGeneratedAt: toMillis(user.leaveLetterGeneratedAt),
           leaveLetterSentAt: toMillis(user.leaveLetterSentAt),
         });
       })
