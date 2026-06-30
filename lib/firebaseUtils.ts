@@ -30,13 +30,32 @@ export type { CombinedApplicationData } from "./types";
 
 
 /**
+ * Normalizes a Firestore timestamp-ish value to milliseconds for sorting.
+ * Handles Firestore Timestamp, { seconds }, Date, number, ISO string, and
+ * missing/invalid values (which sort last via -Infinity).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toMillis(value: any): number {
+  if (!value) return -Infinity;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (typeof value.seconds === "number") return value.seconds * 1000;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number") return value;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? -Infinity : parsed;
+}
+
+/**
  * Fetches all applications from Firestore, ordered by creation date (newest first)
  */
 export async function fetchAllApplications(): Promise<FirestoreApplication[]> {
   try {
     const applicationsRef = collection(db, 'applications');
-    const q = query(applicationsRef, orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
+    // Note: we intentionally do NOT use Firestore orderBy('createdAt') here.
+    // Firestore silently excludes documents that are missing the orderBy field,
+    // which would hide applications without a createdAt. Fetch everything and
+    // sort client-side instead, pushing docs without createdAt to the end.
+    const querySnapshot = await getDocs(applicationsRef);
 
     const applications: FirestoreApplication[] = [];
     querySnapshot.forEach((doc) => {
@@ -45,6 +64,8 @@ export async function fetchAllApplications(): Promise<FirestoreApplication[]> {
         ...doc.data()
       } as FirestoreApplication);
     });
+
+    applications.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
 
     return applications;
   } catch (error) {
