@@ -21,6 +21,18 @@ import {
 import ApplicationAcceptModal from "@/components/ApplicationAcceptModal";
 import { calculateAge } from "@/lib/evaluator";
 
+const APPLICATION_YEAR = 2026;
+
+// Returns true if a Firestore Timestamp / Date / string value falls in the given year.
+const isInYear = (value: unknown, year: number): boolean => {
+  if (!value) return false;
+  const date =
+    typeof (value as { toDate?: () => Date }).toDate === "function"
+      ? (value as { toDate: () => Date }).toDate()
+      : new Date(value as string | number | Date);
+  return !Number.isNaN(date.getTime()) && date.getFullYear() === year;
+};
+
 export default function Applications() {
   const [config, setConfig] = useState<PortalConfig | null>(null);
   const [applications, setApplications] = useState<CombinedApplicationData[]>(
@@ -581,8 +593,10 @@ export default function Applications() {
   );
   const inProgressApplications = applicationsOriginal.filter(
     (app) =>
-      app.status === APPLICATION_STATUS.NOT_APPLICABLE ||
-      app.status === APPLICATION_STATUS.DRAFT
+      (app.status === APPLICATION_STATUS.NOT_APPLICABLE ||
+        app.status === APPLICATION_STATUS.DRAFT) &&
+      (isInYear(app.applicationCreatedAt, APPLICATION_YEAR) ||
+        isInYear(app.applicationUpdatedAt, APPLICATION_YEAR))
   );
   const filteredDisplayableApplications = (() => {
     if (statusFilter === "all") return displayableApplications;
