@@ -20,6 +20,7 @@ import {
 } from "@/lib/types";
 import ApplicationAcceptModal from "@/components/ApplicationAcceptModal";
 import { calculateAge } from "@/lib/evaluator";
+import { openStorageFile } from "@/lib/fileAccess";
 
 const APPLICATION_YEAR = 2026;
 
@@ -518,6 +519,33 @@ export default function Applications() {
         </svg>
         {label}
       </a>
+    ) : null;
+
+  // Like LinkRow, but for participant uploads stored in Firebase Storage. These
+  // objects are private, so we mint a short-lived signed URL on click instead of
+  // linking the (no-longer-public) stored URL directly.
+  const StorageFileLink = ({
+    href,
+    label,
+  }: {
+    href?: string | null;
+    label: string;
+  }) =>
+    href ? (
+      <button
+        type="button"
+        onClick={() => openStorageFile(href)}
+        className="flex items-center gap-2 text-accent-accessible hover:text-accent-accessible/80 text-sm"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
+            clipRule="evenodd"
+          />
+        </svg>
+        {label}
+      </button>
     ) : null;
 
   const SectionHeader = ({ title }: { title: string }) => (
@@ -1575,7 +1603,7 @@ export default function Applications() {
                   <div>
                     <SectionHeader title="Links & Documents" />
                     <div className="flex flex-wrap gap-4">
-                      <LinkRow
+                      <StorageFileLink
                         href={selectedApplication.resume}
                         label="Resume (PDF)"
                       />
@@ -1591,7 +1619,7 @@ export default function Applications() {
                         href={selectedApplication.devpost}
                         label="DevPost"
                       />
-                      <LinkRow
+                      <StorageFileLink
                         href={selectedApplication.signedConsent}
                         label="Signed Consent Form"
                       />

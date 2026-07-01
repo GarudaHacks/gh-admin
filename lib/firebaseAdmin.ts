@@ -1,6 +1,7 @@
 import { getApps, initializeApp, cert, applicationDefault, App } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
+import { getStorage } from "firebase-admin/storage";
 
 /**
  * Firebase Admin SDK — server only.
@@ -36,3 +37,8 @@ function getAdminApp(): App {
 const adminApp = getAdminApp();
 export const adminDb = getFirestore(adminApp);
 export const adminAuth = getAuth(adminApp);
+export const adminStorage = getStorage(adminApp);
+
+// Default storage bucket. initializeApp() above doesn't set storageBucket, so
+// callers of adminStorage.bucket() must pass this explicitly.
+export const STORAGE_BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "";
