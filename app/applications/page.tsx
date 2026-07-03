@@ -57,6 +57,12 @@ export default function Applications() {
   const [searchSort, setSearchSort] = useState<string>("applicationUpdatedAt");
   const [isSortDescending, setIsSortDescending] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<"evaluate" | "issues" | "in-progress" | "overnight">("evaluate");
+  const [overnightGenderFilter, setOvernightGenderFilter] = useState<
+    "all" | "male" | "female"
+  >("all");
+  const [overnightStatusFilter, setOvernightStatusFilter] = useState<
+    "all" | "confirmed-rsvp" | "accepted" | "in-progress"
+  >("all");
   const [activeIssueType, setActiveIssueType] = useState<
     "duplicates" | "oversize-team" | "missing-fields"
   >("duplicates");
@@ -641,6 +647,29 @@ export default function Applications() {
     ...overnightAcceptedApplications,
     ...overnightInProgressApplications,
   ];
+  const matchesOvernightGender = (app: CombinedApplicationData) =>
+    overnightGenderFilter === "all" ||
+    (app.genderIdentity || "").trim().toLowerCase() === overnightGenderFilter;
+  const overnightConfirmedRSVPByGender = overnightConfirmedRSVPApplications.filter(
+    matchesOvernightGender
+  );
+  const overnightAcceptedByGender = overnightAcceptedApplications.filter(
+    matchesOvernightGender
+  );
+  const overnightInProgressByGender = overnightInProgressApplications.filter(
+    matchesOvernightGender
+  );
+  const overnightTotalByGender = overnightApplications.filter(
+    matchesOvernightGender
+  );
+  const overnightDisplayApplications = (() => {
+    if (overnightStatusFilter === "confirmed-rsvp")
+      return overnightConfirmedRSVPByGender;
+    if (overnightStatusFilter === "accepted") return overnightAcceptedByGender;
+    if (overnightStatusFilter === "in-progress")
+      return overnightInProgressByGender;
+    return overnightTotalByGender;
+  })();
   const filteredDisplayableApplications = (() => {
     if (statusFilter === "all") return displayableApplications;
     if (statusFilter === "pending") return pendingApplications;
@@ -1412,44 +1441,120 @@ export default function Applications() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/10">
                   <div className="text-center py-2 md:py-0 px-2">
                     <div className="text-xl font-bold mb-1 text-purple-500">
-                      {overnightConfirmedRSVPApplications.length}
+                      {overnightConfirmedRSVPByGender.length}
                     </div>
                     <div className="text-xs text-white/70">Confirmed RSVP</div>
                   </div>
                   <div className="text-center py-2 md:py-0 px-2">
                     <div className="text-xl font-bold mb-1 text-accent-accessible">
-                      {overnightAcceptedApplications.length}
+                      {overnightAcceptedByGender.length}
                     </div>
                     <div className="text-xs text-white/70">Accepted</div>
                   </div>
                   <div className="text-center py-2 md:py-0 px-2">
                     <div className="text-xl font-bold mb-1 text-blue-400">
-                      {overnightInProgressApplications.length}
+                      {overnightInProgressByGender.length}
                     </div>
                     <div className="text-xs text-white/70">In Progress</div>
                   </div>
                   <div className="text-center py-2 md:py-0 px-2">
                     <div className="text-xl font-bold mb-1 text-teal-400">
-                      {overnightApplications.length}
+                      {overnightTotalByGender.length}
                     </div>
                     <div className="text-xs text-white/70">Total</div>
                   </div>
                 </div>
               </div>
 
-              <div className="card flex flex-col h-[60vh] lg:h-[calc(100vh-27rem)]">
+              <div className="flex gap-1 mb-3 flex-wrap">
+                <button
+                  onClick={() => setOvernightStatusFilter("all")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    overnightStatusFilter === "all"
+                      ? "bg-white/20 text-white border border-white/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  All ({overnightTotalByGender.length})
+                </button>
+                <button
+                  onClick={() => setOvernightStatusFilter("confirmed-rsvp")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    overnightStatusFilter === "confirmed-rsvp"
+                      ? "bg-green-500/20 text-purple-500 border border-purple-500/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Confirmed RSVP ({overnightConfirmedRSVPByGender.length})
+                </button>
+                <button
+                  onClick={() => setOvernightStatusFilter("accepted")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    overnightStatusFilter === "accepted"
+                      ? "bg-accent-foreground/20 text-accent-accessible border border-accent-accessible/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Accepted ({overnightAcceptedByGender.length})
+                </button>
+                <button
+                  onClick={() => setOvernightStatusFilter("in-progress")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    overnightStatusFilter === "in-progress"
+                      ? "bg-blue-500/20 text-blue-400 border border-blue-500/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  In Progress ({overnightInProgressByGender.length})
+                </button>
+              </div>
+
+              <div className="flex gap-1 mb-4">
+                <button
+                  onClick={() => setOvernightGenderFilter("all")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    overnightGenderFilter === "all"
+                      ? "bg-white/20 text-white border border-white/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  All Genders
+                </button>
+                <button
+                  onClick={() => setOvernightGenderFilter("male")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    overnightGenderFilter === "male"
+                      ? "bg-blue-500/20 text-blue-400 border border-blue-500/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Male
+                </button>
+                <button
+                  onClick={() => setOvernightGenderFilter("female")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    overnightGenderFilter === "female"
+                      ? "bg-pink-500/20 text-pink-500 border border-pink-500/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Female
+                </button>
+              </div>
+
+              <div className="card flex flex-col h-[60vh] lg:h-[calc(100vh-33rem)]">
                 <div className="p-6 border-b border-white/10 flex-shrink-0">
                   <h3 className="text-lg font-semibold text-white">
-                    Staying Overnight ({overnightApplications.length})
+                    Staying Overnight ({overnightDisplayApplications.length})
                   </h3>
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                  {overnightApplications.length === 0 ? (
+                  {overnightDisplayApplications.length === 0 ? (
                     <div className="p-6 text-center text-white/70">
                       No applications found
                     </div>
                   ) : (
-                    overnightApplications.map((application) => (
+                    overnightDisplayApplications.map((application) => (
                       <div
                         key={application.id}
                         onClick={() => handleApplicationSelect(application)}
