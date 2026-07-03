@@ -57,7 +57,6 @@ export default function Applications() {
   const [searchSort, setSearchSort] = useState<string>("applicationUpdatedAt");
   const [isSortDescending, setIsSortDescending] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<"evaluate" | "issues" | "in-progress" | "overnight">("evaluate");
-  const [overnightScope, setOvernightScope] = useState<"confirmed" | "forecast">("confirmed");
   const [activeIssueType, setActiveIssueType] = useState<
     "duplicates" | "oversize-team" | "missing-fields"
   >("duplicates");
@@ -631,20 +630,17 @@ export default function Applications() {
   // Overnight stay at UMN: participant answered "Yes, I will stay overnight at UMN"
   const isOvernightYes = (app: CombinedApplicationData) =>
     (app.overnightPlan || "").trim().toLowerCase().startsWith("yes,");
-  const overnightConfirmedApplications = confirmedRSVPApplications.filter(
-    isOvernightYes
-  );
-  const overnightInProgressApplications = inProgressApplications.filter(
-    isOvernightYes
-  );
-  const overnightForecastApplications = [
-    ...overnightConfirmedApplications,
+  const overnightConfirmedRSVPApplications =
+    confirmedRSVPApplications.filter(isOvernightYes);
+  const overnightAcceptedApplications =
+    approvedApplications.filter(isOvernightYes);
+  const overnightInProgressApplications =
+    inProgressApplications.filter(isOvernightYes);
+  const overnightApplications = [
+    ...overnightConfirmedRSVPApplications,
+    ...overnightAcceptedApplications,
     ...overnightInProgressApplications,
   ];
-  const overnightDisplayApplications =
-    overnightScope === "confirmed"
-      ? overnightConfirmedApplications
-      : overnightForecastApplications;
   const filteredDisplayableApplications = (() => {
     if (statusFilter === "all") return displayableApplications;
     if (statusFilter === "pending") return pendingApplications;
@@ -873,9 +869,9 @@ export default function Applications() {
           }`}
         >
           Overnight Stay
-          {overnightConfirmedApplications.length > 0 && (
+          {overnightApplications.length > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs bg-teal-500/20 text-teal-400">
-              {overnightConfirmedApplications.length}
+              {overnightApplications.length}
             </span>
           )}
         </button>
@@ -1413,108 +1409,75 @@ export default function Applications() {
           {activeTab === "overnight" && (
             <>
               <div className="card py-4 px-3 mb-6">
-                <div className="grid grid-cols-3 gap-4 divide-x divide-white/10">
-                  <div className="text-center px-2">
-                    <div className="text-xl font-bold mb-1 text-teal-400">
-                      {overnightConfirmedApplications.length}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/10">
+                  <div className="text-center py-2 md:py-0 px-2">
+                    <div className="text-xl font-bold mb-1 text-purple-500">
+                      {overnightConfirmedRSVPApplications.length}
                     </div>
-                    <div className="text-xs text-white/70">
-                      Confirmed RSVP staying
-                    </div>
+                    <div className="text-xs text-white/70">Confirmed RSVP</div>
                   </div>
-                  <div className="text-center px-2">
+                  <div className="text-center py-2 md:py-0 px-2">
+                    <div className="text-xl font-bold mb-1 text-accent-accessible">
+                      {overnightAcceptedApplications.length}
+                    </div>
+                    <div className="text-xs text-white/70">Accepted</div>
+                  </div>
+                  <div className="text-center py-2 md:py-0 px-2">
                     <div className="text-xl font-bold mb-1 text-blue-400">
                       {overnightInProgressApplications.length}
                     </div>
-                    <div className="text-xs text-white/70">
-                      In Progress (forecast)
-                    </div>
+                    <div className="text-xs text-white/70">In Progress</div>
                   </div>
-                  <div className="text-center px-2">
-                    <div className="text-xl font-bold mb-1 text-white">
-                      {overnightForecastApplications.length}
+                  <div className="text-center py-2 md:py-0 px-2">
+                    <div className="text-xl font-bold mb-1 text-teal-400">
+                      {overnightApplications.length}
                     </div>
-                    <div className="text-xs text-white/70">
-                      Total forecast
-                    </div>
+                    <div className="text-xs text-white/70">Total</div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-1 mb-4">
-                <button
-                  onClick={() => setOvernightScope("confirmed")}
-                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                    overnightScope === "confirmed"
-                      ? "bg-teal-500/20 text-teal-400 border border-teal-500/50"
-                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
-                  }`}
-                >
-                  Confirmed RSVP only ({overnightConfirmedApplications.length})
-                </button>
-                <button
-                  onClick={() => setOvernightScope("forecast")}
-                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                    overnightScope === "forecast"
-                      ? "bg-blue-500/20 text-blue-400 border border-blue-500/50"
-                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
-                  }`}
-                >
-                  Include In Progress ({overnightForecastApplications.length})
-                </button>
-              </div>
-
-              <div className="card flex flex-col h-[60vh] lg:h-[calc(100vh-29rem)]">
+              <div className="card flex flex-col h-[60vh] lg:h-[calc(100vh-27rem)]">
                 <div className="p-6 border-b border-white/10 flex-shrink-0">
                   <h3 className="text-lg font-semibold text-white">
-                    Staying Overnight ({overnightDisplayApplications.length})
+                    Staying Overnight ({overnightApplications.length})
                   </h3>
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                  {overnightDisplayApplications.length === 0 ? (
+                  {overnightApplications.length === 0 ? (
                     <div className="p-6 text-center text-white/70">
                       No applications found
                     </div>
                   ) : (
-                    overnightDisplayApplications.map((application) => {
-                      const isForecastOnly =
-                        application.status !==
-                        APPLICATION_STATUS.CONFIRMED_RSVP;
-                      return (
-                        <div
-                          key={application.id}
-                          onClick={() => handleApplicationSelect(application)}
-                          className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
-                            selectedApplication?.id === application.id
-                              ? "bg-primary/10 border-primary/30"
-                              : ""
-                          }`}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-medium text-sm text-white truncate">
-                              {application.firstName} {application.lastName}
-                            </h4>
-                            {isForecastOnly && (
-                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/50">
-                                Forecast
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span
-                              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(
-                                getDisplayStatus(application)
-                              )}`}
-                            >
-                              {getDisplayStatus(application)}
-                            </span>
-                            <span className="text-xs text-white/50 truncate max-w-[60%] text-right">
-                              {application.teamName || "No team"}
-                            </span>
-                          </div>
+                    overnightApplications.map((application) => (
+                      <div
+                        key={application.id}
+                        onClick={() => handleApplicationSelect(application)}
+                        className={`w-full max-w-full p-4 border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
+                          selectedApplication?.id === application.id
+                            ? "bg-primary/10 border-primary/30"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium text-sm text-white truncate">
+                            {application.firstName} {application.lastName}
+                          </h4>
                         </div>
-                      );
-                    })
+                        <div className="flex justify-between items-center">
+                          <span
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(
+                              getDisplayStatus(application)
+                            )}`}
+                          >
+                            {getDisplayStatus(application)}
+                          </span>
+                          <span className="text-xs text-white/50 truncate max-w-[60%] text-right">
+                            {application.teamName || "No team"}
+                          </span>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
