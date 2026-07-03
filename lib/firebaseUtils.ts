@@ -487,15 +487,15 @@ export async function fetchMentorshipAppointmentsByMentorId(mentorId: string) {
     );
     const querySnapshot = await getDocs(firebaseQuery);
 
-    const users: MentorshipAppointment[] = [];
+    const appointments: MentorshipAppointment[] = [];
     querySnapshot.forEach((doc) => {
-      users.push({
+      appointments.push({
         id: doc.id,
         ...doc.data()
       } as MentorshipAppointment);
     });
 
-    return users;
+    return appointments;
   } catch (error) {
     console.log("Error", error)
     throw new Error('Failed to fetch mentors');

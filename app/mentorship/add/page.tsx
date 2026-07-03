@@ -30,38 +30,35 @@ export default function AddMentorshipAppointmentPage() {
   };
 
   const handleSubmit = async () => {
+    if (nTime <= 0) {
+      setError('Must create minimum 1 slot')
+      return
+    }
+
+    if (!startDate) {
+      setError('Start date cannot be empty')
+      return
+    }
+
+    if (!mentorId) {
+      setError('Mentor Id cannot be empty')
+      return
+    }
+
+    setError('')
     setLoading(true)
 
     try {
-      if (nTime <= 0) {
-        setError('Must create minimum 1 slot')
-        return
-      } else {
-        setError('')
-      }
-
-      if (!startDate) {
-        setError('Start date cannot be empty')
-        return
-      }
-
-      if (!mentorId) {
-        setError('Mentor Id cannot be empty')
-        return
-      }
-
-      if (!location) {
-        setError('Location cannot be empty')
-        return
-      }
+      const creations = []
       for (let index = 0; index < nTime; index++) {
         const INTERVALS_SECONDS = ONE_SLOT_INTERVAL_MINUTES * 60 * index;
-        addMentorshipAppointment((startDate.getTime() / 1000) + INTERVALS_SECONDS, mentorId, appointmentType).then((res) => {
-          router.replace(`/mentorship/${mentorId}`)
-        })
+        creations.push(addMentorshipAppointment((startDate.getTime() / 1000) + INTERVALS_SECONDS, mentorId, appointmentType))
       }
+      await Promise.all(creations)
+      router.replace(`/mentorship/${mentorId}`)
     } catch (error) {
       console.log(error)
+      setError('Failed to add mentorship appointment slot(s). Please try again.')
     } finally {
       setLoading(false)
     }
@@ -124,8 +121,8 @@ export default function AddMentorshipAppointmentPage() {
 
         <div className="flex flex-col gap-2 text-center">
           {error && <span className="text-red-500 text-sm">{error}</span>}
-          <button onClick={handleSubmit} className="border p-2 rounded-xl text-sm flex flex-row items-center justify-center gap-1" type="button">
-            {loading && <Loader2 className="" />}
+          <button onClick={handleSubmit} disabled={loading} className="border p-2 rounded-xl text-sm flex flex-row items-center justify-center gap-1 disabled:opacity-60" type="button">
+            {loading && <Loader2 className="animate-spin" size={16} />}
             Add Slot
           </button>
         </div>

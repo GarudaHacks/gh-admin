@@ -15,6 +15,7 @@ export default function MentorDetailPage() {
   const [mentor, setMentor] = useState<FirestoreMentor>()
   const [mentorshipAppointments, setMentorshipAppointments] = useState<MentorshipAppointment[]>()
   const [mentorUrl, setMentorUrl] = useState<string>('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
     fetchMentorById(params.mentorId).then((m) => {
@@ -33,6 +34,9 @@ export default function MentorDetailPage() {
       if (m) {
         setMentorshipAppointments(m)
       }
+    }).catch((err) => {
+      console.error(err)
+      setError('Failed to load mentoring schedule. Please refresh the page.')
     })
 
 
@@ -102,6 +106,8 @@ export default function MentorDetailPage() {
             <Plus />
           </button>
         </div>
+
+        {error && <span className="text-red-500 text-sm">{error}</span>}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {mentorshipAppointments?.map((mentorshipAppointment) => (
