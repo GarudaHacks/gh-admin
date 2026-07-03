@@ -58,7 +58,7 @@ export default function Applications() {
   const [isSortDescending, setIsSortDescending] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<"evaluate" | "issues" | "in-progress" | "overnight">("evaluate");
   const [overnightGenderFilter, setOvernightGenderFilter] = useState<
-    "all" | "male" | "female"
+    "all" | "male" | "female" | "unspecified"
   >("all");
   const [overnightStatusFilter, setOvernightStatusFilter] = useState<
     "all" | "confirmed-rsvp" | "accepted" | "in-progress"
@@ -647,9 +647,13 @@ export default function Applications() {
     ...overnightAcceptedApplications,
     ...overnightInProgressApplications,
   ];
-  const matchesOvernightGender = (app: CombinedApplicationData) =>
-    overnightGenderFilter === "all" ||
-    (app.genderIdentity || "").trim().toLowerCase() === overnightGenderFilter;
+  const matchesOvernightGender = (app: CombinedApplicationData) => {
+    if (overnightGenderFilter === "all") return true;
+    const gender = (app.genderIdentity || "").trim().toLowerCase();
+    if (overnightGenderFilter === "unspecified")
+      return gender === "would rather not say";
+    return gender === overnightGenderFilter;
+  };
   const overnightConfirmedRSVPByGender = overnightConfirmedRSVPApplications.filter(
     matchesOvernightGender
   );
@@ -1539,6 +1543,16 @@ export default function Applications() {
                   }`}
                 >
                   Female
+                </button>
+                <button
+                  onClick={() => setOvernightGenderFilter("unspecified")}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    overnightGenderFilter === "unspecified"
+                      ? "bg-white/20 text-white border border-white/50"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  Would Rather Not Say
                 </button>
               </div>
 
