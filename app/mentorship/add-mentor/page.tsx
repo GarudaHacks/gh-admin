@@ -25,6 +25,7 @@ interface CreatedMentor {
 export default function AddMentorPage() {
   const [email, setEmail] = useState("")
   const [displayName, setDisplayName] = useState("")
+  const [mentorTitle, setMentorTitle] = useState("")
   const [specialization, setSpecialization] = useState(SPECIALIZATIONS[0])
   const [discordUsername, setDiscordUsername] = useState("")
   const [intro, setIntro] = useState("")
@@ -54,6 +55,7 @@ export default function AddMentorPage() {
         body: JSON.stringify({
           email,
           displayName,
+          mentorTitle,
           specialization,
           discordUsername,
           intro,
@@ -88,6 +90,7 @@ export default function AddMentorPage() {
   const resetForm = () => {
     setEmail("")
     setDisplayName("")
+    setMentorTitle("")
     setSpecialization(SPECIALIZATIONS[0])
     setDiscordUsername("")
     setIntro("")
@@ -175,6 +178,17 @@ export default function AddMentorPage() {
             onChange={(e) => setDisplayName(e.target.value)}
             type="text"
             placeholder="Jane Doe"
+            className="p-2 rounded-xl bg-zinc-50/20"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="font-semibold text-sm">Title</span>
+          <input
+            value={mentorTitle}
+            onChange={(e) => setMentorTitle(e.target.value)}
+            type="text"
+            placeholder="Senior Software Engineer at Acme"
             className="p-2 rounded-xl bg-zinc-50/20"
           />
         </div>

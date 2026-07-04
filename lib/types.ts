@@ -94,6 +94,7 @@ export interface FirestoreMentor {
   mentor: boolean;
   email: string;
   displayName: string;
+  mentorTitle: string;
   specialization: string;
   discordUsername: string;
   intro: string; // introduction given by mentor

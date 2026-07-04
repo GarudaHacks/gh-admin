@@ -66,6 +66,9 @@ export default function MentorDetailPage() {
             {mentor?.displayName && (
               <h2 className="text-2xl font-semibold ">{mentor.displayName}</h2>
             )}
+            {mentor?.mentorTitle && (
+              <p className="text-sm text-muted-foreground -mt-3">{mentor.mentorTitle}</p>
+            )}
             {mentor?.email && (
               <p className=" text-sm">
                 <span className="font-medium">Email:</span> {mentor.email}

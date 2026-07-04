@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 interface AddMentorBody {
   email?: unknown;
   displayName?: unknown;
+  mentorTitle?: unknown;
   specialization?: unknown;
   discordUsername?: unknown;
   intro?: unknown;
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
 
   const email = asTrimmedString(body.email).toLowerCase();
   const displayName = asTrimmedString(body.displayName);
+  const mentorTitle = asTrimmedString(body.mentorTitle);
   const specialization = asTrimmedString(body.specialization);
   const discordUsername = asTrimmedString(body.discordUsername);
   const intro = asTrimmedString(body.intro);
@@ -123,6 +125,7 @@ export async function POST(req: NextRequest) {
         mentor: true,
         email,
         displayName,
+        mentorTitle,
         specialization,
         discordUsername,
         intro,
