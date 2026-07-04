@@ -6,17 +6,25 @@ import Link from "next/link"
 import { UserPlus } from "lucide-react"
 import Separator from "./Separator"
 import MentorItemComponent from "./MentorItemComponent"
+import ConfirmDialog from "./ConfirmDialog"
 
 export default function MentorListComponent() {
   const [mentors, setMentors] = useState<FirestoreMentor[]>()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [mentorToDelete, setMentorToDelete] = useState<FirestoreMentor | null>(null)
 
-  const handleDelete = async (mentor: FirestoreMentor) => {
+  const requestDelete = (mentor: FirestoreMentor) => {
     if (!mentor.id) return
-    const confirmed = window.confirm(
-      `Delete ${mentor.displayName}? This removes their login and profile permanently.`
-    )
-    if (!confirmed) return
+    setMentorToDelete(mentor)
+  }
+
+  const cancelDelete = () => {
+    setMentorToDelete(null)
+  }
+
+  const confirmDelete = async () => {
+    const mentor = mentorToDelete
+    if (!mentor?.id) return
 
     setDeletingId(mentor.id)
     try {
@@ -41,6 +49,7 @@ export default function MentorListComponent() {
       alert("Something went wrong. Try again.")
     } finally {
       setDeletingId(null)
+      setMentorToDelete(null)
     }
   }
 
@@ -83,13 +92,23 @@ export default function MentorListComponent() {
             <MentorItemComponent
               key={index}
               mentor={m}
-              onDelete={handleDelete}
+              onDelete={requestDelete}
               deleting={deletingId === m.id}
             />
           ))}
         </div>
       </div>
 
+      {mentorToDelete && (
+        <ConfirmDialog
+          title="Delete Mentor"
+          description={`Delete ${mentorToDelete.displayName}? This removes their login and profile permanently.`}
+          confirmLabel="Delete"
+          loading={deletingId === mentorToDelete.id}
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
+        />
+      )}
     </div>
   )
 }
