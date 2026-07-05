@@ -24,6 +24,15 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 	const [confirmationModalActive, setConfirmationModalActive] = useState(false)
 	const [confirmationError, setConfirmationError] = useState("")
 	const [isAcceptingLoading, setIsAcceptingLoading] = useState(false)
+	const [excludeOvernight, setExcludeOvernight] = useState(false)
+
+	// Participant answered "No, I have my own accommodation and will not stay overnight at UMN"
+	const isNonOvernight = (application: CombinedApplicationData) =>
+		(application.overnightPlan || "").trim().toLowerCase().startsWith("no,")
+
+	const displayedApplications = excludeOvernight
+		? combinedApplications.filter(isNonOvernight)
+		: combinedApplications
 
 	const loadConfig = async () => {
 		try {
@@ -62,8 +71,13 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 		}
 	}
 
+	const onChangeExcludeOvernight = (e: React.ChangeEvent<HTMLInputElement>) => {
+		setExcludeOvernight(e.target.checked)
+		setToAcceptApplications([])
+	}
+
 	const handleSelectAll = () => {
-		setToAcceptApplications(combinedApplications)
+		setToAcceptApplications(displayedApplications)
 	}
 
 	const handleUnselectAll = () => {
@@ -223,6 +237,19 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 						</div>
 					</div>
 
+					<div className="flex flex-row items-center gap-2">
+						<input
+							id="excludeOvernight"
+							type="checkbox"
+							className="accent-green-400"
+							checked={excludeOvernight}
+							onChange={onChangeExcludeOvernight}
+						/>
+						<label htmlFor="excludeOvernight" className="text-sm text-white/80 cursor-pointer">
+							Only include participants not staying overnight at UMN
+						</label>
+					</div>
+
 					<div className="w-full h-1 border-b border-white/50" />
 
 					{isLoading ? (
@@ -232,7 +259,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 					) : (
 						<>
 							<div className="flex flex-row justify-between items-end">
-								<p className="text-xs font-semibold text-white/70">Showing {combinedApplications.length} applications passing the score threshold</p>
+								<p className="text-xs font-semibold text-white/70">Showing {displayedApplications.length} applications passing the score threshold{excludeOvernight ? " and not staying overnight" : ""}</p>
 								<div className="flex flex-col items-end gap-2">
 									<div className="flex flex-row gap-1 text-xs">
 										<button className="border px-3 py-1 rounded-full border-green-400 hover:bg-white/10" onClick={handleSelectAll}>Select All</button>
@@ -243,7 +270,7 @@ export default function ApplicationAcceptModal({ setShowAcceptModal }: Applicati
 							</div>
 
 							<div className="bg-white/5 border border-white/20 rounded-md p-4 flex-1 overflow-y-auto max-h-96">
-								{combinedApplications.map((application) => (
+								{displayedApplications.map((application) => (
 									<div key={application.id} onClick={() => handleIsToAcceptChange(application)}>
 										<AcceptingApplicationRowComponent
 											setIsToAccept={handleIsToAcceptChange}
