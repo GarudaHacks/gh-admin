@@ -19,6 +19,7 @@ import {
   PortalConfig,
 } from "@/lib/types";
 import ApplicationAcceptModal from "@/components/ApplicationAcceptModal";
+import ApplicationRejectModal from "@/components/ApplicationRejectModal";
 import { calculateAge } from "@/lib/evaluator";
 import { openStorageFile } from "@/lib/fileAccess";
 
@@ -53,6 +54,7 @@ export default function Applications() {
   const [resetting, setResetting] = useState(false);
   const [reverting, setReverting] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
   const [searchName, setSearchName] = useState<string>("");
   const [searchSort, setSearchSort] = useState<string>("applicationUpdatedAt");
   const [isSortDescending, setIsSortDescending] = useState<boolean>(true);
@@ -1129,12 +1131,20 @@ export default function Applications() {
                 </div>
               </div>
 
-              <button
-                onClick={() => setShowAcceptModal(true)}
-                className="w-full mt-6 px-4 py-3 bg-accent-accessible/20 border-2 border-grey text-grey-500 rounded-lg hover:bg-accent-accessible/30 hover:opacity-80 font-semibold transition-colors"
-              >
-                Bulk Accept
-              </button>
+              <div className="flex gap-2 mt-6">
+                <button
+                  onClick={() => setShowAcceptModal(true)}
+                  className="flex-1 px-4 py-3 bg-accent-accessible/20 border-2 border-grey text-grey-500 rounded-lg hover:bg-accent-accessible/30 hover:opacity-80 font-semibold transition-colors"
+                >
+                  Bulk Accept
+                </button>
+                <button
+                  onClick={() => setShowRejectModal(true)}
+                  className="flex-1 px-4 py-3 bg-red-600/20 border-2 border-red-600/50 text-red-400 rounded-lg hover:bg-red-600/30 hover:opacity-80 font-semibold transition-colors"
+                >
+                  Bulk Reject
+                </button>
+              </div>
             </>
           )}
 
@@ -2127,6 +2137,10 @@ export default function Applications() {
 
       {showAcceptModal && (
         <ApplicationAcceptModal setShowAcceptModal={setShowAcceptModal} />
+      )}
+
+      {showRejectModal && (
+        <ApplicationRejectModal setShowRejectModal={setShowRejectModal} />
       )}
     </div>
   );
