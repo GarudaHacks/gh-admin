@@ -512,7 +512,9 @@ export async function addMentorshipAppointment(startDate: number, mentorId: stri
       startTime: startDate,
       endTime: endDate,
       mentorId: mentorId,
-      location: location
+      location: location,
+      hackerId: null,
+      isBooked: false
     }
     const mentorshipRef = collection(db, 'mentorships');
     const docRef = await addDoc(mentorshipRef, mentorshipAppointment)

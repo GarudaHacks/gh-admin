@@ -108,9 +108,10 @@ export interface MentorshipAppointment {
   startTime: number;
   endTime: number;
   mentorId: string;
-  hackerId?: string; // a hacker book for the whole team
+  hackerId?: string | null; // a hacker book for the whole team
   hackerDescription?: string; // desc given needed by hacker
   location: string;
+  isBooked?: boolean;
 }
 
 /**
