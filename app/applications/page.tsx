@@ -108,6 +108,7 @@ export default function Applications() {
         app.countryOfResidence,
         app.interestedTrack,
         app.referralCode,
+        app.currentOccupation,
         age,
       ].some((field) => field?.toLowerCase().includes(q));
     });
@@ -1030,8 +1031,7 @@ export default function Applications() {
                     placeholder="Search by keyword"
                   />
                   <p className="text-xs text-white/80">
-                    First/last name, email, status, occupation, role, team, nationality,
-                    country, track, age, referral code.
+                    First/last name, email, status, current occupation, occupation detail, role, team, nationality, country, track, age, referral code.
                   </p>
 
                   <div className="flex flex-row justify-end gap-4">

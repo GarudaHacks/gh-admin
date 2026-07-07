@@ -4,7 +4,6 @@ import { FirestoreMentor, FirestoreUser } from "@/lib/types"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { UserPlus } from "lucide-react"
-import Separator from "./Separator"
 import MentorItemComponent from "./MentorItemComponent"
 import ConfirmDialog from "./ConfirmDialog"
 
