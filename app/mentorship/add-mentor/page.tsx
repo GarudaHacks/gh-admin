@@ -1,9 +1,10 @@
 "use client"
 
 import { auth } from "@/lib/firebase"
-import { Check, Copy, Loader2 } from "lucide-react"
+import { Check, Copy, ImagePlus, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useRef, useState } from "react"
+import MentorPictureCropModal from "@/components/MentorPictureCropModal"
 
 const SPECIALIZATIONS = [
   "developer",
@@ -35,8 +36,68 @@ export default function AddMentorPage() {
   const [created, setCreated] = useState<CreatedMentor | null>(null)
   const [copied, setCopied] = useState(false)
 
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null)
+  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [pictureWarning, setPictureWarning] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => setRawImageSrc(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const handleCropCancel = () => {
+    setRawImageSrc(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const handleCropConfirm = (blob: Blob) => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setCroppedBlob(blob)
+    setPreviewUrl(URL.createObjectURL(blob))
+    setRawImageSrc(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const handleRemovePicture = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setCroppedBlob(null)
+    setPreviewUrl(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const uploadMentorPicture = async (uid: string, token: string) => {
+    if (!croppedBlob) return
+
+    try {
+      const formData = new FormData()
+      formData.append("file", croppedBlob, "picture.png")
+
+      const res = await fetch(`/api/mentors/${uid}/picture`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        setPictureWarning(
+          data.reason || "Mentor created, but the picture failed to upload."
+        )
+      }
+    } catch {
+      setPictureWarning("Mentor created, but the picture failed to upload.")
+    }
+  }
+
   const handleSubmit = async () => {
     setError("")
+    setPictureWarning("")
     setLoading(true)
 
     try {
@@ -68,6 +129,8 @@ export default function AddMentorPage() {
         return
       }
 
+      await uploadMentorPicture(data.uid, token)
+
       setCreated({
         email: data.email,
         displayName: data.displayName,
@@ -96,6 +159,8 @@ export default function AddMentorPage() {
     setIntro("")
     setCreated(null)
     setError("")
+    handleRemovePicture()
+    setPictureWarning("")
   }
 
   if (created) {
@@ -130,6 +195,10 @@ export default function AddMentorPage() {
           </p>
         </div>
 
+        {pictureWarning && (
+          <span className="text-yellow-500 text-sm">{pictureWarning}</span>
+        )}
+
         <div className="flex flex-row gap-2">
           <button
             onClick={resetForm}
@@ -160,6 +229,49 @@ export default function AddMentorPage() {
       </div>
 
       <div className="flex flex-col gap-4 max-w-xl">
+        <div className="flex flex-col gap-2">
+          <span className="font-semibold text-sm">Profile Picture</span>
+          <div className="flex flex-row items-center gap-4">
+            <div className="w-20 h-20 rounded-full bg-zinc-50/20 border border-gray-400 overflow-hidden flex items-center justify-center shrink-0">
+              {previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewUrl}
+                  alt="Mentor profile preview"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <ImagePlus size={24} className="text-gray-400" />
+              )}
+            </div>
+            <div className="flex flex-row gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                type="button"
+                className="border p-2 rounded-xl text-sm"
+              >
+                {previewUrl ? "Change Picture" : "Upload Picture"}
+              </button>
+              {previewUrl && (
+                <button
+                  onClick={handleRemovePicture}
+                  type="button"
+                  className="border p-2 rounded-xl text-sm"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              type="file"
+              accept="image/*"
+              className="hidden"
+            />
+          </div>
+        </div>
+
         <div className="flex flex-col gap-2">
           <span className="font-semibold text-sm">Email</span>
           <input
@@ -243,6 +355,14 @@ export default function AddMentorPage() {
           </button>
         </div>
       </div>
+
+      {rawImageSrc && (
+        <MentorPictureCropModal
+          imageSrc={rawImageSrc}
+          onCancel={handleCropCancel}
+          onConfirm={handleCropConfirm}
+        />
+      )}
     </div>
   )
 }
