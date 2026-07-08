@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   updateDoc,
+  setDoc,
   query,
   Timestamp,
   where,
@@ -18,6 +19,8 @@ import {
   FirestoreUser,
   CombinedApplicationData,
   PortalConfig,
+  MatchConfig,
+  MentorshipConfig,
   FirestoreMentor,
   MentorshipAppointment,
   APPLICATION_STATUS,
@@ -309,6 +312,104 @@ export async function updatePortalConfig(config: PortalConfig): Promise<boolean>
     };
 
     await updateDoc(configRef, firestoreData);
+    return true;
+
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves team matching configuration
+ */
+export async function getMatchConfig(): Promise<MatchConfig | null> {
+  try {
+    const configRef = doc(db, 'config', 'matchConfig');
+    const configSnap = await getDoc(configRef);
+
+    if (!configSnap.exists()) {
+      return null;
+    }
+
+    const data = configSnap.data();
+
+    const config: MatchConfig = {
+      isMatchOpen: Boolean(data.isMatchOpen),
+      startDate: data.startDate.toDate(),
+      endDate: data.endDate.toDate(),
+    };
+
+    return config;
+
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Creates or updates team matching configuration in Firestore
+ * @param config - The match configuration data to save
+ */
+export async function updateMatchConfig(config: MatchConfig): Promise<boolean> {
+  try {
+    const configRef = doc(db, 'config', 'matchConfig');
+
+    const firestoreData = {
+      isMatchOpen: config.isMatchOpen,
+      startDate: Timestamp.fromDate(config.startDate),
+      endDate: Timestamp.fromDate(config.endDate),
+    };
+
+    await setDoc(configRef, firestoreData, { merge: true });
+    return true;
+
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves mentorship configuration
+ */
+export async function getMentorshipConfig(): Promise<MentorshipConfig | null> {
+  try {
+    const configRef = doc(db, 'config', 'mentorshipConfig');
+    const configSnap = await getDoc(configRef);
+
+    if (!configSnap.exists()) {
+      return null;
+    }
+
+    const data = configSnap.data();
+
+    const config: MentorshipConfig = {
+      isMentorshipOpen: Boolean(data.isMentorshipOpen),
+      startDate: data.startDate.toDate(),
+      endDate: data.endDate.toDate(),
+    };
+
+    return config;
+
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Creates or updates mentorship configuration in Firestore
+ * @param config - The mentorship configuration data to save
+ */
+export async function updateMentorshipConfig(config: MentorshipConfig): Promise<boolean> {
+  try {
+    const configRef = doc(db, 'config', 'mentorshipConfig');
+
+    const firestoreData = {
+      isMentorshipOpen: config.isMentorshipOpen,
+      startDate: Timestamp.fromDate(config.startDate),
+      endDate: Timestamp.fromDate(config.endDate),
+    };
+
+    await setDoc(configRef, firestoreData, { merge: true });
     return true;
 
   } catch {

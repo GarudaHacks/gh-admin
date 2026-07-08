@@ -215,3 +215,14 @@ export interface PortalConfig {
   maxApplicationEvaluationScore: number;
 }
 
+export interface MatchConfig {
+  isMatchOpen: boolean
+  startDate: Date
+  endDate: Date
+}
+
+export interface MentorshipConfig {
+  isMentorshipOpen: boolean
+  startDate: Date
+  endDate: Date
+}
