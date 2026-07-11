@@ -1,7 +1,7 @@
 "use client"
 
 import MentorPictureCropModal from "@/components/MentorPictureCropModal"
-import MentorshipAppointmentCardComponent from "@/components/MentorshipAppointmentCardComponent"
+import MentorScheduleTimeline from "@/components/MentorScheduleTimeline"
 import { auth } from "@/lib/firebase"
 import { fetchMentorshipAppointmentsByMentorId, fetchMentorById, getMentorProfilePicture } from "@/lib/firebaseUtils"
 import { FirestoreMentor, MentorshipAppointment } from "@/lib/types"
@@ -198,11 +198,18 @@ export default function MentorDetailPage() {
 
         {error && <span className="text-red-500 text-sm">{error}</span>}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {mentorshipAppointments?.map((mentorshipAppointment) => (
-            <MentorshipAppointmentCardComponent key={mentorshipAppointment.id} mentorshipAppointment={mentorshipAppointment} />
-          ))}
-        </div>
+        {mentorshipAppointments && mentorshipAppointments.length > 0 ? (
+          <MentorScheduleTimeline
+            appointments={mentorshipAppointments}
+            onDeleted={(id) =>
+              setMentorshipAppointments((prev) => prev?.filter((a) => a.id !== id))
+            }
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No schedule yet. Click &ldquo;Add Schedule&rdquo; to create booking slots.
+          </p>
+        )}
       </div>
 
       {rawImageSrc && (

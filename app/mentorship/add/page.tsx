@@ -1,7 +1,8 @@
 "use client"
 
+import MentorScheduleTimeline from "@/components/MentorScheduleTimeline"
 import { ONE_SLOT_INTERVAL_MINUTES } from "@/config"
-import { addMentorshipAppointment, fetchMentorById } from "@/lib/firebaseUtils"
+import { addMentorshipAppointment, fetchMentorById, fetchMentorshipAppointmentsByMentorId } from "@/lib/firebaseUtils"
 import { dateToStringTime, epochToStringDate } from "@/lib/helpers"
 import { FirestoreMentor, MentorshipAppointment } from "@/lib/types"
 import { Loader2 } from "lucide-react"
@@ -18,6 +19,7 @@ export default function AddMentorshipAppointmentPage() {
 
   const [mentor, setMentor] = useState<FirestoreMentor | null>()
   const [mentorName, setMentorName] = useState<string | undefined>('')
+  const [appointments, setAppointments] = useState<MentorshipAppointment[]>([])
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [nTime, setNTime] = useState<number>(1)
   const [appointmentType, setAppointmentType] = useState<string>('online');
@@ -70,6 +72,10 @@ export default function AddMentorshipAppointmentPage() {
         setMentor(result)
         setMentorName(result?.displayName)
       })
+
+      fetchMentorshipAppointmentsByMentorId(mentorId)
+        .then((result) => setAppointments(result ?? []))
+        .catch((err) => console.error(err))
     }
   }, [mentorId])
 
@@ -81,7 +87,8 @@ export default function AddMentorshipAppointmentPage() {
         <p className="text-muted-foreground">Add mentorship slots that can be booked immediately by hackers.</p>
       </div>
 
-      <div className="flex flex-col gap-4 max-w-xl">
+      <div className="flex flex-col lg:flex-row gap-8">
+      <div className="flex flex-col gap-4 w-full max-w-xl">
         <div className="flex flex-col gap-2">
           <span className="font-semibold text-sm">Mentor Name</span>
           <input value={mentorName} onChange={e => setMentorName(e.target.value)} disabled type="text" className="p-2 rounded-xl bg-zinc-50/20" />
@@ -126,6 +133,23 @@ export default function AddMentorshipAppointmentPage() {
             Add Slot
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-3 w-full lg:max-w-2xl">
+        <div>
+          <h2 className="font-semibold">Existing schedule</h2>
+          <p className="text-muted-foreground text-sm">
+            {mentorName || 'This mentor'}&apos;s current slots — check for conflicts before adding.
+          </p>
+        </div>
+        {appointments.length > 0 ? (
+          <MentorScheduleTimeline appointments={appointments} compact />
+        ) : (
+          <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            No slots created yet.
+          </div>
+        )}
+      </div>
       </div>
     </div>
   )
