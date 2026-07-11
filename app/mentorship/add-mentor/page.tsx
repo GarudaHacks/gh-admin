@@ -20,7 +20,8 @@ const SPECIALIZATIONS = [
 interface CreatedMentor {
   email: string
   displayName: string
-  password: string
+  password?: string
+  upgraded?: boolean
 }
 
 export default function AddMentorPage() {
@@ -32,7 +33,9 @@ export default function AddMentorPage() {
   const [intro, setIntro] = useState("")
 
   const [loading, setLoading] = useState(false)
+  const [upgrading, setUpgrading] = useState(false)
   const [error, setError] = useState("")
+  const [existingEmail, setExistingEmail] = useState<string | null>(null)
   const [created, setCreated] = useState<CreatedMentor | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -95,10 +98,11 @@ export default function AddMentorPage() {
     }
   }
 
-  const handleSubmit = async () => {
+  const submit = async (upgradeExisting: boolean) => {
     setError("")
     setPictureWarning("")
-    setLoading(true)
+    if (upgradeExisting) setUpgrading(true)
+    else setLoading(true)
 
     try {
       const token = await auth.currentUser?.getIdToken()
@@ -120,31 +124,43 @@ export default function AddMentorPage() {
           specialization,
           discordUsername,
           intro,
+          upgradeExisting,
         }),
       })
 
       const data = await res.json()
       if (!res.ok || !data.ok) {
+        // Duplicate email on a create: offer to upgrade the existing user
+        // instead of just showing an error.
+        if (!upgradeExisting && data.code === "email-exists") {
+          setExistingEmail(email)
+          return
+        }
         setError(data.reason || "Something went wrong. Try again.")
         return
       }
 
       await uploadMentorPicture(data.uid, token)
 
+      setExistingEmail(null)
       setCreated({
         email: data.email,
         displayName: data.displayName,
         password: data.password,
+        upgraded: data.upgraded === true,
       })
     } catch {
       setError("Something went wrong. Try again.")
     } finally {
-      setLoading(false)
+      if (upgradeExisting) setUpgrading(false)
+      else setLoading(false)
     }
   }
 
+  const handleSubmit = () => submit(false)
+
   const handleCopy = async () => {
-    if (!created) return
+    if (!created?.password) return
     await navigator.clipboard.writeText(created.password)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -159,6 +175,7 @@ export default function AddMentorPage() {
     setIntro("")
     setCreated(null)
     setError("")
+    setExistingEmail(null)
     handleRemovePicture()
     setPictureWarning("")
   }
@@ -167,33 +184,55 @@ export default function AddMentorPage() {
     return (
       <div className="flex flex-col gap-4 max-w-xl">
         <div>
-          <h1 className="text-xl">Mentor Created</h1>
+          <h1 className="text-xl">
+            {created.upgraded ? "Mentor Upgraded" : "Mentor Created"}
+          </h1>
           <p className="text-muted-foreground">
-            {created.displayName} ({created.email}) now has a login. Share the
-            password below — it is shown only once and is not stored anywhere.
+            {created.upgraded ? (
+              <>
+                {created.displayName} ({created.email}) is now a mentor. They keep
+                their existing login — no new password is generated.
+              </>
+            ) : (
+              <>
+                {created.displayName} ({created.email}) now has a login. Share the
+                password below — it is shown only once and is not stored anywhere.
+              </>
+            )}
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 border border-gray-400 rounded-xl p-4">
-          <span className="font-semibold text-sm">Generated Password</span>
-          <div className="flex flex-row items-center gap-2">
-            <code className="flex-1 p-2 rounded-lg bg-zinc-50/20 font-mono break-all">
-              {created.password}
-            </code>
-            <button
-              onClick={handleCopy}
-              className="border p-2 rounded-lg flex items-center gap-1 text-sm"
-              type="button"
-            >
-              {copied ? <Check size={16} /> : <Copy size={16} />}
-              {copied ? "Copied" : "Copy"}
-            </button>
+        {created.upgraded ? (
+          <div className="flex flex-col gap-1 border border-gray-400 rounded-xl p-4">
+            <span className="font-semibold text-sm">Existing account upgraded</span>
+            <p className="text-muted-foreground text-sm">
+              This user was already registered, so they sign in with their current
+              email and password. They now have mentor access (role: mentor) and a
+              mentor profile.
+            </p>
           </div>
-          <p className="text-muted-foreground text-sm">
-            The mentor can sign in with their email and this password, then reset
-            it from the portal.
-          </p>
-        </div>
+        ) : (
+          <div className="flex flex-col gap-2 border border-gray-400 rounded-xl p-4">
+            <span className="font-semibold text-sm">Generated Password</span>
+            <div className="flex flex-row items-center gap-2">
+              <code className="flex-1 p-2 rounded-lg bg-zinc-50/20 font-mono break-all">
+                {created.password}
+              </code>
+              <button
+                onClick={handleCopy}
+                className="border p-2 rounded-lg flex items-center gap-1 text-sm"
+                type="button"
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p className="text-muted-foreground text-sm">
+              The mentor can sign in with their email and this password, then reset
+              it from the portal.
+            </p>
+          </div>
+        )}
 
         {pictureWarning && (
           <span className="text-yellow-500 text-sm">{pictureWarning}</span>
@@ -276,7 +315,11 @@ export default function AddMentorPage() {
           <span className="font-semibold text-sm">Email</span>
           <input
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setExistingEmail(null)
+              setError("")
+            }}
             type="email"
             placeholder="mentor@example.com"
             className="p-2 rounded-xl bg-zinc-50/20"
@@ -342,11 +385,34 @@ export default function AddMentorPage() {
           />
         </div>
 
-        <div className="flex flex-col gap-2 text-center">
+        <div className="flex flex-col gap-3 text-center">
+          {existingEmail && (
+            <div className="flex flex-col gap-3 rounded-xl border border-yellow-600/50 bg-yellow-500/10 p-4 text-left">
+              <div className="text-sm">
+                <p className="font-semibold">
+                  An account with {existingEmail} already exists.
+                </p>
+                <p className="text-muted-foreground">
+                  Upgrade this existing user to a mentor? They keep their current
+                  login and password. We&apos;ll grant mentor access (role:
+                  mentor) and save the profile above onto their account.
+                </p>
+              </div>
+              <button
+                onClick={() => submit(true)}
+                disabled={upgrading}
+                className="border border-yellow-600/60 p-2 rounded-xl text-sm flex flex-row items-center justify-center gap-1 disabled:opacity-60 hover:bg-yellow-500/10"
+                type="button"
+              >
+                {upgrading && <Loader2 className="animate-spin" size={16} />}
+                Upgrade to Mentor
+              </button>
+            </div>
+          )}
           {error && <span className="text-red-500 text-sm">{error}</span>}
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || upgrading}
             className="border p-2 rounded-xl text-sm flex flex-row items-center justify-center gap-1 disabled:opacity-60"
             type="button"
           >
