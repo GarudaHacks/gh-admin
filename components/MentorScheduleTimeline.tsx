@@ -3,7 +3,7 @@
 import { deleteMentorshipAppointment } from '@/lib/firebaseUtils';
 import { getTimeZoneLabel } from '@/lib/helpers';
 import { MentorshipAppointment } from '@/lib/types';
-import { Clock, Loader2, Trash2 } from 'lucide-react';
+import { Check, Clock, Copy, Loader2, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 interface MentorScheduleTimelineProps {
@@ -75,7 +75,19 @@ export default function MentorScheduleTimeline({
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [pendingDelete, setPendingDelete] = useState<MentorshipAppointment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const timeZone = getTimeZoneLabel();
+
+  const copyId = async (id?: string) => {
+    if (!id) return;
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1500);
+    } catch {
+      // Clipboard can be blocked (e.g. insecure context) — the id is still visible to copy manually.
+    }
+  };
 
   const totals = useMemo(() => {
     const booked = appointments.filter(isBooked).length;
@@ -258,6 +270,30 @@ export default function MentorScheduleTimeline({
                                   </span>
                                   {slot.hackerDescription}
                                 </p>
+                              )}
+                              {slot.id && (
+                                <div className="mt-2 flex items-center gap-1.5 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                                  <span className="shrink-0">ID</span>
+                                  <code className="truncate font-mono text-primary-foreground" title={slot.id}>
+                                    {slot.id}
+                                  </code>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyId(slot.id)}
+                                    className="ml-auto flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 hover:bg-zinc-50/10"
+                                    aria-label="Copy slot ID"
+                                  >
+                                    {copiedId === slot.id ? (
+                                      <>
+                                        <Check size={12} /> Copied
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy size={12} /> Copy
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
