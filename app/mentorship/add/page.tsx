@@ -3,9 +3,9 @@
 import MentorScheduleTimeline from "@/components/MentorScheduleTimeline"
 import { ONE_SLOT_INTERVAL_MINUTES } from "@/config"
 import { addMentorshipAppointment, fetchMentorById, fetchMentorshipAppointmentsByMentorId } from "@/lib/firebaseUtils"
-import { dateToStringTime, epochToStringDate } from "@/lib/helpers"
+import { dateToStringTime, epochToStringDate, getTimeZoneLabel } from "@/lib/helpers"
 import { FirestoreMentor, MentorshipAppointment } from "@/lib/types"
-import { Loader2 } from "lucide-react"
+import { Clock, Loader2 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import DatePicker from "react-datepicker"
@@ -106,6 +106,10 @@ export default function AddMentorshipAppointmentPage() {
             />
             <span>{dateToStringTime(startDate || new Date())}</span>
           </div>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock size={13} />
+            Times are in <span className="font-medium text-primary-foreground">{getTimeZoneLabel()}</span>
+          </p>
         </div>
 
         <div className="flex flex-col gap-2">

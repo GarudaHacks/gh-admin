@@ -1,8 +1,9 @@
 'use client';
 
 import { deleteMentorshipAppointment } from '@/lib/firebaseUtils';
+import { getTimeZoneLabel } from '@/lib/helpers';
 import { MentorshipAppointment } from '@/lib/types';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Clock, Loader2, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 interface MentorScheduleTimelineProps {
@@ -74,6 +75,7 @@ export default function MentorScheduleTimeline({
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [pendingDelete, setPendingDelete] = useState<MentorshipAppointment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const timeZone = getTimeZoneLabel();
 
   const totals = useMemo(() => {
     const booked = appointments.filter(isBooked).length;
@@ -153,6 +155,14 @@ export default function MentorScheduleTimeline({
           <FilterChip value="booked" label="Booked" />
           <FilterChip value="free" label="Free" />
         </div>
+      </div>
+
+      {/* Timezone notice */}
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Clock size={13} />
+        <span>
+          All times shown in <span className="font-medium text-primary-foreground">{timeZone}</span>
+        </span>
       </div>
 
       {/* Timeline */}
