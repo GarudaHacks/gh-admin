@@ -73,6 +73,32 @@ export async function editTeamMember(input: {
   }
 }
 
+/** Switches a hacker's overnight plan during check-in. Returns the new value. */
+export async function setOvernightPlan(
+  uid: string,
+  overnight: boolean
+): Promise<{ ok: true; overnight: boolean } | { ok: false; reason: string }> {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) {
+    return { ok: false, reason: "You must be signed in." };
+  }
+  try {
+    const res = await fetch("/api/check-in/overnight", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ uid, overnight }),
+    });
+    return (await res.json()) as
+      | { ok: true; overnight: boolean }
+      | { ok: false; reason: string };
+  } catch {
+    return { ok: false, reason: "Something went wrong. Try again." };
+  }
+}
+
 /** Fetches the check-in history (all checked-in users, newest first). */
 export async function fetchCheckInHistory(): Promise<
   { ok: true; history: CheckInHistoryEntry[] } | { ok: false; reason: string }

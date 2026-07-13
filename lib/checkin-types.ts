@@ -67,6 +67,8 @@ export type CheckInResponse =
     team: CheckInTeam | null;
     /** The team's assigned venue table, if it has been placed in `tables`. */
     table: CheckInTable | null;
+    /** Whether the hacker's application opts into staying overnight. */
+    overnight: boolean;
   }
   | { ok: false; reason: string };
 

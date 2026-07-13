@@ -39,6 +39,12 @@ export const CheckInSteps: CheckInStep[] = [
         showWhen: (ctx) => ctx.inTeam,
     },
     {
+        stepName: "confirmOvernight",
+        friendlyName: "Overnight Plan",
+        instruction:
+            "Remind the hacker of their overnight plan and confirm it's still correct. If it changed, switch it below and confirm.",
+    },
+    {
         stepName: "verifyTable",
         friendlyName: "Verify Table",
         instruction:
@@ -51,6 +57,13 @@ export const CheckInSteps: CheckInStep[] = [
         instruction:
             "Tell the hacker their table number and where to find it, out loud.",
         showWhen: (ctx) => ctx.hasTable,
+    },
+    {
+        stepName: "noTableYet",
+        friendlyName: "No Table Yet",
+        instruction:
+            "This hacker doesn't have an assigned table yet. Let them know they'll get their table after the Speed Dating session.",
+        showWhen: (ctx) => !ctx.hasTable,
     },
     {
         stepName: "giveLanyard",

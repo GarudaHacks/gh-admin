@@ -160,18 +160,21 @@ export async function validateAndCheckIn(
     }
   }
 
-  // Whether the hacker opted into Speed Dating, from their application's
-  // teamFormation answer. Best-effort.
+  // From the hacker's application: whether they opted into Speed Dating
+  // (teamFormation) and whether they plan to stay overnight (overnightPlan).
+  // Best-effort — never fail the check-in over it.
   let joiningSpeedDating = false;
+  let overnight = false;
   try {
     const appSnap = await adminDb
       .collection("applications")
       .doc(parsed.userId)
       .get();
-    const teamFormation = appSnap.exists
-      ? (appSnap.data()?.teamFormation as string | undefined)
-      : undefined;
+    const appData = appSnap.exists ? appSnap.data() : undefined;
+    const teamFormation = appData?.teamFormation as string | undefined;
+    const overnightPlan = appData?.overnightPlan as string | undefined;
     joiningSpeedDating = !!teamFormation && /speed dating/i.test(teamFormation);
+    overnight = !!overnightPlan && /^yes/i.test(overnightPlan);
   } catch (err) {
     console.error("Failed to read application for", parsed.userId, err);
   }
@@ -187,5 +190,6 @@ export async function validateAndCheckIn(
     context,
     team,
     table,
+    overnight,
   };
 }

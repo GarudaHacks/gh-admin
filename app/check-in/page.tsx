@@ -9,12 +9,12 @@ import {
   Loader2,
   MapPin,
   ScanLine,
-  Sparkles,
   XCircle,
 } from "lucide-react";
 import QrScanner from "./QrScanner";
 import { StepCard } from "./StepCard";
 import { TeamConfirm } from "./TeamConfirm";
+import { OvernightConfirm } from "./OvernightConfirm";
 import { PhotoCapture } from "./PhotoCapture";
 import { useCheckInFlow } from "./useCheckInFlow";
 import { postCheckIn } from "./checkin-client";
@@ -38,6 +38,8 @@ export default function CheckInPage() {
   const [result, setResult] = useState<CheckInResponse | null>(null);
   // The team roster (mutable via the Confirm Team step), seeded from the scan.
   const [team, setTeam] = useState<CheckInTeam | null>(null);
+  // The hacker's overnight plan (mutable via the Overnight Plan step).
+  const [overnight, setOvernight] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   // True while a scanned code is being validated / checked in (network in flight).
   const [scanning, setScanning] = useState(false);
@@ -59,6 +61,7 @@ export default function CheckInPage() {
       }
       setResult(data);
       setTeam(data.team);
+      setOvernight(data.overnight);
       setContext(data.context); // re-filters the flow to this hacker
       flow.next(); // advance off the scan step
     } finally {
@@ -71,6 +74,7 @@ export default function CheckInPage() {
   const handleReset = () => {
     setResult(null);
     setTeam(null);
+    setOvernight(false);
     setScanError(null);
     setScanning(false);
     setContext(DEFAULT_CONTEXT);
@@ -134,6 +138,22 @@ export default function CheckInPage() {
             ) : null,
             announceTable: result?.ok && result.table ? (
               <TableCallout table={result.table} />
+            ) : null,
+            noTableYet: (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+                <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                <p className="text-sm text-amber-100/90">
+                  No table assigned yet. Let them know they&apos;ll get their
+                  table after the Speed Dating session.
+                </p>
+              </div>
+            ),
+            confirmOvernight: result?.ok ? (
+              <OvernightConfirm
+                uid={result.userId}
+                overnight={overnight}
+                onChange={setOvernight}
+              />
             ) : null,
             speedDatingBooth: (
               <div className="flex items-start gap-3 rounded-xl border border-[#874ffe]/40 bg-[#874ffe]/10 p-4">
