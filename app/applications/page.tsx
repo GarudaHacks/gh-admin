@@ -201,12 +201,29 @@ export default function Applications() {
       const sorted = [...data].sort((a, b) => {
         return new Date(b.applicationUpdatedAt).getTime() - new Date(a.applicationUpdatedAt).getTime();
       });
-      setApplications(sorted);
       setApplicationsOriginal(data);
-      if (data.length > 0) {
-        setSelectedApplication(data[0]);
-        setEvaluationScore(data[0].score?.toString() || "");
-        setEvaluationNotes(data[0].evaluationNotes || "");
+
+      // Deep link: /applications?uid=<uid> (e.g. from the Table Assignments
+      // page) preselects that person and filters the list down to them.
+      const uidParam =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("uid")
+          : null;
+      const linked = uidParam ? data.find((a) => a.id === uidParam) : null;
+
+      if (linked) {
+        setApplications([linked]);
+        setSearchName(uidParam!);
+        setSelectedApplication(linked);
+        setEvaluationScore(linked.score?.toString() || "");
+        setEvaluationNotes(linked.evaluationNotes || "");
+      } else {
+        setApplications(sorted);
+        if (data.length > 0) {
+          setSelectedApplication(data[0]);
+          setEvaluationScore(data[0].score?.toString() || "");
+          setEvaluationNotes(data[0].evaluationNotes || "");
+        }
       }
     } catch (err) {
       console.error("Error loading applications:", err);

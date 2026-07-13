@@ -137,6 +137,12 @@ export default function TablesPage() {
   const [sortCriteria, setSortCriteria] = useState<
     { key: SortKey; dir: SortDir }[]
   >([]);
+  // Narrow the pool by whether a team is already seated at some table.
+  const [assignmentFilter, setAssignmentFilter] = useState<
+    "all" | "unassigned" | "assigned"
+  >("all");
+  // Teams whose member list is expanded (to inspect each member's age/gender).
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
 
   // Move-team modal (moving one formation off a table onto another).
   const [moveSource, setMoveSource] = useState<{
@@ -194,6 +200,27 @@ export default function TablesPage() {
     const name = u ? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() : "";
     return name || uid;
   };
+
+  // Name + age + gender for a member, straight from the users doc, plus a deep
+  // link to that person's record in the Applications page.
+  const memberDetail = (uid: string) => {
+    const u = userMap.get(uid);
+    return {
+      uid,
+      name: memberName(uid),
+      age: computeAge(u?.dateOfBirth),
+      gender: u?.genderIdentity || "—",
+      appHref: `/applications?uid=${encodeURIComponent(uid)}`,
+    };
+  };
+
+  const toggleExpanded = (id: string) =>
+    setExpandedTeams((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   // Total seated members currently at a table.
   const filledOf = (table: FirestoreTable): number =>
@@ -525,34 +552,50 @@ export default function TablesPage() {
     return s.ageAvg ?? -Infinity; // "age"
   };
 
-  // Candidates for the assign modal: formations matching the query, not already
-  // at this table, ordered by the active multi-sort (alphabetical fallback).
+  // Candidates for the assign modal: every formation not already at this table,
+  // narrowed by the search query and the assignment-status filter, ordered by
+  // the active multi-sort. No cap — the whole pool stays reachable (sorting used
+  // to reorder a truncated slice, which hid teams as the order changed).
   const assignCandidates = useMemo(() => {
     if (!assignTable) return [];
     const q = assignSearch.trim().toLowerCase();
     const current = new Set(assignTable.formations);
-    const list = formationsList
+    let list = formationsList
       .filter((f) => !current.has(f.id))
       .filter(
         (f) => !q || `${f.teamName ?? ""} ${f.id}`.toLowerCase().includes(q)
       );
 
-    if (sortCriteria.length === 0) return list.slice(0, 60);
+    // Assignment status is relative to *any* table (a team seated at another
+    // table counts as "assigned"; candidates already exclude this table's teams).
+    if (assignmentFilter === "unassigned") {
+      list = list.filter((f) => !formationTableOf.has(f.id));
+    } else if (assignmentFilter === "assigned") {
+      list = list.filter((f) => formationTableOf.has(f.id));
+    }
+
+    if (sortCriteria.length === 0) return list;
 
     // Stable sort: formationsList is alphabetical, so ties keep that order.
-    return [...list]
-      .sort((a, b) => {
-        for (const { key, dir } of sortCriteria) {
-          const av = sortValue(a.id, key);
-          const bv = sortValue(b.id, key);
-          if (av !== bv) return dir === "desc" ? bv - av : av - bv;
-        }
-        return 0;
-      })
-      .slice(0, 60);
+    return [...list].sort((a, b) => {
+      for (const { key, dir } of sortCriteria) {
+        const av = sortValue(a.id, key);
+        const bv = sortValue(b.id, key);
+        if (av !== bv) return dir === "desc" ? bv - av : av - bv;
+      }
+      return 0;
+    });
     // sortValue closes over formationStats.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignTable, assignSearch, formationsList, sortCriteria, formationStats]);
+  }, [
+    assignTable,
+    assignSearch,
+    formationsList,
+    sortCriteria,
+    formationStats,
+    assignmentFilter,
+    formationTableOf,
+  ]);
 
   // Tables the moving formation could go to: not the source, not already holding
   // it, and with enough free seats for the whole team.
@@ -867,17 +910,46 @@ export default function TablesPage() {
               )}
             </div>
 
+            {/* Assignment-status filter */}
+            <div className="flex items-center gap-1.5 flex-wrap mb-2">
+              <span className="text-xs text-white/50 mr-1">Show:</span>
+              {(
+                [
+                  ["all", "All"],
+                  ["unassigned", "Not yet assigned"],
+                  ["assigned", "Already assigned"],
+                ] as const
+              ).map(([val, label]) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setAssignmentFilter(val)}
+                  className={`px-2 py-1 rounded-full text-xs border transition-colors ${
+                    assignmentFilter === val
+                      ? "bg-primary/20 text-accent-accessible border-primary/40"
+                      : "bg-white/5 text-white/70 border-white/15 hover:bg-white/10"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             <input
               value={assignSearch}
               onChange={(e) => setAssignSearch(e.target.value)}
-              className="input w-full mb-3"
+              className="input w-full mb-2"
               placeholder="Search teams by name or id…"
             />
+            <p className="text-xs text-white/40 mb-2">
+              {assignCandidates.length} team
+              {assignCandidates.length === 1 ? "" : "s"} in pool
+            </p>
             <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-1">
               {assignCandidates.length === 0 ? (
                 <p className="text-center text-white/50 text-sm py-8">
-                  {assignSearch
-                    ? "No matching teams."
+                  {assignSearch || assignmentFilter !== "all"
+                    ? "No teams match."
                     : "All teams are assigned or none exist."}
                 </p>
               ) : (
@@ -885,36 +957,94 @@ export default function TablesPage() {
                   const elsewhere = formationTableOf.get(f.id);
                   const atOther = elsewhere && elsewhere.id !== assignTable.id;
                   const s = formationStats.get(f.id);
+                  const expanded = expandedTeams.has(f.id);
                   return (
-                    <button
+                    <div
                       key={f.id}
-                      disabled={!!assignBusyId}
-                      onClick={() => handleAssign(f)}
-                      className="w-full text-left p-3 rounded-lg border border-white/10 hover:bg-white/5 transition-colors flex items-center justify-between gap-3 disabled:opacity-50"
+                      className="rounded-lg border border-white/10"
                     >
-                      <div className="min-w-0">
-                        <p className="text-sm text-white truncate">
-                          {f.teamName || "(unnamed team)"}
-                        </p>
-                        <p className="text-xs text-white/50 truncate">
-                          {f.members.length} member
-                          {f.members.length === 1 ? "" : "s"}
-                          {s && (
-                            <>
-                              {" · "}🌙 {s.overnightCount}
-                              {" · "}Ø{" "}
-                              {s.ageAvg != null ? s.ageAvg.toFixed(1) : "—"}
-                              {" · "}♂ {s.maleCount}
-                            </>
-                          )}
-                        </p>
+                      <div className="flex items-center justify-between gap-2 p-3">
+                        {/* Team info — click to expand members. */}
+                        <button
+                          type="button"
+                          onClick={() => toggleExpanded(f.id)}
+                          className="min-w-0 text-left flex-1"
+                          title="Show members (age / gender)"
+                        >
+                          <p className="text-sm text-white truncate">
+                            <span className="inline-block w-3 text-white/40">
+                              {expanded ? "▾" : "▸"}
+                            </span>{" "}
+                            {f.teamName || "(unnamed team)"}
+                          </p>
+                          <p className="text-xs text-white/50 truncate pl-3">
+                            {f.members.length} member
+                            {f.members.length === 1 ? "" : "s"}
+                            {s && (
+                              <>
+                                {" · "}🌙 {s.overnightCount}
+                                {" · "}Ø{" "}
+                                {s.ageAvg != null ? s.ageAvg.toFixed(1) : "—"}
+                                {" · "}♂ {s.maleCount}
+                              </>
+                            )}
+                            {atOther && (
+                              <span className="text-amber-300/90">
+                                {" · "}at Table {elsewhere!.tableNumber}
+                              </span>
+                            )}
+                          </p>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!!assignBusyId}
+                          onClick={() => handleAssign(f)}
+                          className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-white/90 bg-primary/20 border border-primary/40 hover:bg-primary/30 transition-colors disabled:opacity-50"
+                        >
+                          Assign
+                        </button>
                       </div>
-                      {atOther && (
-                        <span className="shrink-0 text-xs text-amber-300/90 whitespace-nowrap">
-                          at Table {elsewhere!.tableNumber}
-                        </span>
+
+                      {/* Members with age / gender, each linked to the app. */}
+                      {expanded && (
+                        <ul className="border-t border-white/10 divide-y divide-white/5">
+                          {f.members.length === 0 ? (
+                            <li className="px-3 py-2 text-xs text-white/40">
+                              No members listed.
+                            </li>
+                          ) : (
+                            f.members.map((uid) => {
+                              const m = memberDetail(uid);
+                              return (
+                                <li
+                                  key={uid}
+                                  className="flex items-center justify-between gap-2 px-3 py-2 text-xs"
+                                >
+                                  <span className="min-w-0 truncate text-white/80">
+                                    {m.name}
+                                  </span>
+                                  <span className="shrink-0 flex items-center gap-2 text-white/50">
+                                    <span>
+                                      {m.age != null ? `${m.age}y` : "—"}
+                                    </span>
+                                    <span>· {m.gender}</span>
+                                    <a
+                                      href={m.appHref}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-accent-accessible hover:underline"
+                                      title="Open in Applications"
+                                    >
+                                      app ↗
+                                    </a>
+                                  </span>
+                                </li>
+                              );
+                            })
+                          )}
+                        </ul>
                       )}
-                    </button>
+                    </div>
                   );
                 })
               )}
