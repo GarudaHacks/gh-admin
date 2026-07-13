@@ -1,17 +1,25 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import toast from "react-hot-toast";
 import PageHeader from "@/components/PageHeader";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   fetchAllFormations,
   fetchAllUsers,
   formatApplicationDate,
+  createFormation,
+  moveFormationMember,
+  deleteFormation,
 } from "@/lib/firebaseUtils";
 import { TeamFormation, FirestoreUser } from "@/lib/types";
 
 // How many team cards to reveal per lazy-load step.
 const PAGE_SIZE = 30;
+// A team is "full" (can't receive more members) at this size.
+const MAX_TEAM_SIZE = 4;
 
 // Resolved user info we surface for each member UID.
 interface MemberInfo {
@@ -21,15 +29,46 @@ interface MemberInfo {
   resolved: boolean; // whether a matching users/{uid} doc was found
 }
 
+// Alphabetical by team name (matches fetchAllFormations); unnamed teams sort last.
+const sortByName = (list: TeamFormation[]) =>
+  [...list].sort((a, b) =>
+    (a.teamName || "￿").localeCompare(b.teamName || "￿")
+  );
+
 export default function FormationPage() {
+  const { user } = useAuth();
   const [formations, setFormations] = useState<TeamFormation[]>([]);
   const [userMap, setUserMap] = useState<Map<string, FirestoreUser>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  // Filter by exact member count ("all", "notfull", or "0".."4") and sort order.
+  const [countFilter, setCountFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"name" | "members-desc" | "members-asc">(
+    "name"
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [copied, setCopied] = useState(false);
+
+  // Add-team modal.
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  // Move-member modal.
+  const [movingMember, setMovingMember] = useState<{
+    uid: string;
+    fromTeamId: string;
+  } | null>(null);
+  const [moveSearch, setMoveSearch] = useState("");
+  const [moveBusy, setMoveBusy] = useState(false);
+
+  // Delete-team confirmation.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const editor = user?.email ?? "system";
 
   useEffect(() => {
     loadData();
@@ -93,9 +132,31 @@ export default function FormationPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return formations;
-    return formations.filter((f) => haystacks.get(f.id)?.includes(q));
-  }, [search, formations, haystacks]);
+    let list = formations;
+
+    if (q) list = list.filter((f) => haystacks.get(f.id)?.includes(q));
+
+    if (countFilter !== "all") {
+      list = list.filter((f) => {
+        const n = f.members.length;
+        if (countFilter === "notfull") return n < MAX_TEAM_SIZE;
+        return n === Number(countFilter);
+      });
+    }
+
+    // Sort is stable, so member-count ties keep the underlying alphabetical order.
+    if (sortBy === "name") {
+      list = sortByName(list);
+    } else {
+      list = [...list].sort((a, b) =>
+        sortBy === "members-desc"
+          ? b.members.length - a.members.length
+          : a.members.length - b.members.length
+      );
+    }
+
+    return list;
+  }, [search, formations, haystacks, countFilter, sortBy]);
 
   const visible = filtered.slice(0, visibleCount);
   const selected = formations.find((f) => f.id === selectedId) ?? null;
@@ -129,6 +190,117 @@ export default function FormationPage() {
       setTimeout(() => setCopied(false), 1500);
     } catch {
       /* clipboard unavailable — ignore */
+    }
+  };
+
+  // Eligible destinations for the member being moved: any other team not full.
+  const moveTargets = useMemo(() => {
+    if (!movingMember) return [];
+    const q = moveSearch.trim().toLowerCase();
+    return formations
+      .filter(
+        (f) =>
+          f.id !== movingMember.fromTeamId && f.members.length < MAX_TEAM_SIZE
+      )
+      .filter((f) => !q || `${f.id} ${f.teamName}`.toLowerCase().includes(q));
+  }, [formations, movingMember, moveSearch]);
+
+  const handleCreateTeam = async () => {
+    const name = newTeamName.trim();
+    if (!name || creating) return;
+    try {
+      setCreating(true);
+      const created = await createFormation(name, editor);
+      setFormations((prev) => sortByName([created, ...prev]));
+      setSearch(""); // make sure the new team is visible in the list
+      setVisibleCount(PAGE_SIZE);
+      setSelectedId(created.id);
+      setShowAddModal(false);
+      setNewTeamName("");
+      toast.success(`Created "${name}"`);
+    } catch (err) {
+      console.error("Error creating team:", err);
+      toast.error("Failed to create team");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleMoveMember = async (toTeamId: string) => {
+    if (!movingMember || moveBusy) return;
+    const { uid, fromTeamId } = movingMember;
+    const toTeam = formations.find((f) => f.id === toTeamId);
+    if (!toTeam) return;
+    if (toTeam.members.length >= MAX_TEAM_SIZE) {
+      toast.error("That team is already full");
+      return;
+    }
+    try {
+      setMoveBusy(true);
+      const ok = await moveFormationMember(fromTeamId, toTeamId, uid, editor);
+      if (!ok) {
+        toast.error("Failed to move member");
+        return;
+      }
+      const now = new Date();
+      setFormations((prev) =>
+        prev.map((f) => {
+          if (f.id === fromTeamId) {
+            return {
+              ...f,
+              members: f.members.filter((m) => m !== uid),
+              updatedAt: now,
+              updatedBy: editor,
+            };
+          }
+          if (f.id === toTeamId) {
+            return {
+              ...f,
+              members: f.members.includes(uid)
+                ? f.members
+                : [...f.members, uid],
+              updatedAt: now,
+              updatedBy: editor,
+            };
+          }
+          return f;
+        })
+      );
+      toast.success(`Moved to ${toTeam.teamName || toTeam.id}`);
+      setMovingMember(null);
+      setMoveSearch("");
+    } catch (err) {
+      console.error("Error moving member:", err);
+      toast.error("Failed to move member");
+    } finally {
+      setMoveBusy(false);
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    if (!selected || deleting) return;
+    const { id, teamName } = selected;
+    try {
+      setDeleting(true);
+      const ok = await deleteFormation(id);
+      if (!ok) {
+        toast.error("Failed to delete team");
+        return;
+      }
+      const remaining = formations.filter((f) => f.id !== id);
+      setFormations(remaining);
+      // Move the selection to the next nearest team, if any.
+      if (selectedId === id) {
+        const idx = formations.findIndex((f) => f.id === id);
+        setSelectedId(remaining[idx]?.id ?? remaining[idx - 1]?.id ?? null);
+      }
+      setConfirmingDelete(false);
+      toast.success(`Deleted "${teamName || id}"`);
+    } catch (err) {
+      console.error("Error deleting team:", err);
+      toast.error("Failed to delete team");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -173,6 +345,20 @@ export default function FormationPage() {
         <div className="lg:col-span-5">
           <div className="card flex flex-col h-[70vh] lg:h-[calc(100vh-16rem)]">
             <div className="p-4 border-b border-white/10 flex flex-col gap-2 flex-shrink-0">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-white">
+                  Teams ({formations.length})
+                </h3>
+                <button
+                  onClick={() => {
+                    setNewTeamName("");
+                    setShowAddModal(true);
+                  }}
+                  className="btn-primary text-xs px-3 py-1.5"
+                >
+                  + Add team
+                </button>
+              </div>
               <input
                 onChange={onSearchChange}
                 value={search}
@@ -180,6 +366,42 @@ export default function FormationPage() {
                 type="text"
                 placeholder="Search teams…"
               />
+              <div className="flex gap-2">
+                <label className="flex-1 flex flex-col gap-1">
+                  <span className="text-xs text-white/50">Members</span>
+                  <select
+                    value={countFilter}
+                    onChange={(e) => {
+                      setCountFilter(e.target.value);
+                      setVisibleCount(PAGE_SIZE);
+                    }}
+                    className="input w-full text-sm"
+                  >
+                    <option value="all">All counts</option>
+                    <option value="notfull">Not full (&lt;{MAX_TEAM_SIZE})</option>
+                    <option value="0">Empty (0)</option>
+                    <option value="1">1 member</option>
+                    <option value="2">2 members</option>
+                    <option value="3">3 members</option>
+                    <option value="4">4 (full)</option>
+                  </select>
+                </label>
+                <label className="flex-1 flex flex-col gap-1">
+                  <span className="text-xs text-white/50">Sort by</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => {
+                      setSortBy(e.target.value as typeof sortBy);
+                      setVisibleCount(PAGE_SIZE);
+                    }}
+                    className="input w-full text-sm"
+                  >
+                    <option value="name">Name (A–Z)</option>
+                    <option value="members-desc">Members (most first)</option>
+                    <option value="members-asc">Members (fewest first)</option>
+                  </select>
+                </label>
+              </div>
               <div className="flex items-center justify-between">
                 <p className="text-xs text-white/60">
                   Search by team ID, team name, or member (UID, name, email).
@@ -249,20 +471,38 @@ export default function FormationPage() {
                   <h2 className="text-2xl font-bold text-white">
                     {selected.teamName || "(unnamed team)"}
                   </h2>
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/20 text-accent-accessible border border-primary/40">
-                    {selected.members.length} member
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                      selected.members.length >= MAX_TEAM_SIZE
+                        ? "bg-white/10 text-white/70 border-white/20"
+                        : "bg-primary/20 text-accent-accessible border-primary/40"
+                    }`}
+                  >
+                    {selected.members.length}/{MAX_TEAM_SIZE} member
                     {selected.members.length === 1 ? "" : "s"}
+                    {selected.members.length >= MAX_TEAM_SIZE ? " · full" : ""}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => copyTeamId(selected.id)}
-                  className="mt-2 inline-flex items-center gap-2 text-xs font-mono text-white/50 hover:text-white/80 transition-colors"
-                  title="Copy team ID"
-                >
-                  <span className="truncate">{selected.id}</span>
-                  <span className="text-white/40">{copied ? "✓ copied" : "⧉"}</span>
-                </button>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => copyTeamId(selected.id)}
+                    className="inline-flex items-center gap-2 text-xs font-mono text-white/50 hover:text-white/80 transition-colors min-w-0"
+                    title="Copy team ID"
+                  >
+                    <span className="truncate">{selected.id}</span>
+                    <span className="text-white/40 shrink-0">
+                      {copied ? "✓ copied" : "⧉"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(true)}
+                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-600/10 border border-red-600/40 hover:bg-red-600/20 transition-colors"
+                  >
+                    Delete team
+                  </button>
+                </div>
               </div>
 
               {/* Meta */}
@@ -301,12 +541,12 @@ export default function FormationPage() {
                       return (
                         <li
                           key={`${uid}-${i}`}
-                          className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10"
+                          className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10"
                         >
                           <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-accent-accessible text-xs font-semibold flex items-center justify-center">
                             {i + 1}
                           </span>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <p className="text-sm text-white truncate">
                               {m.resolved ? (
                                 m.name
@@ -325,6 +565,19 @@ export default function FormationPage() {
                               {uid}
                             </p>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMoveSearch("");
+                              setMovingMember({
+                                uid,
+                                fromTeamId: selected.id,
+                              });
+                            }}
+                            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-white/80 bg-white/5 border border-white/15 hover:bg-white/10 transition-colors"
+                          >
+                            Move
+                          </button>
                         </li>
                       );
                     })}
@@ -335,6 +588,138 @@ export default function FormationPage() {
           )}
         </div>
       </div>
+
+      {/* Add-team modal */}
+      {showAddModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !creating && setShowAddModal(false)}
+        >
+          <div
+            className="card p-6 w-full max-w-md space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h3 className="text-lg font-semibold text-white">Add team</h3>
+              <p className="text-sm text-white/60 mt-1">
+                Creates an empty team. Move members into it afterwards.
+              </p>
+            </div>
+            <input
+              autoFocus
+              value={newTeamName}
+              onChange={(e) => setNewTeamName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleCreateTeam();
+              }}
+              className="input w-full"
+              placeholder="Team name"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowAddModal(false)}
+                disabled={creating}
+                className="px-4 py-2 rounded-lg text-sm text-white/70 hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateTeam}
+                disabled={creating || !newTeamName.trim()}
+                className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {creating ? "Creating…" : "Create team"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete-team confirmation */}
+      {confirmingDelete && selected && (
+        <ConfirmDialog
+          title={`Delete "${selected.teamName || selected.id}"?`}
+          description={
+            selected.members.length > 0
+              ? `This team has ${selected.members.length} member${
+                  selected.members.length === 1 ? "" : "s"
+                }. Deleting removes the team only — the members' user accounts are not affected, but they will no longer belong to this team. This cannot be undone.`
+              : "This cannot be undone."
+          }
+          confirmLabel={deleting ? "Deleting…" : "Delete team"}
+          loading={deleting}
+          onConfirm={handleDeleteTeam}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
+
+      {/* Move-member modal */}
+      {movingMember && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !moveBusy && setMovingMember(null)}
+        >
+          <div
+            className="card p-6 w-full max-w-lg flex flex-col max-h-[80vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3">
+              <h3 className="text-lg font-semibold text-white">Move member</h3>
+              <p className="text-sm text-white/60 mt-1">
+                Moving{" "}
+                <span className="text-white/90">
+                  {resolveMember(movingMember.uid).name}
+                </span>{" "}
+                — pick a team that isn&apos;t full (max {MAX_TEAM_SIZE}).
+              </p>
+            </div>
+            <input
+              autoFocus
+              value={moveSearch}
+              onChange={(e) => setMoveSearch(e.target.value)}
+              className="input w-full mb-3"
+              placeholder="Search teams…"
+            />
+            <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-1">
+              {moveTargets.length === 0 ? (
+                <p className="text-center text-white/50 text-sm py-8">
+                  No available teams{moveSearch ? " match your search" : ""}.
+                </p>
+              ) : (
+                moveTargets.map((t) => (
+                  <button
+                    key={t.id}
+                    disabled={moveBusy}
+                    onClick={() => handleMoveMember(t.id)}
+                    className="w-full text-left p-3 rounded-lg border border-white/10 hover:bg-white/5 transition-colors flex items-center justify-between gap-3 disabled:opacity-50"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm text-white truncate">
+                        {t.teamName || "(unnamed team)"}
+                      </p>
+                      <p className="text-xs text-white/40 font-mono truncate">
+                        {t.id}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs text-white/60">
+                      {t.members.length}/{MAX_TEAM_SIZE}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+            <div className="flex justify-end mt-3">
+              <button
+                onClick={() => setMovingMember(null)}
+                disabled={moveBusy}
+                className="px-4 py-2 rounded-lg text-sm text-white/70 hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -12,6 +12,9 @@ import {
   addDoc,
   deleteDoc,
   serverTimestamp,
+  writeBatch,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db, auth, storage } from "./firebase";
 import {
@@ -105,6 +108,89 @@ export async function fetchAllFormations(): Promise<TeamFormation[]> {
   } catch (error) {
     console.error('Error fetching formations:', error);
     throw new Error('Failed to fetch formations');
+  }
+}
+
+// Event iteration this admin writes formations for. Matches the import scripts.
+export const FORMATION_VERSION = "7.0";
+
+/**
+ * Creates a new (empty) team in the `formations` collection. The doc id is
+ * auto-generated and mirrored into the `id` field, matching the shape written
+ * by scripts/import-formations.mjs. Returns the created team with local
+ * timestamps for immediate display (real server timestamps land on next reload).
+ */
+export async function createFormation(
+  teamName: string,
+  updatedBy: string
+): Promise<TeamFormation> {
+  const ref = doc(collection(db, 'formations'));
+  await setDoc(ref, {
+    id: ref.id,
+    members: [],
+    teamName,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    updatedBy,
+    version: FORMATION_VERSION,
+  });
+
+  return {
+    id: ref.id,
+    members: [],
+    teamName,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    updatedBy,
+    version: FORMATION_VERSION,
+  };
+}
+
+/**
+ * Moves a member UID out of one team and into another in a single atomic batch.
+ * Both teams get their `updatedAt`/`updatedBy` refreshed. The caller is
+ * responsible for ensuring the destination team is not already full.
+ */
+export async function moveFormationMember(
+  fromTeamId: string,
+  toTeamId: string,
+  uid: string,
+  updatedBy: string
+): Promise<boolean> {
+  try {
+    const batch = writeBatch(db);
+    const fromRef = doc(db, 'formations', fromTeamId);
+    const toRef = doc(db, 'formations', toTeamId);
+
+    batch.update(fromRef, {
+      members: arrayRemove(uid),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    });
+    batch.update(toRef, {
+      members: arrayUnion(uid),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    });
+
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error('Error moving formation member:', error);
+    return false;
+  }
+}
+
+/**
+ * Deletes a team from the `formations` collection.
+ */
+export async function deleteFormation(teamId: string): Promise<boolean> {
+  try {
+    await deleteDoc(doc(db, 'formations', teamId));
+    return true;
+  } catch (error) {
+    console.error('Error deleting formation:', error);
+    return false;
   }
 }
 
