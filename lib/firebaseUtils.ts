@@ -336,6 +336,42 @@ export async function createTable(
 }
 
 /**
+ * Creates several empty tables in one atomic batch (used for bulk-adding a
+ * numbered range). Each item becomes its own doc. Returns the created tables
+ * with local timestamps for immediate display.
+ */
+export async function createTablesBulk(
+  items: { location: string; capacity: number; tableNumber: number }[],
+  updatedBy: string
+): Promise<FirestoreTable[]> {
+  const batch = writeBatch(db);
+  const created: FirestoreTable[] = [];
+
+  for (const item of items) {
+    const ref = doc(collection(db, 'tables'));
+    const payload = {
+      capacity: item.capacity,
+      formations: [] as string[],
+      location: item.location,
+      tableNumber: item.tableNumber,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    };
+    batch.set(ref, payload);
+    created.push({
+      ...payload,
+      id: ref.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  await batch.commit();
+  return created;
+}
+
+/**
  * Assigns a formation (team) to a table by adding its id to `formations`
  * (no-op if already present). Refreshes updatedAt / updatedBy.
  */
@@ -375,6 +411,37 @@ export async function removeFormationFromTable(
     return true;
   } catch (error) {
     console.error('Error removing formation from table:', error);
+    return false;
+  }
+}
+
+/**
+ * Moves a formation from one table to another in a single atomic batch (remove
+ * from the source, add to the destination). Both tables get their
+ * updatedAt / updatedBy refreshed. Caller ensures the destination has room.
+ */
+export async function moveFormationBetweenTables(
+  fromTableId: string,
+  toTableId: string,
+  formationId: string,
+  updatedBy: string
+): Promise<boolean> {
+  try {
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'tables', fromTableId), {
+      formations: arrayRemove(formationId),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    });
+    batch.update(doc(db, 'tables', toTableId), {
+      formations: arrayUnion(formationId),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    });
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error('Error moving formation between tables:', error);
     return false;
   }
 }

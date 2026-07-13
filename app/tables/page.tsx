@@ -10,9 +10,11 @@ import {
   fetchAllTables,
   fetchAllFormations,
   fetchAllUsers,
-  createTable,
+  fetchAllApplications,
+  createTablesBulk,
   assignFormationToTable,
   removeFormationFromTable,
+  moveFormationBetweenTables,
   deleteTable,
 } from "@/lib/firebaseUtils";
 import { FirestoreTable, TeamFormation, FirestoreUser } from "@/lib/types";
@@ -31,8 +33,34 @@ const SEAT_COLORS = [
 ];
 
 const UNSPECIFIED = "(no location)";
+const MAX_BULK = 200; // guard against accidentally creating thousands of tables
 
-// A single seat = one member of one formation seated at a table.
+// --- Sorting (assign modal) ------------------------------------------------
+
+type SortKey = "overnight" | "age" | "male";
+type SortDir = "asc" | "desc";
+const SORT_KEYS: SortKey[] = ["overnight", "age", "male"];
+const SORT_LABELS: Record<SortKey, string> = {
+  overnight: "Overnight",
+  age: "Avg age",
+  male: "Male / PNS",
+};
+const SORT_HINTS: Record<SortKey, string> = {
+  overnight: "Members staying overnight",
+  age: "Average member age",
+  male: "Members who are Male or would rather not say",
+};
+
+// Per-formation stats used for sorting + display in the assign modal.
+interface FormationStats {
+  memberCount: number;
+  overnightCount: number;
+  ageAvg: number | null;
+  maleCount: number;
+}
+
+// --- Table render model ----------------------------------------------------
+
 interface Seat {
   formationId: string;
   memberUid: string;
@@ -40,7 +68,6 @@ interface Seat {
   colorIndex: number;
 }
 
-// A formation seated at a table (or a dangling id whose formation is gone).
 interface AssignedFormation {
   id: string;
   formation: TeamFormation | null;
@@ -57,6 +84,27 @@ interface TableView {
   overCapacity: boolean; // more members than seats
 }
 
+// --- Helpers ---------------------------------------------------------------
+
+// Age in whole years from a date-of-birth string; null if unparseable/absurd.
+function computeAge(dob?: string): number | null {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  if (age < 0 || age > 120) return null;
+  return age;
+}
+
+// Whether a gender answer counts toward the "Male / prefer-not-to-say" bucket.
+function isMalePns(gender?: string): boolean {
+  const g = (gender || "").toLowerCase();
+  return g === "male" || g.includes("rather not");
+}
+
 export default function TablesPage() {
   const { user } = useAuth();
   const editor = user?.email ?? "system";
@@ -67,20 +115,36 @@ export default function TablesPage() {
   );
   const [formationsList, setFormationsList] = useState<TeamFormation[]>([]);
   const [userMap, setUserMap] = useState<Map<string, FirestoreUser>>(new Map());
+  // uid -> whether they answered "yes" to staying overnight (from applications).
+  const [overnightByUid, setOvernightByUid] = useState<Map<string, boolean>>(
+    new Map()
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Add-table modal.
+  // Add-table modal (supports a numbered range).
   const [showAddModal, setShowAddModal] = useState(false);
   const [newLocation, setNewLocation] = useState("");
   const [newCapacity, setNewCapacity] = useState("6");
-  const [newTableNumber, setNewTableNumber] = useState("1");
+  const [newFrom, setNewFrom] = useState("1");
+  const [newTo, setNewTo] = useState("1");
   const [creating, setCreating] = useState(false);
 
-  // Assign-team modal (the table we're assigning to).
+  // Assign-team modal (the table we're assigning to) + its sort criteria.
   const [assignTable, setAssignTable] = useState<FirestoreTable | null>(null);
   const [assignSearch, setAssignSearch] = useState("");
   const [assignBusyId, setAssignBusyId] = useState<string | null>(null);
+  const [sortCriteria, setSortCriteria] = useState<
+    { key: SortKey; dir: SortDir }[]
+  >([]);
+
+  // Move-team modal (moving one formation off a table onto another).
+  const [moveSource, setMoveSource] = useState<{
+    table: FirestoreTable;
+    formationId: string;
+  } | null>(null);
+  const [moveSearch, setMoveSearch] = useState("");
+  const [moveBusy, setMoveBusy] = useState(false);
 
   // Remove-formation + delete-table busy state.
   const [removeBusy, setRemoveBusy] = useState<string | null>(null);
@@ -96,21 +160,27 @@ export default function TablesPage() {
     try {
       setLoading(true);
       setError(null);
-      const [tablesData, formations, users] = await Promise.all([
+      const [tablesData, formations, users, applications] = await Promise.all([
         fetchAllTables(),
         fetchAllFormations().catch(() => [] as TeamFormation[]),
         fetchAllUsers().catch(() => [] as FirestoreUser[]),
+        fetchAllApplications().catch(() => []),
       ]);
 
       const fMap = new Map<string, TeamFormation>();
       formations.forEach((f) => fMap.set(f.id, f));
       const uMap = new Map<string, FirestoreUser>();
       users.forEach((u) => uMap.set(u.id, u));
+      const oMap = new Map<string, boolean>();
+      applications.forEach((a) =>
+        oMap.set(a.id, /^yes/i.test(a.overnightPlan || ""))
+      );
 
       setTables(tablesData);
       setFormationMap(fMap);
       setFormationsList(formations);
       setUserMap(uMap);
+      setOvernightByUid(oMap);
     } catch (err) {
       console.error("Error loading tables:", err);
       setError("Failed to load tables. Please try again.");
@@ -125,8 +195,44 @@ export default function TablesPage() {
     return name || uid;
   };
 
-  // Which table (if any) a formation is currently seated at — used to warn when
-  // assigning a team that's already placed somewhere else.
+  // Total seated members currently at a table.
+  const filledOf = (table: FirestoreTable): number =>
+    table.formations.reduce(
+      (sum, fid) => sum + (formationMap.get(fid)?.members.length ?? 0),
+      0
+    );
+
+  // Per-formation stats (overnight / age / gender), computed once per data load.
+  const formationStats = useMemo(() => {
+    const map = new Map<string, FormationStats>();
+    for (const f of formationsList) {
+      let overnightCount = 0;
+      let maleCount = 0;
+      let ageSum = 0;
+      let ageN = 0;
+      for (const uid of f.members) {
+        if (overnightByUid.get(uid)) overnightCount++;
+        const u = userMap.get(uid);
+        if (u) {
+          if (isMalePns(u.genderIdentity)) maleCount++;
+          const age = computeAge(u.dateOfBirth);
+          if (age != null) {
+            ageSum += age;
+            ageN++;
+          }
+        }
+      }
+      map.set(f.id, {
+        memberCount: f.members.length,
+        overnightCount,
+        ageAvg: ageN > 0 ? ageSum / ageN : null,
+        maleCount,
+      });
+    }
+    return map;
+  }, [formationsList, userMap, overnightByUid]);
+
+  // Which table (if any) a formation is currently seated at.
   const formationTableOf = useMemo(() => {
     const map = new Map<string, FirestoreTable>();
     for (const t of tables) {
@@ -181,7 +287,6 @@ export default function TablesPage() {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(t);
     }
-    // Sort each group by table number; sort locations alphabetically, unspecified last.
     const entries = [...map.entries()].map(
       ([loc, list]) =>
         [loc, [...list].sort((a, b) => a.tableNumber - b.tableNumber)] as const
@@ -219,36 +324,54 @@ export default function TablesPage() {
   const openAddModal = () => {
     setNewLocation("");
     setNewCapacity("6");
-    setNewTableNumber(String(nextTableNumber));
+    setNewFrom(String(nextTableNumber));
+    setNewTo(String(nextTableNumber));
     setShowAddModal(true);
   };
 
-  const handleCreateTable = async () => {
+  const bulkCount = useMemo(() => {
+    const from = parseInt(newFrom, 10);
+    const to = parseInt(newTo, 10);
+    if (!Number.isFinite(from) || !Number.isFinite(to) || to < from) return 0;
+    return to - from + 1;
+  }, [newFrom, newTo]);
+
+  const handleCreateTables = async () => {
     const location = newLocation.trim();
     const capacity = parseInt(newCapacity, 10);
-    const tableNumber = parseInt(newTableNumber, 10);
-    if (!location || !Number.isFinite(capacity) || capacity < 1 || creating) {
+    const from = parseInt(newFrom, 10);
+    const to = parseInt(newTo, 10);
+    if (!location || !Number.isFinite(capacity) || capacity < 1) {
       toast.error("Enter a location and a capacity of at least 1");
       return;
     }
+    if (!Number.isFinite(from) || !Number.isFinite(to) || to < from) {
+      toast.error("Enter a valid table-number range");
+      return;
+    }
+    if (bulkCount > MAX_BULK) {
+      toast.error(`That's ${bulkCount} tables — max ${MAX_BULK} at once`);
+      return;
+    }
+    if (creating) return;
+
+    const items = [];
+    for (let n = from; n <= to; n++) {
+      items.push({ location, capacity, tableNumber: n });
+    }
     try {
       setCreating(true);
-      const created = await createTable(
-        {
-          location,
-          capacity,
-          tableNumber: Number.isFinite(tableNumber)
-            ? tableNumber
-            : nextTableNumber,
-        },
-        editor
-      );
-      setTables((prev) => [...prev, created]);
+      const created = await createTablesBulk(items, editor);
+      setTables((prev) => [...prev, ...created]);
       setShowAddModal(false);
-      toast.success(`Added table ${created.tableNumber}`);
+      toast.success(
+        created.length === 1
+          ? `Added table ${created[0].tableNumber}`
+          : `Added ${created.length} tables (${from}–${to})`
+      );
     } catch (err) {
-      console.error("Error creating table:", err);
-      toast.error("Failed to create table");
+      console.error("Error creating tables:", err);
+      toast.error("Failed to create tables");
     } finally {
       setCreating(false);
     }
@@ -267,7 +390,6 @@ export default function TablesPage() {
       const addId = (fs: string[]) =>
         fs.includes(formation.id) ? fs : [...fs, formation.id];
       updateLocalTable(tableId, { formations: addId(assignTable.formations) });
-      // Keep the modal's table reference in sync so the seated list updates live.
       setAssignTable((prev) =>
         prev && prev.id === tableId
           ? { ...prev, formations: addId(prev.formations) }
@@ -310,6 +432,58 @@ export default function TablesPage() {
     }
   };
 
+  const handleMove = async (target: FirestoreTable) => {
+    if (!moveSource || moveBusy) return;
+    const { table: from, formationId } = moveSource;
+    try {
+      setMoveBusy(true);
+      const ok = await moveFormationBetweenTables(
+        from.id,
+        target.id,
+        formationId,
+        editor
+      );
+      if (!ok) {
+        toast.error("Failed to move team");
+        return;
+      }
+      setTables((prev) =>
+        prev.map((t) => {
+          if (t.id === from.id) {
+            return {
+              ...t,
+              formations: t.formations.filter((f) => f !== formationId),
+              updatedAt: new Date(),
+              updatedBy: editor,
+            };
+          }
+          if (t.id === target.id) {
+            return {
+              ...t,
+              formations: t.formations.includes(formationId)
+                ? t.formations
+                : [...t.formations, formationId],
+              updatedAt: new Date(),
+              updatedBy: editor,
+            };
+          }
+          return t;
+        })
+      );
+      const f = formationMap.get(formationId);
+      toast.success(
+        `Moved ${f?.teamName || "team"} to Table ${target.tableNumber}`
+      );
+      setMoveSource(null);
+      setMoveSearch("");
+    } catch (err) {
+      console.error("Error moving team:", err);
+      toast.error("Failed to move team");
+    } finally {
+      setMoveBusy(false);
+    }
+  };
+
   const handleDeleteTable = async () => {
     if (!confirmDeleteTable || deleting) return;
     const { id, tableNumber } = confirmDeleteTable;
@@ -331,17 +505,80 @@ export default function TablesPage() {
     }
   };
 
+  const toggleSort = (key: SortKey) =>
+    setSortCriteria((prev) => {
+      const existing = prev.find((c) => c.key === key);
+      if (!existing) return [...prev, { key, dir: "desc" }];
+      if (existing.dir === "desc")
+        return prev.map((c) => (c.key === key ? { ...c, dir: "asc" } : c));
+      // was ascending -> turn this criterion off
+      return prev.filter((c) => c.key !== key);
+    });
+
+  // Numeric value of a formation for a given sort key (missing -> -Infinity,
+  // which sorts such teams last when descending).
+  const sortValue = (formationId: string, key: SortKey): number => {
+    const s = formationStats.get(formationId);
+    if (!s) return -Infinity;
+    if (key === "overnight") return s.overnightCount;
+    if (key === "male") return s.maleCount;
+    return s.ageAvg ?? -Infinity; // "age"
+  };
+
   // Candidates for the assign modal: formations matching the query, not already
-  // seated at this table.
+  // at this table, ordered by the active multi-sort (alphabetical fallback).
   const assignCandidates = useMemo(() => {
     if (!assignTable) return [];
     const q = assignSearch.trim().toLowerCase();
     const current = new Set(assignTable.formations);
-    return formationsList
+    const list = formationsList
       .filter((f) => !current.has(f.id))
-      .filter((f) => !q || `${f.teamName ?? ""} ${f.id}`.toLowerCase().includes(q))
-      .slice(0, 40);
-  }, [assignTable, assignSearch, formationsList]);
+      .filter(
+        (f) => !q || `${f.teamName ?? ""} ${f.id}`.toLowerCase().includes(q)
+      );
+
+    if (sortCriteria.length === 0) return list.slice(0, 60);
+
+    // Stable sort: formationsList is alphabetical, so ties keep that order.
+    return [...list]
+      .sort((a, b) => {
+        for (const { key, dir } of sortCriteria) {
+          const av = sortValue(a.id, key);
+          const bv = sortValue(b.id, key);
+          if (av !== bv) return dir === "desc" ? bv - av : av - bv;
+        }
+        return 0;
+      })
+      .slice(0, 60);
+    // sortValue closes over formationStats.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignTable, assignSearch, formationsList, sortCriteria, formationStats]);
+
+  // Tables the moving formation could go to: not the source, not already holding
+  // it, and with enough free seats for the whole team.
+  const moveTargets = useMemo(() => {
+    if (!moveSource) return [];
+    const need = formationMap.get(moveSource.formationId)?.members.length ?? 0;
+    const q = moveSearch.trim().toLowerCase();
+    return tables
+      .filter((t) => t.id !== moveSource.table.id)
+      .filter((t) => !t.formations.includes(moveSource.formationId))
+      .filter((t) => t.capacity - filledOf(t) >= need)
+      .filter(
+        (t) =>
+          !q ||
+          `table ${t.tableNumber} ${t.location ?? ""}`
+            .toLowerCase()
+            .includes(q)
+      )
+      .sort(
+        (a, b) =>
+          (a.location || "").localeCompare(b.location || "") ||
+          a.tableNumber - b.tableNumber
+      );
+    // filledOf closes over formationMap.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moveSource, tables, moveSearch, formationMap]);
 
   if (loading) {
     return (
@@ -372,6 +609,10 @@ export default function TablesPage() {
     );
   }
 
+  const movingFormation = moveSource
+    ? formationMap.get(moveSource.formationId)
+    : null;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -385,14 +626,14 @@ export default function TablesPage() {
           {grouped.length} location{grouped.length === 1 ? "" : "s"}
         </p>
         <button onClick={openAddModal} className="btn-primary text-sm">
-          + Add table
+          + Add tables
         </button>
       </div>
 
       {tables.length === 0 ? (
         <div className="card p-10 text-center text-white/60">
-          No tables yet. Click <span className="text-white">+ Add table</span> to
-          create one.
+          No tables yet. Click <span className="text-white">+ Add tables</span>{" "}
+          to create some.
         </div>
       ) : (
         <div className="space-y-8">
@@ -415,6 +656,10 @@ export default function TablesPage() {
                       setAssignTable(table);
                     }}
                     onRemoveFormation={(fid) => handleRemoveFormation(table, fid)}
+                    onMoveFormation={(fid) => {
+                      setMoveSearch("");
+                      setMoveSource({ table, formationId: fid });
+                    }}
                     onDelete={() => setConfirmDeleteTable(table)}
                     removeBusy={removeBusy}
                   />
@@ -425,7 +670,7 @@ export default function TablesPage() {
         </div>
       )}
 
-      {/* Add-table modal */}
+      {/* Add-tables modal (numbered range) */}
       {showAddModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
@@ -436,9 +681,10 @@ export default function TablesPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div>
-              <h3 className="text-lg font-semibold text-white">Add table</h3>
+              <h3 className="text-lg font-semibold text-white">Add tables</h3>
               <p className="text-sm text-white/60 mt-1">
-                Creates an empty table. Assign teams to it afterwards.
+                Creates a numbered range of empty tables, all with the same
+                location and capacity.
               </p>
             </div>
 
@@ -459,28 +705,47 @@ export default function TablesPage() {
               </datalist>
             </label>
 
+            <label className="block">
+              <span className="text-xs text-white/50">Capacity (seats)</span>
+              <input
+                type="number"
+                min={1}
+                value={newCapacity}
+                onChange={(e) => setNewCapacity(e.target.value)}
+                className="input w-full mt-1"
+              />
+            </label>
+
             <div className="flex gap-3">
               <label className="flex-1">
-                <span className="text-xs text-white/50">Capacity (seats)</span>
+                <span className="text-xs text-white/50">Table number from</span>
                 <input
                   type="number"
-                  min={1}
-                  value={newCapacity}
-                  onChange={(e) => setNewCapacity(e.target.value)}
+                  min={0}
+                  value={newFrom}
+                  onChange={(e) => setNewFrom(e.target.value)}
                   className="input w-full mt-1"
                 />
               </label>
               <label className="flex-1">
-                <span className="text-xs text-white/50">Table number</span>
+                <span className="text-xs text-white/50">to</span>
                 <input
                   type="number"
                   min={0}
-                  value={newTableNumber}
-                  onChange={(e) => setNewTableNumber(e.target.value)}
+                  value={newTo}
+                  onChange={(e) => setNewTo(e.target.value)}
                   className="input w-full mt-1"
                 />
               </label>
             </div>
+
+            <p className="text-xs text-white/50">
+              {bulkCount > 0
+                ? `Will create ${bulkCount} table${
+                    bulkCount === 1 ? "" : "s"
+                  } (numbered ${newFrom}–${newTo}).`
+                : "Enter a valid range (from ≤ to)."}
+            </p>
 
             <div className="flex justify-end gap-2">
               <button
@@ -491,11 +756,15 @@ export default function TablesPage() {
                 Cancel
               </button>
               <button
-                onClick={handleCreateTable}
-                disabled={creating || !newLocation.trim()}
+                onClick={handleCreateTables}
+                disabled={creating || !newLocation.trim() || bulkCount < 1}
                 className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {creating ? "Creating…" : "Create table"}
+                {creating
+                  ? "Creating…"
+                  : `Create ${bulkCount || ""} table${
+                      bulkCount === 1 ? "" : "s"
+                    }`}
               </button>
             </div>
           </div>
@@ -509,7 +778,7 @@ export default function TablesPage() {
           onClick={() => !assignBusyId && setAssignTable(null)}
         >
           <div
-            className="card p-6 w-full max-w-lg flex flex-col max-h-[80vh]"
+            className="card p-6 w-full max-w-lg flex flex-col max-h-[85vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3">
@@ -560,8 +829,45 @@ export default function TablesPage() {
               </div>
             )}
 
+            {/* Multi-sort controls */}
+            <div className="flex items-center gap-1.5 flex-wrap mb-2">
+              <span className="text-xs text-white/50 mr-1">Sort:</span>
+              {SORT_KEYS.map((key) => {
+                const idx = sortCriteria.findIndex((c) => c.key === key);
+                const active = idx >= 0;
+                const dir = active ? sortCriteria[idx].dir : null;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleSort(key)}
+                    title={`${SORT_HINTS[key]} — click to cycle desc → asc → off`}
+                    className={`px-2 py-1 rounded-full text-xs border transition-colors ${
+                      active
+                        ? "bg-primary/20 text-accent-accessible border-primary/40"
+                        : "bg-white/5 text-white/70 border-white/15 hover:bg-white/10"
+                    }`}
+                  >
+                    {active && (
+                      <span className="mr-1 opacity-70">{idx + 1}</span>
+                    )}
+                    {SORT_LABELS[key]}
+                    {active ? (dir === "desc" ? " ↓" : " ↑") : ""}
+                  </button>
+                );
+              })}
+              {sortCriteria.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSortCriteria([])}
+                  className="text-xs text-white/50 hover:text-white/80 ml-1"
+                >
+                  clear
+                </button>
+              )}
+            </div>
+
             <input
-              autoFocus
               value={assignSearch}
               onChange={(e) => setAssignSearch(e.target.value)}
               className="input w-full mb-3"
@@ -578,6 +884,7 @@ export default function TablesPage() {
                 assignCandidates.map((f) => {
                   const elsewhere = formationTableOf.get(f.id);
                   const atOther = elsewhere && elsewhere.id !== assignTable.id;
+                  const s = formationStats.get(f.id);
                   return (
                     <button
                       key={f.id}
@@ -589,21 +896,100 @@ export default function TablesPage() {
                         <p className="text-sm text-white truncate">
                           {f.teamName || "(unnamed team)"}
                         </p>
-                        <p className="text-xs text-white/40 font-mono truncate">
-                          {f.id}
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <span className="text-xs text-white/60">
+                        <p className="text-xs text-white/50 truncate">
                           {f.members.length} member
                           {f.members.length === 1 ? "" : "s"}
-                        </span>
-                        {atOther && (
-                          <p className="text-xs text-amber-300/90 whitespace-nowrap">
-                            at Table {elsewhere!.tableNumber}
-                          </p>
-                        )}
+                          {s && (
+                            <>
+                              {" · "}🌙 {s.overnightCount}
+                              {" · "}Ø{" "}
+                              {s.ageAvg != null ? s.ageAvg.toFixed(1) : "—"}
+                              {" · "}♂ {s.maleCount}
+                            </>
+                          )}
+                        </p>
                       </div>
+                      {atOther && (
+                        <span className="shrink-0 text-xs text-amber-300/90 whitespace-nowrap">
+                          at Table {elsewhere!.tableNumber}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-[11px] text-white/40">
+                🌙 overnight · Ø avg age · ♂ male/PNS
+              </span>
+              <button
+                onClick={() => setAssignTable(null)}
+                className="px-4 py-2 rounded-lg text-sm text-white/70 hover:bg-white/5 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move-team modal */}
+      {moveSource && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !moveBusy && setMoveSource(null)}
+        >
+          <div
+            className="card p-6 w-full max-w-lg flex flex-col max-h-[80vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3">
+              <h3 className="text-lg font-semibold text-white">Move team</h3>
+              <p className="text-sm text-white/60 mt-1">
+                Moving{" "}
+                <span className="text-white/90">
+                  {movingFormation?.teamName || "team"}
+                </span>{" "}
+                ({movingFormation?.members.length ?? 0} member
+                {(movingFormation?.members.length ?? 0) === 1 ? "" : "s"}) off
+                Table {moveSource.table.tableNumber}. Pick a table with room.
+              </p>
+            </div>
+            <input
+              autoFocus
+              value={moveSearch}
+              onChange={(e) => setMoveSearch(e.target.value)}
+              className="input w-full mb-3"
+              placeholder="Search tables by number or location…"
+            />
+            <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-1">
+              {moveTargets.length === 0 ? (
+                <p className="text-center text-white/50 text-sm py-8">
+                  No tables with enough free seats
+                  {moveSearch ? " match your search" : ""}.
+                </p>
+              ) : (
+                moveTargets.map((t) => {
+                  const free = t.capacity - filledOf(t);
+                  return (
+                    <button
+                      key={t.id}
+                      disabled={moveBusy}
+                      onClick={() => handleMove(t)}
+                      className="w-full text-left p-3 rounded-lg border border-white/10 hover:bg-white/5 transition-colors flex items-center justify-between gap-3 disabled:opacity-50"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm text-white truncate">
+                          Table {t.tableNumber}
+                        </p>
+                        <p className="text-xs text-white/40 truncate">
+                          {t.location?.trim() || UNSPECIFIED}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs text-emerald-300/90 whitespace-nowrap">
+                        {free} free seat{free === 1 ? "" : "s"}
+                      </span>
                     </button>
                   );
                 })
@@ -611,10 +997,11 @@ export default function TablesPage() {
             </div>
             <div className="flex justify-end mt-3">
               <button
-                onClick={() => setAssignTable(null)}
-                className="px-4 py-2 rounded-lg text-sm text-white/70 hover:bg-white/5 transition-colors"
+                onClick={() => setMoveSource(null)}
+                disabled={moveBusy}
+                className="px-4 py-2 rounded-lg text-sm text-white/70 hover:bg-white/5 transition-colors disabled:opacity-50"
               >
-                Done
+                Cancel
               </button>
             </div>
           </div>
@@ -646,12 +1033,14 @@ function TableCard({
   view,
   onAssign,
   onRemoveFormation,
+  onMoveFormation,
   onDelete,
   removeBusy,
 }: {
   view: TableView;
   onAssign: () => void;
   onRemoveFormation: (formationId: string) => void;
+  onMoveFormation: (formationId: string) => void;
   onDelete: () => void;
   removeBusy: string | null;
 }) {
@@ -660,7 +1049,11 @@ function TableCard({
   const cols = Math.max(1, Math.ceil(Math.sqrt(totalSquares)));
 
   return (
-    <div className="w-56 rounded-lg border border-white/15 bg-white/[0.03] p-3 flex flex-col gap-2">
+    <div
+      className={`w-56 rounded-lg border bg-white/[0.03] p-3 flex flex-col gap-2 ${
+        overCapacity ? "border-red-500/50" : "border-white/15"
+      }`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold text-white text-sm">
@@ -742,6 +1135,14 @@ function TableCard({
         {filled}/{table.capacity} seats filled
       </p>
 
+      {/* Over-capacity warning + call to action */}
+      {overCapacity && (
+        <p className="text-[11px] text-red-300 bg-red-500/10 border border-red-500/30 rounded px-2 py-1">
+          ⚠ Over capacity by {filled - table.capacity}. Move a team to a table
+          with room.
+        </p>
+      )}
+
       {/* Assigned teams */}
       {assigned.length === 0 ? (
         <button
@@ -774,6 +1175,14 @@ function TableCard({
                   )}
                 </span>
                 <span className="text-white/40">{a.memberCount}</span>
+                <button
+                  type="button"
+                  onClick={() => onMoveFormation(a.id)}
+                  className="text-white/40 hover:text-accent-accessible"
+                  title="Move to another table"
+                >
+                  ↗
+                </button>
                 <button
                   type="button"
                   onClick={() => onRemoveFormation(a.id)}
