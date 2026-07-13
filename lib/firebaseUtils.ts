@@ -147,6 +147,29 @@ export async function createFormation(
 }
 
 /**
+ * Adds a member UID to a team (no-op if already present). Refreshes
+ * updatedAt / updatedBy. The caller ensures the team is not already full and
+ * that the user isn't already on another team (use moveFormationMember for that).
+ */
+export async function addFormationMember(
+  teamId: string,
+  uid: string,
+  updatedBy: string
+): Promise<boolean> {
+  try {
+    await updateDoc(doc(db, 'formations', teamId), {
+      members: arrayUnion(uid),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error adding formation member:', error);
+    return false;
+  }
+}
+
+/**
  * Moves a member UID out of one team and into another in a single atomic batch.
  * Both teams get their `updatedAt`/`updatedBy` refreshed. The caller is
  * responsible for ensuring the destination team is not already full.

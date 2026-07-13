@@ -8,6 +8,14 @@ export interface CheckedInHacker {
   lastName: string;
   email: string;
   status: string;
+  phone: string;
+  genderIdentity: string;
+  dateOfBirth: string;
+  nationality: string; // raw; the card shows "Indonesian" / "Non"
+  occupationPlace: string; // affiliation (school / company)
+  occupationDetail: string; // major / position
+  acceptedAt: string | null; // ISO string
+  confirmedRsvpAt: string | null; // ISO string
 }
 
 export interface CheckInContext {

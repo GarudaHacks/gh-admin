@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomUUID } from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb, adminStorage, STORAGE_BUCKET } from "@/lib/firebaseAdmin";
 import { requireAdmin } from "@/lib/requireAdmin";
@@ -15,6 +14,11 @@ const STORAGE_PREFIX = "users/checkin/7.0";
  * `users/checkin/7.0/{uid}.jpg` (Admin SDK — client writes are denied by rules)
  * and stamps users/{uid} with checkInPhotoUrl / checkInPhotoAt. The photo is
  * compressed on the client; this route just persists it.
+ *
+ * The object is left PRIVATE (no public ACL, no download token). The stored
+ * `checkInPhotoUrl` is the canonical, un-signed
+ * `https://storage.googleapis.com/<bucket>/<path>` form — viewing it later goes
+ * through /api/file-url, which mints a short-lived signed URL.
  */
 export async function POST(req: NextRequest) {
   const authResult = await requireAdmin(req);
@@ -58,18 +62,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const token = randomUUID();
     const objectPath = `${STORAGE_PREFIX}/${uid}.jpg`;
     const storageFile = adminStorage.bucket(STORAGE_BUCKET).file(objectPath);
 
-    await storageFile.save(buffer, {
-      contentType: "image/jpeg",
-      metadata: { metadata: { firebaseStorageDownloadTokens: token } },
-    });
+    // Private object: no public:true, no download token. Access later via a
+    // signed URL from /api/file-url.
+    await storageFile.save(buffer, { contentType: "image/jpeg" });
 
-    const url = `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(
-      objectPath
-    )}?alt=media&token=${token}`;
+    const url = `https://storage.googleapis.com/${STORAGE_BUCKET}/${objectPath}`;
 
     await adminDb.collection("users").doc(uid).set(
       {

@@ -25,6 +25,19 @@ interface ParsedQr {
  *   signed (current):  userId/firstName/lastName/confirmedRsvpAt/<sig>
  * The signature, when present, is the trailing base64url segment.
  */
+/**
+ * Normalizes a Firestore Timestamp / {seconds} / Date / ISO value to an ISO
+ * string (or null). Used to serialize acceptedAt / confirmedRsvpAt for the card.
+ */
+function toIso(value: unknown): string | null {
+  if (!value) return null;
+  const v = value as { toDate?: () => Date; seconds?: number };
+  if (typeof v.toDate === "function") return v.toDate().toISOString();
+  if (typeof v.seconds === "number") return new Date(v.seconds * 1000).toISOString();
+  const d = new Date(value as string | number | Date);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 export function parseQr(raw: string): ParsedQr | null {
   const parts = raw.trim().split("/");
   if (parts.length < 4) return null;
@@ -99,10 +112,18 @@ export async function validateAndCheckIn(
   }
 
   const hacker = {
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    status: user.status,
+    firstName: user.firstName ?? "",
+    lastName: user.lastName ?? "",
+    email: user.email ?? "",
+    status: user.status ?? "",
+    phone: user.phone ?? "",
+    genderIdentity: user.genderIdentity ?? "",
+    dateOfBirth: user.dateOfBirth ?? "",
+    nationality: user.nationality ?? "",
+    occupationPlace: user.occupationPlace ?? "",
+    occupationDetail: user.occupationDetail ?? "",
+    acceptedAt: toIso(user.acceptedAt),
+    confirmedRsvpAt: toIso(user.confirmedRsvpAt),
   };
 
   // Idempotent: keep the first check-in time, but still stamp checkedInAt below

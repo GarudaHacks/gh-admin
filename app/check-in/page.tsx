@@ -109,12 +109,29 @@ export default function CheckInPage() {
   );
 }
 
+// dd/mm/yyyy HH:mm:ss (24h) from an ISO string, or "—".
+function formatDMYHMS(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(
+    d.getHours()
+  )}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// Classify nationality to "Indonesian" / "Non" (or "—" when unknown).
+function nationalityLabel(nationality: string): string {
+  if (!nationality.trim()) return "—";
+  return /indonesia/i.test(nationality) ? "Indonesian" : "Non";
+}
+
 function HackerSummary({
   result,
 }: {
   result: Extract<CheckInResponse, { ok: true }>;
 }) {
-  const { hacker, alreadyCheckedIn, checkedInAt } = result;
+  const { hacker, userId, alreadyCheckedIn, checkedInAt } = result;
   return (
     <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
       <p className="flex items-center gap-2 text-sm font-medium text-emerald-100">
@@ -124,18 +141,44 @@ function HackerSummary({
       <div className="mt-3 space-y-1">
         <Detail label="Name" value={`${hacker.firstName} ${hacker.lastName}`} />
         <Detail label="Email" value={hacker.email} />
+        <Detail label="Phone" value={hacker.phone} />
+        <Detail label="Gender" value={hacker.genderIdentity} />
+        <Detail label="Date of birth" value={hacker.dateOfBirth} />
+        <Detail label="Nationality" value={nationalityLabel(hacker.nationality)} />
+        <Detail label="Affiliation" value={hacker.occupationPlace} />
+        <Detail label="Occupation detail" value={hacker.occupationDetail} />
         <Detail label="Status" value={hacker.status} />
-        <Detail label="When" value={new Date(checkedInAt).toLocaleString()} />
+        <Detail label="Accepted at" value={formatDMYHMS(hacker.acceptedAt)} />
+        <Detail
+          label="Confirmed RSVP at"
+          value={formatDMYHMS(hacker.confirmedRsvpAt)}
+        />
+        <Detail label="Checked in" value={new Date(checkedInAt).toLocaleString()} />
+        <Detail label="UID" value={userId} mono />
       </div>
     </div>
   );
 }
 
-function Detail({ label, value }: { label: string; value?: string }) {
+function Detail({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value?: string;
+  mono?: boolean;
+}) {
   return (
     <div className="flex justify-between gap-4 text-sm">
-      <span className="text-white/50">{label}</span>
-      <span className="text-right font-medium text-white/90">{value || "—"}</span>
+      <span className="shrink-0 text-white/50">{label}</span>
+      <span
+        className={`text-right font-medium text-white/90 break-all ${
+          mono ? "font-mono text-xs" : ""
+        }`}
+      >
+        {value || "—"}
+      </span>
     </div>
   );
 }

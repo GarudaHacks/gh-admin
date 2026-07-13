@@ -11,9 +11,11 @@ export const dynamic = "force-dynamic";
 // short enough that a leaked link is useless quickly.
 const SIGNED_URL_TTL_MS = 10 * 60 * 1000;
 
-// Only files uploaded by participants may be signed through this route. This
-// prevents the endpoint from being used to sign arbitrary objects in the bucket.
-const ALLOWED_PREFIX = "users/uploads/";
+// Only these object prefixes may be signed through this route, so the endpoint
+// can't be used to sign arbitrary objects in the bucket:
+//   users/uploads/  — participant uploads (resumes, etc.)
+//   users/checkin/  — check-in photos captured at the desk
+const ALLOWED_PREFIXES = ["users/uploads/", "users/checkin/"];
 
 /**
  * Extract the storage object path from either a raw path or a stored URL.
@@ -81,9 +83,9 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  if (!objectPath.startsWith(ALLOWED_PREFIX)) {
+  if (!ALLOWED_PREFIXES.some((prefix) => objectPath.startsWith(prefix))) {
     return NextResponse.json(
-      { error: "Refusing to sign a file outside participant uploads." },
+      { error: "Refusing to sign a file outside the allowed prefixes." },
       { status: 403 }
     );
   }

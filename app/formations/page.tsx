@@ -12,6 +12,7 @@ import {
   formatApplicationDate,
   createFormation,
   moveFormationMember,
+  addFormationMember,
   deleteFormation,
 } from "@/lib/firebaseUtils";
 import { TeamFormation, FirestoreUser } from "@/lib/types";
@@ -67,6 +68,18 @@ export default function FormationPage() {
   // Delete-team confirmation.
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Add-member (from the users pool) modal.
+  const [addingMember, setAddingMember] = useState(false);
+  const [addMemberSearch, setAddMemberSearch] = useState("");
+  const [addBusyUid, setAddBusyUid] = useState<string | null>(null);
+  // A picked user who already belongs to another team: warn + offer to move.
+  const [pendingMove, setPendingMove] = useState<{
+    uid: string;
+    name: string;
+    fromTeamId: string;
+    fromTeamName: string;
+  } | null>(null);
 
   const editor = user?.email ?? "system";
 
@@ -160,6 +173,36 @@ export default function FormationPage() {
 
   const visible = filtered.slice(0, visibleCount);
   const selected = formations.find((f) => f.id === selectedId) ?? null;
+
+  // Which team (if any) each UID currently belongs to — used to warn when adding
+  // someone who's already on another formation.
+  const memberTeamOf = useMemo(() => {
+    const map = new Map<string, TeamFormation>();
+    for (const f of formations) {
+      for (const uid of f.members) if (!map.has(uid)) map.set(uid, f);
+    }
+    return map;
+  }, [formations]);
+
+  // The user pool to add from (everyone, not just people already on a team).
+  const usersList = useMemo(() => [...userMap.values()], [userMap]);
+
+  // Candidates for the add-member search: users matching the query who aren't
+  // already on the selected team. Capped for rendering.
+  const addCandidates = useMemo(() => {
+    if (!selected) return [];
+    const q = addMemberSearch.trim().toLowerCase();
+    if (!q) return [];
+    const current = new Set(selected.members);
+    return usersList
+      .filter((u) => !current.has(u.id))
+      .filter((u) =>
+        `${u.firstName ?? ""} ${u.lastName ?? ""} ${u.email ?? ""} ${u.id}`
+          .toLowerCase()
+          .includes(q)
+      )
+      .slice(0, 25);
+  }, [selected, addMemberSearch, usersList]);
 
   const onSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -301,6 +344,113 @@ export default function FormationPage() {
       toast.error("Failed to delete team");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const closeAddMember = () => {
+    setAddingMember(false);
+    setAddMemberSearch("");
+    setPendingMove(null);
+  };
+
+  // Add locally: append the uid to the selected team and stamp it.
+  const applyLocalAdd = (teamId: string, uid: string, now: Date) =>
+    setFormations((prev) =>
+      prev.map((f) =>
+        f.id === teamId
+          ? {
+              ...f,
+              members: f.members.includes(uid) ? f.members : [...f.members, uid],
+              updatedAt: now,
+              updatedBy: editor,
+            }
+          : f
+      )
+    );
+
+  // Pick a user from the pool. If they're already on another team, defer to a
+  // move confirmation instead of silently duplicating them.
+  const handleAddMember = async (u: FirestoreUser) => {
+    if (!selected || addBusyUid) return;
+    if (selected.members.length >= MAX_TEAM_SIZE) {
+      toast.error("Team is full (max 4)");
+      return;
+    }
+    const existing = memberTeamOf.get(u.id);
+    if (existing && existing.id !== selected.id) {
+      const name = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.id;
+      setPendingMove({
+        uid: u.id,
+        name,
+        fromTeamId: existing.id,
+        fromTeamName: existing.teamName || existing.id,
+      });
+      return;
+    }
+
+    try {
+      setAddBusyUid(u.id);
+      const ok = await addFormationMember(selected.id, u.id, editor);
+      if (!ok) {
+        toast.error("Failed to add member");
+        return;
+      }
+      applyLocalAdd(selected.id, u.id, new Date());
+      toast.success("Member added");
+      setAddMemberSearch("");
+    } catch (err) {
+      console.error("Error adding member:", err);
+      toast.error("Failed to add member");
+    } finally {
+      setAddBusyUid(null);
+    }
+  };
+
+  // Confirmed moving a user off their existing team onto the selected one.
+  const handleConfirmMoveInto = async () => {
+    if (!selected || !pendingMove || addBusyUid) return;
+    if (selected.members.length >= MAX_TEAM_SIZE) {
+      toast.error("Team is full (max 4)");
+      return;
+    }
+    const { uid, fromTeamId, name } = pendingMove;
+    try {
+      setAddBusyUid(uid);
+      const ok = await moveFormationMember(fromTeamId, selected.id, uid, editor);
+      if (!ok) {
+        toast.error("Failed to move member");
+        return;
+      }
+      const now = new Date();
+      setFormations((prev) =>
+        prev.map((f) => {
+          if (f.id === fromTeamId) {
+            return {
+              ...f,
+              members: f.members.filter((m) => m !== uid),
+              updatedAt: now,
+              updatedBy: editor,
+            };
+          }
+          if (f.id === selected.id) {
+            return {
+              ...f,
+              members: f.members.includes(uid) ? f.members : [...f.members, uid],
+              updatedAt: now,
+              updatedBy: editor,
+            };
+          }
+          return f;
+        })
+      );
+      toast.success(`Moved ${name} here`);
+      setPendingMove(null);
+      setAddMemberSearch("");
+    } catch (err) {
+      console.error("Error moving member:", err);
+      toast.error("Failed to move member");
+    } finally {
+      setAddBusyUid(null);
     }
   };
 
@@ -529,9 +679,28 @@ export default function FormationPage() {
 
               {/* Members */}
               <div>
-                <h3 className="font-semibold text-white mb-3 text-sm border-b border-white/10 pb-1">
-                  Members ({selected.members.length})
-                </h3>
+                <div className="flex items-center justify-between gap-2 mb-3 border-b border-white/10 pb-1">
+                  <h3 className="font-semibold text-white text-sm">
+                    Members ({selected.members.length})
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddMemberSearch("");
+                      setPendingMove(null);
+                      setAddingMember(true);
+                    }}
+                    disabled={selected.members.length >= MAX_TEAM_SIZE}
+                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-white/80 bg-white/5 border border-white/15 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={
+                      selected.members.length >= MAX_TEAM_SIZE
+                        ? "Team is full (max 4)"
+                        : "Add a member from the participant pool"
+                    }
+                  >
+                    + Add member
+                  </button>
+                </div>
                 {selected.members.length === 0 ? (
                   <p className="text-white/50 text-sm">No members listed.</p>
                 ) : (
@@ -717,6 +886,119 @@ export default function FormationPage() {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add-member modal (from the participant pool) */}
+      {addingMember && selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !addBusyUid && closeAddMember()}
+        >
+          <div
+            className="card p-6 w-full max-w-lg flex flex-col max-h-[80vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3">
+              <h3 className="text-lg font-semibold text-white">Add member</h3>
+              <p className="text-sm text-white/60 mt-1">
+                Search the participant pool and add someone to{" "}
+                <span className="text-white/90">
+                  {selected.teamName || "(unnamed team)"}
+                </span>
+                .
+              </p>
+            </div>
+
+            {pendingMove ? (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+                <p className="text-sm text-amber-200">
+                  <span className="font-semibold">{pendingMove.name}</span> is
+                  already in{" "}
+                  <span className="font-semibold">
+                    {pendingMove.fromTeamName}
+                  </span>
+                  . Move them here instead?
+                </p>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    onClick={() => setPendingMove(null)}
+                    disabled={!!addBusyUid}
+                    className="px-4 py-2 rounded-lg text-sm text-white/70 hover:bg-white/5 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmMoveInto}
+                    disabled={!!addBusyUid}
+                    className="btn-primary text-sm disabled:opacity-50"
+                  >
+                    {addBusyUid ? "Moving…" : "Move here"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <input
+                  autoFocus
+                  value={addMemberSearch}
+                  onChange={(e) => setAddMemberSearch(e.target.value)}
+                  className="input w-full mb-3"
+                  placeholder="Search participants by name, email, or UID…"
+                />
+                <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-1">
+                  {addMemberSearch.trim() === "" ? (
+                    <p className="text-center text-white/40 text-sm py-8">
+                      Start typing to search participants.
+                    </p>
+                  ) : addCandidates.length === 0 ? (
+                    <p className="text-center text-white/50 text-sm py-8">
+                      No matching participants.
+                    </p>
+                  ) : (
+                    addCandidates.map((u) => {
+                      const existing = memberTeamOf.get(u.id);
+                      const onOtherTeam =
+                        existing && existing.id !== selected.id;
+                      const name =
+                        `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() ||
+                        u.id;
+                      return (
+                        <button
+                          key={u.id}
+                          disabled={!!addBusyUid}
+                          onClick={() => handleAddMember(u)}
+                          className="w-full text-left p-3 rounded-lg border border-white/10 hover:bg-white/5 transition-colors flex items-center justify-between gap-3 disabled:opacity-50"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm text-white truncate">
+                              {name}
+                            </p>
+                            <p className="text-xs text-white/50 truncate">
+                              {u.email || u.id}
+                            </p>
+                          </div>
+                          {onOtherTeam && (
+                            <span className="shrink-0 text-xs text-amber-300/90 whitespace-nowrap">
+                              in {existing!.teamName || existing!.id}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="flex justify-end mt-3">
+                  <button
+                    onClick={closeAddMember}
+                    className="px-4 py-2 rounded-lg text-sm text-white/70 hover:bg-white/5 transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
