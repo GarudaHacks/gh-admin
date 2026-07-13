@@ -151,6 +151,23 @@ export interface FirestoreTeam {
   name?: string; // team name
 }
 
+/**
+ * A physical table in the venue (the `tables` collection). Teams (formations)
+ * are seated here: each formation the table holds is referenced by id in
+ * `formations`. A table normally holds one formation; holding more than one
+ * means different teams share it.
+ */
+export interface FirestoreTable {
+  id: string; // doc id
+  createdAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  updatedAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  updatedBy: string; // "system" or staff email
+  capacity: number; // number of seats
+  formations: string[]; // formation (team) ids seated at this table
+  location: string; // room / area name, grouped in the layout
+  tableNumber: number; // human-facing table number
+}
+
 export interface CombinedApplicationData {
   id: string;
   status: string;

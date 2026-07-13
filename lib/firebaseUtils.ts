@@ -29,6 +29,7 @@ import {
   APPLICATION_STATUS,
   TeamFormation,
   FirestoreTeam,
+  FirestoreTable,
 } from "./types";
 import { ONE_SLOT_INTERVAL_MINUTES } from "@/config";
 import { getDownloadURL, ref } from "firebase/storage";
@@ -267,6 +268,126 @@ export async function deleteFormation(teamId: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error deleting formation:', error);
+    return false;
+  }
+}
+
+/**
+ * Fetches all tables from the `tables` collection, sorted by location then
+ * table number so the room layout renders in a stable order.
+ */
+export async function fetchAllTables(): Promise<FirestoreTable[]> {
+  try {
+    const tablesRef = collection(db, 'tables');
+    const querySnapshot = await getDocs(tablesRef);
+
+    const tables: FirestoreTable[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      tables.push({
+        id: doc.id,
+        ...data,
+        formations: Array.isArray(data.formations) ? data.formations : [],
+        capacity: Number(data.capacity) || 0,
+        tableNumber: Number(data.tableNumber) || 0,
+      } as FirestoreTable);
+    });
+
+    tables.sort(
+      (a, b) =>
+        (a.location || '').localeCompare(b.location || '') ||
+        a.tableNumber - b.tableNumber
+    );
+
+    return tables;
+  } catch (error) {
+    console.error('Error fetching tables:', error);
+    throw new Error('Failed to fetch tables');
+  }
+}
+
+/**
+ * Creates a new (empty) table in the `tables` collection. The doc id is
+ * auto-generated. Returns the created table with local timestamps for
+ * immediate display (real server timestamps land on next reload).
+ */
+export async function createTable(
+  params: { location: string; capacity: number; tableNumber: number },
+  updatedBy: string
+): Promise<FirestoreTable> {
+  const ref = doc(collection(db, 'tables'));
+  const payload = {
+    capacity: params.capacity,
+    formations: [] as string[],
+    location: params.location,
+    tableNumber: params.tableNumber,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    updatedBy,
+  };
+  await setDoc(ref, payload);
+
+  return {
+    id: ref.id,
+    ...payload,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
+/**
+ * Assigns a formation (team) to a table by adding its id to `formations`
+ * (no-op if already present). Refreshes updatedAt / updatedBy.
+ */
+export async function assignFormationToTable(
+  tableId: string,
+  formationId: string,
+  updatedBy: string
+): Promise<boolean> {
+  try {
+    await updateDoc(doc(db, 'tables', tableId), {
+      formations: arrayUnion(formationId),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error assigning formation to table:', error);
+    return false;
+  }
+}
+
+/**
+ * Removes a formation (team) from a table's `formations` array. Refreshes
+ * updatedAt / updatedBy.
+ */
+export async function removeFormationFromTable(
+  tableId: string,
+  formationId: string,
+  updatedBy: string
+): Promise<boolean> {
+  try {
+    await updateDoc(doc(db, 'tables', tableId), {
+      formations: arrayRemove(formationId),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error removing formation from table:', error);
+    return false;
+  }
+}
+
+/**
+ * Deletes a table from the `tables` collection.
+ */
+export async function deleteTable(tableId: string): Promise<boolean> {
+  try {
+    await deleteDoc(doc(db, 'tables', tableId));
+    return true;
+  } catch (error) {
+    console.error('Error deleting table:', error);
     return false;
   }
 }
