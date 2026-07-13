@@ -140,6 +140,17 @@ export interface TeamFormation {
   members: string[] // list uid
 }
 
+/**
+ * A team in the live `teams` collection (created through the portal's Speed
+ * Dating / matching flow). Distinct from `formations`, which the admin curates.
+ */
+export interface FirestoreTeam {
+  id: string; // doc id
+  members: string[]; // list of member uids (includes the leader)
+  leader?: string; // uid of the team leader
+  name?: string; // team name
+}
+
 export interface CombinedApplicationData {
   id: string;
   status: string;

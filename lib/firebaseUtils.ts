@@ -28,6 +28,7 @@ import {
   MentorshipAppointment,
   APPLICATION_STATUS,
   TeamFormation,
+  FirestoreTeam,
 } from "./types";
 import { ONE_SLOT_INTERVAL_MINUTES } from "@/config";
 import { getDownloadURL, ref } from "firebase/storage";
@@ -200,6 +201,59 @@ export async function moveFormationMember(
     return true;
   } catch (error) {
     console.error('Error moving formation member:', error);
+    return false;
+  }
+}
+
+/**
+ * Fetches all teams from the live `teams` collection (created via the portal's
+ * Speed Dating / matching flow). Members arrays are normalized to always be an
+ * array so callers can rely on `.includes`/`.length`.
+ */
+export async function fetchAllTeams(): Promise<FirestoreTeam[]> {
+  try {
+    const teamsRef = collection(db, 'teams');
+    const querySnapshot = await getDocs(teamsRef);
+
+    const teams: FirestoreTeam[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      teams.push({
+        id: doc.id,
+        ...data,
+        members: Array.isArray(data.members) ? data.members : [],
+      } as FirestoreTeam);
+    });
+
+    return teams;
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    throw new Error('Failed to fetch teams');
+  }
+}
+
+/**
+ * Marks a Speed Dating applicant as having already found a team by rewriting
+ * their application's `teamFormation` answer to the "already have a team"
+ * option, so they drop out of the Speed Dating pool. Also stamps who/when for
+ * an audit trail. `alreadyHaveTeamOption` is the exact option string from the
+ * teamFormation question (passed in so the wording stays in sync with the form).
+ */
+export async function markApplicationFoundTeam(
+  uid: string,
+  updatedBy: string,
+  alreadyHaveTeamOption: string
+): Promise<boolean> {
+  try {
+    await updateDoc(doc(db, 'applications', uid), {
+      teamFormation: alreadyHaveTeamOption,
+      foundTeamMarkedBy: updatedBy,
+      foundTeamMarkedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return true;
+  } catch (error) {
+    console.error('Error marking application as found team:', error);
     return false;
   }
 }
