@@ -3,14 +3,40 @@
 import { useState, useEffect } from "react";
 import PageHeader from "@/components/PageHeader";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { getPortalConfig, updatePortalConfig } from "@/lib/firebaseUtils";
-import { PortalConfig } from "@/lib/types";
+import {
+  getPortalConfig,
+  updatePortalConfig,
+  getMatchConfig,
+  updateMatchConfig,
+  getMentorshipConfig,
+  updateMentorshipConfig,
+} from "@/lib/firebaseUtils";
+import { PortalConfig, MatchConfig, MentorshipConfig } from "@/lib/types";
+
+const DEFAULT_MATCH_CONFIG: MatchConfig = {
+  isMatchOpen: false,
+  startDate: new Date(),
+  endDate: new Date(),
+};
+
+const DEFAULT_MENTORSHIP_CONFIG: MentorshipConfig = {
+  isMentorshipOpen: false,
+  startDate: new Date(),
+  endDate: new Date(),
+};
 
 export default function Home() {
   const [config, setConfig] = useState<PortalConfig | null>(null);
   const [originalConfig, setOriginalConfig] = useState<PortalConfig | null>(
     null
   );
+  const [matchConfig, setMatchConfig] = useState<MatchConfig | null>(null);
+  const [originalMatchConfig, setOriginalMatchConfig] =
+    useState<MatchConfig | null>(null);
+  const [mentorshipConfig, setMentorshipConfig] =
+    useState<MentorshipConfig | null>(null);
+  const [originalMentorshipConfig, setOriginalMentorshipConfig] =
+    useState<MentorshipConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +50,21 @@ export default function Home() {
     try {
       setLoading(true);
       setError(null);
-      const portalConfig = await getPortalConfig();
+      const [portalConfig, matchConfigData, mentorshipConfigData] =
+        await Promise.all([
+          getPortalConfig(),
+          getMatchConfig(),
+          getMentorshipConfig(),
+        ]);
+
       setConfig(portalConfig);
       setOriginalConfig(portalConfig);
+
+      setMatchConfig(matchConfigData ?? DEFAULT_MATCH_CONFIG);
+      setOriginalMatchConfig(matchConfigData);
+
+      setMentorshipConfig(mentorshipConfigData ?? DEFAULT_MENTORSHIP_CONFIG);
+      setOriginalMentorshipConfig(mentorshipConfigData);
     } catch {
       setError("Failed to load portal configuration");
     } finally {
@@ -35,9 +73,10 @@ export default function Home() {
   };
 
   const hasChanges = (): boolean => {
-    if (!config || !originalConfig) return false;
+    if (!config || !originalConfig || !matchConfig || !mentorshipConfig)
+      return false;
 
-    return (
+    const portalChanged =
       config.applicationStartDate.getTime() !==
         originalConfig.applicationStartDate.getTime() ||
       config.applicationCloseDate.getTime() !==
@@ -48,23 +87,48 @@ export default function Home() {
         originalConfig.hackathonStartDate.getTime() ||
       config.hackathonEndDate.getTime() !==
         originalConfig.hackathonEndDate.getTime() ||
-      config.applicationsOpen !== originalConfig.applicationsOpen
-    );
+      config.applicationsOpen !== originalConfig.applicationsOpen;
+
+    const matchChanged =
+      !originalMatchConfig ||
+      matchConfig.isMatchOpen !== originalMatchConfig.isMatchOpen ||
+      matchConfig.startDate.getTime() !==
+        originalMatchConfig.startDate.getTime() ||
+      matchConfig.endDate.getTime() !== originalMatchConfig.endDate.getTime();
+
+    const mentorshipChanged =
+      !originalMentorshipConfig ||
+      mentorshipConfig.isMentorshipOpen !==
+        originalMentorshipConfig.isMentorshipOpen ||
+      mentorshipConfig.startDate.getTime() !==
+        originalMentorshipConfig.startDate.getTime() ||
+      mentorshipConfig.endDate.getTime() !==
+        originalMentorshipConfig.endDate.getTime();
+
+    return portalChanged || matchChanged || mentorshipChanged;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!config) return;
+    if (!config || !matchConfig || !mentorshipConfig) return;
 
     try {
       setSaving(true);
       setError(null);
       setSuccess(false);
 
-      const success = await updatePortalConfig(config);
-      if (success) {
+      const [portalSuccess, matchSuccess, mentorshipSuccess] =
+        await Promise.all([
+          updatePortalConfig(config),
+          updateMatchConfig(matchConfig),
+          updateMentorshipConfig(mentorshipConfig),
+        ]);
+
+      if (portalSuccess && matchSuccess && mentorshipSuccess) {
         setSuccess(true);
         setOriginalConfig(config);
+        setOriginalMatchConfig(matchConfig);
+        setOriginalMentorshipConfig(mentorshipConfig);
         setTimeout(() => setSuccess(false), 3000);
       } else {
         setError("Failed to update configuration");
@@ -93,6 +157,28 @@ export default function Home() {
     });
   };
 
+  const handleMatchDateChange = (
+    field: "startDate" | "endDate",
+    value: string
+  ) => {
+    if (!matchConfig) return;
+    setMatchConfig({
+      ...matchConfig,
+      [field]: new Date(value),
+    });
+  };
+
+  const handleMentorshipDateChange = (
+    field: "startDate" | "endDate",
+    value: string
+  ) => {
+    if (!mentorshipConfig) return;
+    setMentorshipConfig({
+      ...mentorshipConfig,
+      [field]: new Date(value),
+    });
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -105,7 +191,7 @@ export default function Home() {
     );
   }
 
-  if (!config) {
+  if (!config || !matchConfig || !mentorshipConfig) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -238,6 +324,124 @@ export default function Home() {
                 required
               />
             </div>
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">
+            Team Matching Settings
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Match Start Date
+              </label>
+              <input
+                type="datetime-local"
+                value={formatDateForInput(matchConfig.startDate)}
+                onChange={(e) =>
+                  handleMatchDateChange("startDate", e.target.value)
+                }
+                className="input w-full"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Match End Date
+              </label>
+              <input
+                type="datetime-local"
+                value={formatDateForInput(matchConfig.endDate)}
+                onChange={(e) =>
+                  handleMatchDateChange("endDate", e.target.value)
+                }
+                className="input w-full"
+                required
+              />
+            </div>
+          </div>
+          <div className="flex flex-col pt-6 space-y-2">
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={matchConfig.isMatchOpen}
+                onChange={(e) =>
+                  setMatchConfig({
+                    ...matchConfig,
+                    isMatchOpen: e.target.checked,
+                  })
+                }
+                className="w-5 h-5 rounded border-border bg-input"
+              />
+              <span className="text-sm font-medium text-white">
+                Team Matching Open
+              </span>
+            </label>
+            <p className="text-xs text-yellow-400 ml-8">
+              *Warning: this will override the match start and end date
+            </p>
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">
+            Mentorship Settings
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Mentorship Start Date
+              </label>
+              <input
+                type="datetime-local"
+                value={formatDateForInput(mentorshipConfig.startDate)}
+                onChange={(e) =>
+                  handleMentorshipDateChange("startDate", e.target.value)
+                }
+                className="input w-full"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Mentorship End Date
+              </label>
+              <input
+                type="datetime-local"
+                value={formatDateForInput(mentorshipConfig.endDate)}
+                onChange={(e) =>
+                  handleMentorshipDateChange("endDate", e.target.value)
+                }
+                className="input w-full"
+                required
+              />
+            </div>
+          </div>
+          <div className="flex flex-col pt-6 space-y-2">
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={mentorshipConfig.isMentorshipOpen}
+                onChange={(e) =>
+                  setMentorshipConfig({
+                    ...mentorshipConfig,
+                    isMentorshipOpen: e.target.checked,
+                  })
+                }
+                className="w-5 h-5 rounded border-border bg-input"
+              />
+              <span className="text-sm font-medium text-white">
+                Mentorship Booking Open
+              </span>
+            </label>
+            <p className="text-xs text-yellow-400 ml-8">
+              *Warning: this will override the mentorship start and end date
+            </p>
           </div>
         </div>
 

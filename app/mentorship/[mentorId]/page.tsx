@@ -1,12 +1,14 @@
 "use client"
 
-import MentorshipAppointmentCardComponent from "@/components/MentorshipAppointmentCardComponent"
+import MentorPictureCropModal from "@/components/MentorPictureCropModal"
+import MentorScheduleTimeline from "@/components/MentorScheduleTimeline"
+import { auth } from "@/lib/firebase"
 import { fetchMentorshipAppointmentsByMentorId, fetchMentorById, getMentorProfilePicture } from "@/lib/firebaseUtils"
 import { FirestoreMentor, MentorshipAppointment } from "@/lib/types"
-import { Plus } from "lucide-react"
+import { Camera, Loader2, Plus } from "lucide-react"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import ghq from "@/public/assets/ghq.png"
 
 export default function MentorDetailPage() {
@@ -16,6 +18,11 @@ export default function MentorDetailPage() {
   const [mentorshipAppointments, setMentorshipAppointments] = useState<MentorshipAppointment[]>()
   const [mentorUrl, setMentorUrl] = useState<string>('')
   const [error, setError] = useState('')
+
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null)
+  const [uploadingPicture, setUploadingPicture] = useState(false)
+  const [pictureError, setPictureError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchMentorById(params.mentorId).then((m) => {
@@ -46,21 +53,100 @@ export default function MentorDetailPage() {
     router.push(`/mentorship/add?mentorId=${mentorId}`)
   }
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => setRawImageSrc(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const handleCropCancel = () => {
+    setRawImageSrc(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const handleCropConfirm = async (blob: Blob) => {
+    setRawImageSrc(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+    setPictureError('')
+    setUploadingPicture(true)
+
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) {
+        setPictureError("You must be signed in to update the picture.")
+        return
+      }
+
+      const formData = new FormData()
+      formData.append("file", blob, "picture.png")
+
+      const res = await fetch(`/api/mentors/${params.mentorId}/picture`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        setPictureError(data.reason || "Failed to upload the picture.")
+        return
+      }
+
+      if (mentor) {
+        getMentorProfilePicture(mentor.displayName).then((pp) => {
+          if (pp) setMentorUrl(pp)
+        })
+      }
+    } catch {
+      setPictureError("Failed to upload the picture.")
+    } finally {
+      setUploadingPicture(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
 
       <div className="flex flex-col gap-6 p-6 max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold ">Mentor Profile</h1>
         <div className="flex flex-col md:flex-row gap-6 shadow-lg rounded-xl p-6 border border-gray-100">
-          <div className="flex-shrink-0 flex justify-center">
-            <Image
-              src={mentorUrl || "https://garudahacks.com/images/logo/ghq.png"}
-              alt={`Profile picture of ${mentor?.displayName || 'mentor'}`}
-              width={160}
-              height={160}
-              onError={() => setMentorUrl(ghq.src)}
-              className="rounded-full w-40 h-40 object-cover border-2 border-gray-200"
-            />
+          <div className="flex-shrink-0 flex flex-col items-center gap-2">
+            <div className="relative w-40 h-40">
+              <Image
+                src={mentorUrl || "https://garudahacks.com/images/logo/ghq.png"}
+                alt={`Profile picture of ${mentor?.displayName || 'mentor'}`}
+                width={160}
+                height={160}
+                onError={() => setMentorUrl(ghq.src)}
+                className="rounded-full w-40 h-40 object-cover border-2 border-gray-200"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPicture}
+                type="button"
+                title="Change picture"
+                className="absolute bottom-1 right-1 bg-background border border-border rounded-full p-2 hover:bg-zinc-50/10 disabled:opacity-60"
+              >
+                {uploadingPicture ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Camera size={16} />
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                type="file"
+                accept="image/*"
+                className="hidden"
+              />
+            </div>
+            {pictureError && (
+              <span className="text-red-500 text-xs text-center max-w-40">{pictureError}</span>
+            )}
           </div>
           <div className="flex flex-col gap-4 w-full">
             {mentor?.displayName && (
@@ -112,12 +198,27 @@ export default function MentorDetailPage() {
 
         {error && <span className="text-red-500 text-sm">{error}</span>}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {mentorshipAppointments?.map((mentorshipAppointment) => (
-            <MentorshipAppointmentCardComponent key={mentorshipAppointment.id} mentorshipAppointment={mentorshipAppointment} />
-          ))}
-        </div>
+        {mentorshipAppointments && mentorshipAppointments.length > 0 ? (
+          <MentorScheduleTimeline
+            appointments={mentorshipAppointments}
+            onDeleted={(id) =>
+              setMentorshipAppointments((prev) => prev?.filter((a) => a.id !== id))
+            }
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No schedule yet. Click &ldquo;Add Schedule&rdquo; to create booking slots.
+          </p>
+        )}
       </div>
+
+      {rawImageSrc && (
+        <MentorPictureCropModal
+          imageSrc={rawImageSrc}
+          onCancel={handleCropCancel}
+          onConfirm={handleCropConfirm}
+        />
+      )}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   updateDoc,
+  setDoc,
   query,
   Timestamp,
   where,
@@ -11,6 +12,9 @@ import {
   addDoc,
   deleteDoc,
   serverTimestamp,
+  writeBatch,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db, auth, storage } from "./firebase";
 import {
@@ -18,9 +22,12 @@ import {
   FirestoreUser,
   CombinedApplicationData,
   PortalConfig,
+  MatchConfig,
+  MentorshipConfig,
   FirestoreMentor,
   MentorshipAppointment,
   APPLICATION_STATUS,
+  TeamFormation,
 } from "./types";
 import { ONE_SLOT_INTERVAL_MINUTES } from "@/config";
 import { getDownloadURL, ref } from "firebase/storage";
@@ -71,6 +78,142 @@ export async function fetchAllApplications(): Promise<FirestoreApplication[]> {
   } catch (error) {
     console.error('Error fetching applications:', error);
     throw new Error('Failed to fetch applications');
+  }
+}
+
+/**
+ * Fetches all team formations from the `formations` collection, sorted
+ * alphabetically by team name (teams without a name sort last).
+ */
+export async function fetchAllFormations(): Promise<TeamFormation[]> {
+  try {
+    const formationsRef = collection(db, 'formations');
+    const querySnapshot = await getDocs(formationsRef);
+
+    const formations: TeamFormation[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      formations.push({
+        id: doc.id,
+        ...data,
+        members: Array.isArray(data.members) ? data.members : [],
+      } as TeamFormation);
+    });
+
+    formations.sort((a, b) =>
+      (a.teamName || '￿').localeCompare(b.teamName || '￿')
+    );
+
+    return formations;
+  } catch (error) {
+    console.error('Error fetching formations:', error);
+    throw new Error('Failed to fetch formations');
+  }
+}
+
+// Event iteration this admin writes formations for. Matches the import scripts.
+export const FORMATION_VERSION = "7.0";
+
+/**
+ * Creates a new (empty) team in the `formations` collection. The doc id is
+ * auto-generated and mirrored into the `id` field, matching the shape written
+ * by scripts/import-formations.mjs. Returns the created team with local
+ * timestamps for immediate display (real server timestamps land on next reload).
+ */
+export async function createFormation(
+  teamName: string,
+  updatedBy: string
+): Promise<TeamFormation> {
+  const ref = doc(collection(db, 'formations'));
+  await setDoc(ref, {
+    id: ref.id,
+    members: [],
+    teamName,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    updatedBy,
+    version: FORMATION_VERSION,
+  });
+
+  return {
+    id: ref.id,
+    members: [],
+    teamName,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    updatedBy,
+    version: FORMATION_VERSION,
+  };
+}
+
+/**
+ * Adds a member UID to a team (no-op if already present). Refreshes
+ * updatedAt / updatedBy. The caller ensures the team is not already full and
+ * that the user isn't already on another team (use moveFormationMember for that).
+ */
+export async function addFormationMember(
+  teamId: string,
+  uid: string,
+  updatedBy: string
+): Promise<boolean> {
+  try {
+    await updateDoc(doc(db, 'formations', teamId), {
+      members: arrayUnion(uid),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error adding formation member:', error);
+    return false;
+  }
+}
+
+/**
+ * Moves a member UID out of one team and into another in a single atomic batch.
+ * Both teams get their `updatedAt`/`updatedBy` refreshed. The caller is
+ * responsible for ensuring the destination team is not already full.
+ */
+export async function moveFormationMember(
+  fromTeamId: string,
+  toTeamId: string,
+  uid: string,
+  updatedBy: string
+): Promise<boolean> {
+  try {
+    const batch = writeBatch(db);
+    const fromRef = doc(db, 'formations', fromTeamId);
+    const toRef = doc(db, 'formations', toTeamId);
+
+    batch.update(fromRef, {
+      members: arrayRemove(uid),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    });
+    batch.update(toRef, {
+      members: arrayUnion(uid),
+      updatedAt: serverTimestamp(),
+      updatedBy,
+    });
+
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error('Error moving formation member:', error);
+    return false;
+  }
+}
+
+/**
+ * Deletes a team from the `formations` collection.
+ */
+export async function deleteFormation(teamId: string): Promise<boolean> {
+  try {
+    await deleteDoc(doc(db, 'formations', teamId));
+    return true;
+  } catch (error) {
+    console.error('Error deleting formation:', error);
+    return false;
   }
 }
 
@@ -309,6 +452,104 @@ export async function updatePortalConfig(config: PortalConfig): Promise<boolean>
     };
 
     await updateDoc(configRef, firestoreData);
+    return true;
+
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves team matching configuration
+ */
+export async function getMatchConfig(): Promise<MatchConfig | null> {
+  try {
+    const configRef = doc(db, 'config', 'matchConfig');
+    const configSnap = await getDoc(configRef);
+
+    if (!configSnap.exists()) {
+      return null;
+    }
+
+    const data = configSnap.data();
+
+    const config: MatchConfig = {
+      isMatchOpen: Boolean(data.isMatchOpen),
+      startDate: data.startDate.toDate(),
+      endDate: data.endDate.toDate(),
+    };
+
+    return config;
+
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Creates or updates team matching configuration in Firestore
+ * @param config - The match configuration data to save
+ */
+export async function updateMatchConfig(config: MatchConfig): Promise<boolean> {
+  try {
+    const configRef = doc(db, 'config', 'matchConfig');
+
+    const firestoreData = {
+      isMatchOpen: config.isMatchOpen,
+      startDate: Timestamp.fromDate(config.startDate),
+      endDate: Timestamp.fromDate(config.endDate),
+    };
+
+    await setDoc(configRef, firestoreData, { merge: true });
+    return true;
+
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves mentorship configuration
+ */
+export async function getMentorshipConfig(): Promise<MentorshipConfig | null> {
+  try {
+    const configRef = doc(db, 'config', 'mentorshipConfig');
+    const configSnap = await getDoc(configRef);
+
+    if (!configSnap.exists()) {
+      return null;
+    }
+
+    const data = configSnap.data();
+
+    const config: MentorshipConfig = {
+      isMentorshipOpen: Boolean(data.isMentorshipOpen),
+      startDate: data.startDate.toDate(),
+      endDate: data.endDate.toDate(),
+    };
+
+    return config;
+
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Creates or updates mentorship configuration in Firestore
+ * @param config - The mentorship configuration data to save
+ */
+export async function updateMentorshipConfig(config: MentorshipConfig): Promise<boolean> {
+  try {
+    const configRef = doc(db, 'config', 'mentorshipConfig');
+
+    const firestoreData = {
+      isMentorshipOpen: config.isMentorshipOpen,
+      startDate: Timestamp.fromDate(config.startDate),
+      endDate: Timestamp.fromDate(config.endDate),
+    };
+
+    await setDoc(configRef, firestoreData, { merge: true });
     return true;
 
   } catch {

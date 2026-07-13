@@ -97,6 +97,7 @@ export default function Applications() {
     const results = applicationsOriginal.filter((app) => {
       const age = calculateAge(app.dateOfBirth).toString();
       return [
+        app.id,
         app.firstName,
         app.lastName,
         app.email,
@@ -1033,7 +1034,7 @@ export default function Applications() {
                     placeholder="Search by keyword"
                   />
                   <p className="text-xs text-white/80">
-                    First/last name, email, status, current occupation, occupation detail, role, team, nationality, country, track, age, referral code.
+                    UID, First/last name, email, status, current occupation, occupation detail, role, team, nationality, country, track, age, referral code.
                   </p>
 
                   <div className="flex flex-row justify-end gap-4">

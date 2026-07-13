@@ -1,8 +1,9 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
-import { FirestoreUser, FirestoreApplication, APPLICATION_STATUS } from "./types";
+import { FirestoreUser, APPLICATION_STATUS } from "./types";
 import { isHmacEnabled, verifyCheckIn } from "./hmac";
-import { CheckInResponse, CheckInContext } from "./checkin-types";
+import { CheckInResponse } from "./checkin-types";
+import { getTeamForUser } from "./checkinTeam";
 
 // Server-only: imports node crypto (via ./hmac) and is invoked from the
 // /api/check-in route. Do not import this from a client component.
@@ -24,6 +25,19 @@ interface ParsedQr {
  *   signed (current):  userId/firstName/lastName/confirmedRsvpAt/<sig>
  * The signature, when present, is the trailing base64url segment.
  */
+/**
+ * Normalizes a Firestore Timestamp / {seconds} / Date / ISO value to an ISO
+ * string (or null). Used to serialize acceptedAt / confirmedRsvpAt for the card.
+ */
+function toIso(value: unknown): string | null {
+  if (!value) return null;
+  const v = value as { toDate?: () => Date; seconds?: number };
+  if (typeof v.toDate === "function") return v.toDate().toISOString();
+  if (typeof v.seconds === "number") return new Date(v.seconds * 1000).toISOString();
+  const d = new Date(value as string | number | Date);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 export function parseQr(raw: string): ParsedQr | null {
   const parts = raw.trim().split("/");
   if (parts.length < 4) return null;
@@ -98,56 +112,51 @@ export async function validateAndCheckIn(
   }
 
   const hacker = {
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    status: user.status,
+    firstName: user.firstName ?? "",
+    lastName: user.lastName ?? "",
+    email: user.email ?? "",
+    status: user.status ?? "",
+    phone: user.phone ?? "",
+    genderIdentity: user.genderIdentity ?? "",
+    dateOfBirth: user.dateOfBirth ?? "",
+    nationality: user.nationality ?? "",
+    occupationPlace: user.occupationPlace ?? "",
+    occupationDetail: user.occupationDetail ?? "",
+    acceptedAt: toIso(user.acceptedAt),
+    confirmedRsvpAt: toIso(user.confirmedRsvpAt),
   };
 
-  // The application doc (team / speed-dating data) shares the user's id.
-  const appSnap = await adminDb
-    .collection("applications")
-    .doc(parsed.userId)
-    .get();
-  const application = appSnap.exists
-    ? (appSnap.data() as FirestoreApplication)
-    : undefined;
-  const context = deriveCheckInContext(user, application);
+  // Idempotent: keep the first check-in time, but still stamp checkedInAt below
+  // BEFORE resolving the team so the scanned hacker shows as checked in.
+  const alreadyCheckedIn = !!user.checkedInAt;
+  const checkedInAt = user.checkedInAt ?? new Date().toISOString();
 
-  // Idempotent: keep the first check-in time.
-  if (user.checkedInAt) {
-    return {
-      ok: true,
-      alreadyCheckedIn: true,
-      checkedInAt: user.checkedInAt,
-      hacker: hacker,
-      context,
-    };
+  if (!alreadyCheckedIn) {
+    await userRef.update({
+      checkedInAt,
+      checkedInAtServer: FieldValue.serverTimestamp(),
+      checkedInBy: checkedInBy.uid,
+      checkedInByEmail: checkedInBy.email,
+    });
   }
 
-  const checkedInAt = new Date().toISOString();
-  await userRef.update({
-    checkedInAt,
-    checkedInAtServer: FieldValue.serverTimestamp(),
-    checkedInBy: checkedInBy.uid,
-    checkedInByEmail: checkedInBy.email,
-  });
+  // The hacker's team comes from the `formations` collection (members = UIDs).
+  // Team lookup must not fail the check-in, so tolerate errors.
+  let team = null;
+  try {
+    team = await getTeamForUser(parsed.userId);
+  } catch (err) {
+    console.error("Failed to resolve team for", parsed.userId, err);
+  }
+  const context = { inTeam: !!team, joiningSpeedDating: false };
 
-  return { ok: true, alreadyCheckedIn: false, checkedInAt, hacker: hacker, context };
-}
-
-/**
- * Derives which guided check-in steps apply to a hacker. Team data comes from
- * the application doc. `joiningSpeedDating` has no field yet, so it's false.
- */
-function deriveCheckInContext(
-  user: FirestoreUser,
-  application?: FirestoreApplication
-): CheckInContext {
-  const inTeam =
-    !!application?.teamName?.trim() || !!application?.teamMembers?.trim();
   return {
-    inTeam,
-    joiningSpeedDating: false,
+    ok: true,
+    userId: parsed.userId,
+    alreadyCheckedIn,
+    checkedInAt,
+    hacker,
+    context,
+    team,
   };
 }

@@ -17,6 +17,8 @@
 //   node --env-file=.env scripts/generate-leave-letters.mjs
 //   node --env-file=.env scripts/generate-leave-letters.mjs --dry-run
 //   node --env-file=.env scripts/generate-leave-letters.mjs --force   # regenerate even if leaveLetterUrl is set
+//   node --env-file=.env scripts/generate-leave-letters.mjs --uid <uid>
+//     # regenerate for just this one user (implies --force)
 
 import { initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -52,8 +54,17 @@ const BUCKET_NAME = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 const STORAGE_PREFIX = "users/generated/7.0";
 
 const dryRun = process.argv.includes("--dry-run");
-// By default skip users already processed (leaveLetterUrl present); --force regenerates.
-const force = process.argv.includes("--force");
+
+const uidFlagIndex = process.argv.indexOf("--uid");
+const uidArg = uidFlagIndex !== -1 ? process.argv[uidFlagIndex + 1] : undefined;
+if (uidFlagIndex !== -1 && !uidArg) {
+  console.error("Usage: --uid <uid> (missing value)");
+  process.exit(1);
+}
+
+// By default skip users already processed (leaveLetterUrl present); --force
+// regenerates. Targeting a single user with --uid always regenerates.
+const force = process.argv.includes("--force") || Boolean(uidArg);
 
 // Resolve the LibreOffice binary. Prefer SOFFICE_BIN, then known install
 // locations that actually exist on disk, then a bare `soffice` from PATH.
@@ -131,13 +142,28 @@ const bucket = getStorage(app).bucket(BUCKET_NAME);
 
 const templateBuffer = await readFile(TEMPLATE_PATH);
 
-const snap = await db
-  .collection("applications")
-  .where("leaveLetter", "==", LEAVE_LETTER_VALUE)
-  .get();
-
-console.log(`Found ${snap.size} application(s) requesting a leave letter.`);
-if (snap.empty) process.exit(0);
+let appDocs;
+if (uidArg) {
+  const appDoc = await db.collection("applications").doc(uidArg).get();
+  if (!appDoc.exists) {
+    console.error(`No applications/${uidArg} document found`);
+    process.exit(1);
+  }
+  if (appDoc.data().leaveLetter !== LEAVE_LETTER_VALUE) {
+    console.error(`applications/${uidArg} never requested a leave letter`);
+    process.exit(1);
+  }
+  console.log(`Regenerating leave letter for uid ${uidArg}.`);
+  appDocs = [appDoc];
+} else {
+  const snap = await db
+    .collection("applications")
+    .where("leaveLetter", "==", LEAVE_LETTER_VALUE)
+    .get();
+  console.log(`Found ${snap.size} application(s) requesting a leave letter.`);
+  if (snap.empty) process.exit(0);
+  appDocs = snap.docs;
+}
 
 await mkdir(EXPORT_DIR, { recursive: true });
 const workDir = await mkdtemp(path.join(tmpdir(), "leave-letters-"));
@@ -148,7 +174,7 @@ let ok = 0;
 let skipped = 0;
 let failed = 0;
 
-for (const appDoc of snap.docs) {
+for (const appDoc of appDocs) {
   const uid = appDoc.id; // application id === user uid
   try {
     const userSnap = await db.collection("users").doc(uid).get();
