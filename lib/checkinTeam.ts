@@ -4,6 +4,7 @@ import type {
   CheckInTeam,
   CheckInTeamMember,
   CheckInParticipant,
+  CheckInHistoryEntry,
 } from "./checkin-types";
 
 // Server-only: reads/writes the `formations` collection via the Admin SDK.
@@ -189,4 +190,42 @@ export async function listConfirmedParticipants(): Promise<
 
   participants.sort((a, b) => a.name.localeCompare(b.name));
   return participants;
+}
+
+/**
+ * Lists every user who has checked in, newest first. `checkedInAt` is stored as
+ * an ISO string, which sorts chronologically, and Firestore excludes docs
+ * missing the field — so this naturally returns only checked-in users. Each
+ * entry carries the user's current team name and their (private) photo URL,
+ * which the client signs for display.
+ */
+export async function listCheckInHistory(): Promise<CheckInHistoryEntry[]> {
+  const usersSnap = await adminDb
+    .collection("users")
+    .orderBy("checkedInAt", "desc")
+    .get();
+
+  // Map each UID to the name of the team it belongs to (first team wins).
+  const formationsSnap = await adminDb.collection("formations").get();
+  const teamOf = new Map<string, string>();
+  for (const doc of formationsSnap.docs) {
+    const data = doc.data();
+    const members: string[] = Array.isArray(data.members) ? data.members : [];
+    for (const uid of members) {
+      if (!teamOf.has(uid)) teamOf.set(uid, data.teamName ?? "");
+    }
+  }
+
+  return usersSnap.docs.map((doc) => {
+    const d = doc.data();
+    const name = `${d.firstName ?? ""} ${d.lastName ?? ""}`.trim();
+    return {
+      uid: doc.id,
+      name: name || doc.id,
+      email: d.email ?? "",
+      checkedInAt: typeof d.checkedInAt === "string" ? d.checkedInAt : "",
+      teamName: teamOf.get(doc.id) ?? null,
+      photoUrl: typeof d.checkInPhotoUrl === "string" ? d.checkInPhotoUrl : null,
+    };
+  });
 }

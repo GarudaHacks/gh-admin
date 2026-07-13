@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CheckCircle2, ScanLine, XCircle } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, History, ScanLine, XCircle } from "lucide-react";
 import QrScanner from "./QrScanner";
 import { StepCard } from "./StepCard";
 import { TeamConfirm } from "./TeamConfirm";
@@ -64,9 +65,18 @@ export default function CheckInPage() {
   return (
     <div className="min-h-screen text-white px-4 py-10">
       <div className="mx-auto max-w-md">
-        <header className="mb-6 flex items-center gap-2">
-          <ScanLine className="h-6 w-6 text-[#874ffe]" />
-          <h1 className="text-xl font-semibold">Guided Check-In</h1>
+        <header className="mb-6 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ScanLine className="h-6 w-6 text-[#874ffe]" />
+            <h1 className="text-xl font-semibold">Guided Check-In</h1>
+          </div>
+          <Link
+            href="/check-in/history"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-medium text-white/80 hover:bg-white/10 transition-colors"
+          >
+            <History className="h-4 w-4" />
+            History
+          </Link>
         </header>
 
         <StepCard

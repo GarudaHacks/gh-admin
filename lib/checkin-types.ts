@@ -64,3 +64,14 @@ export type CheckInResponse =
 export type TeamEditResponse =
   | { ok: true; team: CheckInTeam }
   | { ok: false; reason: string };
+
+/** One row of the check-in history (all users who have checked in). */
+export interface CheckInHistoryEntry {
+  uid: string;
+  name: string;
+  email: string;
+  checkedInAt: string; // ISO string
+  teamName: string | null;
+  /** Stored (private) photo URL, or null. The client signs it to display. */
+  photoUrl: string | null;
+}

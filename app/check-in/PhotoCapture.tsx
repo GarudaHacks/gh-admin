@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Check, Loader2, RotateCcw, Upload } from "lucide-react";
 import toast from "react-hot-toast";
+import SignedImage from "@/components/SignedImage";
 import { uploadCheckInPhoto } from "./checkin-client";
 
 // The photo only needs to be recognizable, so we downscale hard and JPEG-encode
@@ -178,11 +179,11 @@ export function PhotoCapture({
           <Check className="h-4 w-4" />
           Photo saved
         </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        {/* The stored object is private, so preview it via a signed URL. */}
+        <SignedImage
           src={uploadedUrl}
           alt="Check-in"
-          className="max-h-64 w-auto rounded-xl border border-white/10"
+          className="h-64 w-64 overflow-hidden rounded-xl border border-white/10"
         />
         <button
           type="button"

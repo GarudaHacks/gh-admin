@@ -3,6 +3,7 @@ import type {
   CheckInResponse,
   CheckInParticipant,
   CheckInTeam,
+  CheckInHistoryEntry,
   TeamEditResponse,
 } from "@/lib/checkin-types";
 
@@ -69,6 +70,26 @@ export async function editTeamMember(input: {
     return (await res.json()) as TeamEditResponse;
   } catch {
     return { ok: false, reason: "Something went wrong. Try again." };
+  }
+}
+
+/** Fetches the check-in history (all checked-in users, newest first). */
+export async function fetchCheckInHistory(): Promise<
+  { ok: true; history: CheckInHistoryEntry[] } | { ok: false; reason: string }
+> {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) {
+    return { ok: false, reason: "You must be signed in." };
+  }
+  try {
+    const res = await fetch("/api/check-in/history", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return (await res.json()) as
+      | { ok: true; history: CheckInHistoryEntry[] }
+      | { ok: false; reason: string };
+  } catch {
+    return { ok: false, reason: "Failed to load history. Try again." };
   }
 }
 
