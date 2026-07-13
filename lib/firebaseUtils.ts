@@ -447,6 +447,35 @@ export async function moveFormationBetweenTables(
 }
 
 /**
+ * Clears the `formations` array on every given table (unseats all teams) while
+ * leaving the tables themselves in place. Runs in chunked batches to stay under
+ * Firestore's 500-op batch limit.
+ */
+export async function resetAllTablePlacements(
+  tableIds: string[],
+  updatedBy: string
+): Promise<boolean> {
+  try {
+    const CHUNK = 450;
+    for (let i = 0; i < tableIds.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      for (const id of tableIds.slice(i, i + CHUNK)) {
+        batch.update(doc(db, 'tables', id), {
+          formations: [],
+          updatedAt: serverTimestamp(),
+          updatedBy,
+        });
+      }
+      await batch.commit();
+    }
+    return true;
+  } catch (error) {
+    console.error('Error resetting table placements:', error);
+    return false;
+  }
+}
+
+/**
  * Deletes a table from the `tables` collection.
  */
 export async function deleteTable(tableId: string): Promise<boolean> {

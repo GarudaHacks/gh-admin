@@ -15,6 +15,7 @@ import {
   assignFormationToTable,
   removeFormationFromTable,
   moveFormationBetweenTables,
+  resetAllTablePlacements,
   deleteTable,
 } from "@/lib/firebaseUtils";
 import { FirestoreTable, TeamFormation, FirestoreUser } from "@/lib/types";
@@ -105,6 +106,27 @@ function isMalePns(gender?: string): boolean {
   return g === "male" || g.includes("rather not");
 }
 
+// Serialize a matrix of strings to CSV (RFC-4180 quoting) and trigger a download.
+function downloadCsv(filename: string, rows: string[][]) {
+  const esc = (v: string) => {
+    const s = v ?? "";
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = rows.map((r) => r.map(esc).join(",")).join("\r\n");
+  // Prepend a BOM so Excel reads UTF-8 (team names may be non-ASCII).
+  const blob = new Blob(["﻿" + csv], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function TablesPage() {
   const { user } = useAuth();
   const editor = user?.email ?? "system";
@@ -157,6 +179,12 @@ export default function TablesPage() {
   const [confirmDeleteTable, setConfirmDeleteTable] =
     useState<FirestoreTable | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Which area (location) to show; "all" shows every location.
+  const [areaFilter, setAreaFilter] = useState<string>("all");
+  // Reset-all-placements confirmation.
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -335,6 +363,19 @@ export default function TablesPage() {
   const nextTableNumber = useMemo(
     () => (tables.reduce((max, t) => Math.max(max, t.tableNumber), 0) || 0) + 1,
     [tables]
+  );
+
+  // Area filter: fall back to "all" if the selected area no longer exists.
+  const areaKeys = grouped.map(([loc]) => loc);
+  const effectiveArea =
+    areaFilter !== "all" && areaKeys.includes(areaFilter) ? areaFilter : "all";
+  const visibleGroups =
+    effectiveArea === "all"
+      ? grouped
+      : grouped.filter(([loc]) => loc === effectiveArea);
+  const visibleTableCount = visibleGroups.reduce(
+    (n, [, list]) => n + list.length,
+    0
   );
 
   // --- Mutations -----------------------------------------------------------
@@ -532,6 +573,63 @@ export default function TablesPage() {
     }
   };
 
+  const handleResetAll = async () => {
+    if (resetting) return;
+    const ids = tables.filter((t) => t.formations.length > 0).map((t) => t.id);
+    try {
+      setResetting(true);
+      const ok = await resetAllTablePlacements(ids, editor);
+      if (!ok) {
+        toast.error("Failed to reset placements");
+        return;
+      }
+      setTables((prev) =>
+        prev.map((t) =>
+          t.formations.length
+            ? { ...t, formations: [], updatedAt: new Date(), updatedBy: editor }
+            : t
+        )
+      );
+      setConfirmReset(false);
+      toast.success(
+        ids.length
+          ? `Cleared placements on ${ids.length} table${
+              ids.length === 1 ? "" : "s"
+            }`
+          : "No placements to clear"
+      );
+    } catch (err) {
+      console.error("Error resetting placements:", err);
+      toast.error("Failed to reset placements");
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  // Export the currently-visible area(s) as CSV: one row per table with its id,
+  // area, table number, and the seated formation name(s) (joined if more than one).
+  const handleExport = () => {
+    const rows: string[][] = [["id", "area", "tableNumber", "formations"]];
+    for (const [loc, list] of visibleGroups) {
+      for (const t of list) {
+        const names = t.formations
+          .map((fid) => formationMap.get(fid)?.teamName || fid)
+          .join("; ");
+        rows.push([
+          t.id,
+          loc === UNSPECIFIED ? "" : loc,
+          String(t.tableNumber),
+          names,
+        ]);
+      }
+    }
+    const suffix =
+      effectiveArea === "all"
+        ? "all"
+        : effectiveArea.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    downloadCsv(`table-placements-${suffix}.csv`, rows);
+  };
+
   const toggleSort = (key: SortKey) =>
     setSortCriteria((prev) => {
       const existing = prev.find((c) => c.key === key);
@@ -663,14 +761,71 @@ export default function TablesPage() {
         subtitle="Each square is a seat; its color is the team seated there. A table showing more than one color holds teams from different formations. Click a table to assign a team."
       />
 
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-white/60">
-          {tables.length} table{tables.length === 1 ? "" : "s"} across{" "}
-          {grouped.length} location{grouped.length === 1 ? "" : "s"}
-        </p>
-        <button onClick={openAddModal} className="btn-primary text-sm">
-          + Add tables
-        </button>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-sm text-white/60">
+            {effectiveArea === "all"
+              ? `${tables.length} table${
+                  tables.length === 1 ? "" : "s"
+                } across ${grouped.length} location${
+                  grouped.length === 1 ? "" : "s"
+                }`
+              : `${visibleTableCount} table${
+                  visibleTableCount === 1 ? "" : "s"
+                } in ${effectiveArea}`}
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleExport}
+              disabled={tables.length === 0}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium text-white/80 bg-white/5 border border-white/15 hover:bg-white/10 transition-colors disabled:opacity-40"
+            >
+              Export CSV
+            </button>
+            <button
+              onClick={() => setConfirmReset(true)}
+              disabled={tables.length === 0}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium text-red-300 bg-red-600/10 border border-red-600/40 hover:bg-red-600/20 transition-colors disabled:opacity-40"
+            >
+              Reset all
+            </button>
+            <button onClick={openAddModal} className="btn-primary text-sm">
+              + Add tables
+            </button>
+          </div>
+        </div>
+
+        {/* Area filter */}
+        {grouped.length > 1 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-white/50 mr-1">Area:</span>
+            <button
+              type="button"
+              onClick={() => setAreaFilter("all")}
+              className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                effectiveArea === "all"
+                  ? "bg-primary/20 text-accent-accessible border-primary/40"
+                  : "bg-white/5 text-white/70 border-white/15 hover:bg-white/10"
+              }`}
+            >
+              All ({tables.length})
+            </button>
+            {grouped.map(([loc, list]) => (
+              <button
+                key={loc}
+                type="button"
+                onClick={() => setAreaFilter(loc)}
+                className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                  effectiveArea === loc
+                    ? "bg-primary/20 text-accent-accessible border-primary/40"
+                    : "bg-white/5 text-white/70 border-white/15 hover:bg-white/10"
+                }`}
+              >
+                {loc} ({list.length})
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {tables.length === 0 ? (
@@ -680,7 +835,7 @@ export default function TablesPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {grouped.map(([location, list]) => (
+          {visibleGroups.map(([location, list]) => (
             <section key={location} className="space-y-3">
               <div className="flex items-center gap-2 border-b border-white/10 pb-2">
                 <h2 className="text-lg font-semibold text-white">{location}</h2>
@@ -1151,6 +1306,18 @@ export default function TablesPage() {
           loading={deleting}
           onConfirm={handleDeleteTable}
           onCancel={() => setConfirmDeleteTable(null)}
+        />
+      )}
+
+      {/* Reset-all-placements confirmation */}
+      {confirmReset && (
+        <ConfirmDialog
+          title="Reset all table placements?"
+          description="This unseats every team from every table (clears each table's assigned formations). The tables themselves are kept. This cannot be undone."
+          confirmLabel={resetting ? "Resetting…" : "Reset all placements"}
+          loading={resetting}
+          onConfirm={handleResetAll}
+          onCancel={() => setConfirmReset(false)}
         />
       )}
     </div>
