@@ -1,8 +1,9 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
-import { FirestoreUser, FirestoreApplication, APPLICATION_STATUS } from "./types";
+import { FirestoreUser, APPLICATION_STATUS } from "./types";
 import { isHmacEnabled, verifyCheckIn } from "./hmac";
-import { CheckInResponse, CheckInContext } from "./checkin-types";
+import { CheckInResponse } from "./checkin-types";
+import { getTeamForUser } from "./checkinTeam";
 
 // Server-only: imports node crypto (via ./hmac) and is invoked from the
 // /api/check-in route. Do not import this from a client component.
@@ -104,50 +105,37 @@ export async function validateAndCheckIn(
     status: user.status,
   };
 
-  // The application doc (team / speed-dating data) shares the user's id.
-  const appSnap = await adminDb
-    .collection("applications")
-    .doc(parsed.userId)
-    .get();
-  const application = appSnap.exists
-    ? (appSnap.data() as FirestoreApplication)
-    : undefined;
-  const context = deriveCheckInContext(user, application);
+  // Idempotent: keep the first check-in time, but still stamp checkedInAt below
+  // BEFORE resolving the team so the scanned hacker shows as checked in.
+  const alreadyCheckedIn = !!user.checkedInAt;
+  const checkedInAt = user.checkedInAt ?? new Date().toISOString();
 
-  // Idempotent: keep the first check-in time.
-  if (user.checkedInAt) {
-    return {
-      ok: true,
-      alreadyCheckedIn: true,
-      checkedInAt: user.checkedInAt,
-      hacker: hacker,
-      context,
-    };
+  if (!alreadyCheckedIn) {
+    await userRef.update({
+      checkedInAt,
+      checkedInAtServer: FieldValue.serverTimestamp(),
+      checkedInBy: checkedInBy.uid,
+      checkedInByEmail: checkedInBy.email,
+    });
   }
 
-  const checkedInAt = new Date().toISOString();
-  await userRef.update({
-    checkedInAt,
-    checkedInAtServer: FieldValue.serverTimestamp(),
-    checkedInBy: checkedInBy.uid,
-    checkedInByEmail: checkedInBy.email,
-  });
+  // The hacker's team comes from the `formations` collection (members = UIDs).
+  // Team lookup must not fail the check-in, so tolerate errors.
+  let team = null;
+  try {
+    team = await getTeamForUser(parsed.userId);
+  } catch (err) {
+    console.error("Failed to resolve team for", parsed.userId, err);
+  }
+  const context = { inTeam: !!team, joiningSpeedDating: false };
 
-  return { ok: true, alreadyCheckedIn: false, checkedInAt, hacker: hacker, context };
-}
-
-/**
- * Derives which guided check-in steps apply to a hacker. Team data comes from
- * the application doc. `joiningSpeedDating` has no field yet, so it's false.
- */
-function deriveCheckInContext(
-  user: FirestoreUser,
-  application?: FirestoreApplication
-): CheckInContext {
-  const inTeam =
-    !!application?.teamName?.trim() || !!application?.teamMembers?.trim();
   return {
-    inTeam,
-    joiningSpeedDating: false,
+    ok: true,
+    userId: parsed.userId,
+    alreadyCheckedIn,
+    checkedInAt,
+    hacker,
+    context,
+    team,
   };
 }

@@ -32,16 +32,10 @@ export const CheckInSteps: CheckInStep[] = [
         instruction: "Confirm the hacker's information on file is correct.",
     },
     {
-        stepName: "doGroupCheckin",
-        friendlyName: "Group Check-in",
-        instruction: "Scan the QR codes of the rest of the team in one batch.",
-        skippable: true,
-        showWhen: (ctx) => ctx.inTeam,
-    },
-    {
-        stepName: "checkOtherMembers",
-        friendlyName: "Verify Team Members",
-        instruction: "Confirm each scanned teammate's identity.",
+        stepName: "confirmTeam",
+        friendlyName: "Confirm Team",
+        instruction:
+            "Check this hacker's team is correct. Add or remove members if needed.",
         showWhen: (ctx) => ctx.inTeam,
     },
     {
@@ -58,6 +52,7 @@ export const CheckInSteps: CheckInStep[] = [
         stepName: "takePicture",
         friendlyName: "Take Picture",
         instruction: "Take the hacker's check-in photo.",
+        skippable: true,
     },
     {
         stepName: "smileAndSayGoodLuck",

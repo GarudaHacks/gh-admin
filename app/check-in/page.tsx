@@ -4,11 +4,15 @@ import { useRef, useState } from "react";
 import { CheckCircle2, ScanLine, XCircle } from "lucide-react";
 import QrScanner from "./QrScanner";
 import { StepCard } from "./StepCard";
-import { GroupScanner, GroupRoster } from "./GroupCheckin";
+import { TeamConfirm } from "./TeamConfirm";
+import { PhotoCapture } from "./PhotoCapture";
 import { useCheckInFlow } from "./useCheckInFlow";
-import { useGroupCheckin } from "./useGroupCheckin";
 import { postCheckIn } from "./checkin-client";
-import type { CheckInContext, CheckInResponse } from "@/lib/checkin-types";
+import type {
+  CheckInContext,
+  CheckInResponse,
+  CheckInTeam,
+} from "@/lib/checkin-types";
 
 // Sensible default before the first scan tells us who the hacker is. The flow
 // re-filters its steps once `setContext` runs with the scanned hacker's facts.
@@ -20,12 +24,13 @@ const DEFAULT_CONTEXT: CheckInContext = {
 export default function CheckInPage() {
   const [context, setContext] = useState<CheckInContext>(DEFAULT_CONTEXT);
   const [result, setResult] = useState<CheckInResponse | null>(null);
+  // The team roster (mutable via the Confirm Team step), seeded from the scan.
+  const [team, setTeam] = useState<CheckInTeam | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   // Guards against the camera firing the same code many times per second.
   const busyRef = useRef(false);
 
   const flow = useCheckInFlow(context);
-  const group = useGroupCheckin();
 
   const handleScan = async (value: string) => {
     if (busyRef.current) return;
@@ -38,6 +43,7 @@ export default function CheckInPage() {
         return;
       }
       setResult(data);
+      setTeam(data.team);
       setContext(data.context); // re-filters the flow to this hacker
       flow.next(); // advance off the scan step
     } finally {
@@ -48,10 +54,10 @@ export default function CheckInPage() {
   // reset for the next hacker
   const handleReset = () => {
     setResult(null);
+    setTeam(null);
     setScanError(null);
     setContext(DEFAULT_CONTEXT);
     busyRef.current = false;
-    group.reset();
     flow.reset();
   };
 
@@ -81,8 +87,21 @@ export default function CheckInPage() {
             getHackerInformations: result?.ok ? (
               <HackerSummary result={result} />
             ) : null,
-            doGroupCheckin: <GroupScanner group={group} />,
-            checkOtherMembers: <GroupRoster group={group} mode="verify" />,
+            confirmTeam:
+              result?.ok && team ? (
+                <TeamConfirm
+                  team={team}
+                  leadUid={result.userId}
+                  onTeamChange={setTeam}
+                />
+              ) : (
+                <p className="text-sm text-white/50">
+                  This hacker isn&apos;t on any team.
+                </p>
+              ),
+            takePicture: result?.ok ? (
+              <PhotoCapture uid={result.userId} onUploaded={() => {}} />
+            ) : null,
           }}
         />
       </div>
