@@ -180,6 +180,10 @@ export default function TablesPage() {
     useState<FirestoreTable | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Preview modal: the table whose seating we're inspecting (by id, so it stays
+  // in sync with `tables` as teams are moved/removed).
+  const [previewTableId, setPreviewTableId] = useState<string | null>(null);
+
   // Which area (location) to show; "all" shows every location.
   const [areaFilter, setAreaFilter] = useState<string>("all");
   // Reset-all-placements confirmation.
@@ -754,6 +758,10 @@ export default function TablesPage() {
     ? formationMap.get(moveSource.formationId)
     : null;
 
+  const previewTable = previewTableId
+    ? tables.find((t) => t.id === previewTableId) ?? null
+    : null;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -849,6 +857,7 @@ export default function TablesPage() {
                   <TableCard
                     key={table.id}
                     view={buildView(table)}
+                    onPreview={() => setPreviewTableId(table.id)}
                     onAssign={() => {
                       setAssignSearch("");
                       setAssignTable(table);
@@ -867,6 +876,187 @@ export default function TablesPage() {
           ))}
         </div>
       )}
+
+      {/* Table preview modal (opened by clicking a table card) */}
+      {previewTable &&
+        (() => {
+          const view = buildView(previewTable);
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+              onClick={() => setPreviewTableId(null)}
+            >
+              <div
+                className="modal-panel p-6 w-full max-w-lg flex flex-col max-h-[85vh]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">
+                      Table {previewTable.tableNumber}
+                    </h3>
+                    <p className="text-sm text-white/60 mt-1">
+                      {previewTable.location?.trim() || UNSPECIFIED} ·{" "}
+                      {view.filled}/{previewTable.capacity} seats filled
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {view.isMixed && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/40">
+                        ⚠ mixed
+                      </span>
+                    )}
+                    {view.overCapacity && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/15 text-red-300 border border-red-500/40">
+                        over
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Seat preview */}
+                <div className="rounded-md border border-white/10 bg-black/20 p-3 flex justify-center mb-3">
+                  <SeatGrid view={view} seatSize="w-6 h-6" />
+                </div>
+
+                {view.overCapacity && (
+                  <p className="text-[11px] text-red-300 bg-red-500/10 border border-red-500/30 rounded px-2 py-1 mb-3">
+                    ⚠ Over capacity by {view.filled - previewTable.capacity}. Move
+                    a team to a table with room.
+                  </p>
+                )}
+
+                {/* Assigned teams with their members (age / gender). */}
+                <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-3">
+                  {view.assigned.length === 0 ? (
+                    <p className="text-center text-white/50 text-sm py-6">
+                      No teams assigned yet.
+                    </p>
+                  ) : (
+                    view.assigned.map((a) => {
+                      const key = `${previewTable.id}:${a.id}`;
+                      const members = a.formation?.members ?? [];
+                      return (
+                        <div
+                          key={a.id}
+                          className="rounded-lg border border-white/10"
+                        >
+                          <div className="flex items-center justify-between gap-2 p-3">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span
+                                className="w-3 h-3 rounded-sm shrink-0"
+                                style={{
+                                  backgroundColor:
+                                    SEAT_COLORS[a.colorIndex % SEAT_COLORS.length],
+                                }}
+                              />
+                              <span className="text-sm text-white truncate">
+                                {a.formation?.teamName || (
+                                  <span className="italic text-red-300">
+                                    missing ({a.id.slice(0, 6)}…)
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-xs text-white/40 shrink-0">
+                                {a.memberCount} member
+                                {a.memberCount === 1 ? "" : "s"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMoveSearch("");
+                                  setMoveSource({
+                                    table: previewTable,
+                                    formationId: a.id,
+                                  });
+                                  setPreviewTableId(null);
+                                }}
+                                className="px-2 py-1 rounded text-xs text-white/70 bg-white/5 border border-white/15 hover:bg-white/10 transition-colors"
+                              >
+                                Move
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleRemoveFormation(previewTable, a.id)
+                                }
+                                disabled={removeBusy === key}
+                                className="px-2 py-1 rounded text-xs text-red-300 bg-red-600/10 border border-red-600/40 hover:bg-red-600/20 transition-colors disabled:opacity-50"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+
+                          <ul className="border-t border-white/10 divide-y divide-white/5">
+                            {members.length === 0 ? (
+                              <li className="px-3 py-2 text-xs text-white/40">
+                                No members listed.
+                              </li>
+                            ) : (
+                              members.map((uid) => {
+                                const m = memberDetail(uid);
+                                return (
+                                  <li
+                                    key={uid}
+                                    className="flex items-center justify-between gap-2 px-3 py-2 text-xs"
+                                  >
+                                    <span className="min-w-0 truncate text-white/80">
+                                      {m.name}
+                                    </span>
+                                    <span className="shrink-0 flex items-center gap-2 text-white/50">
+                                      <span>
+                                        {m.age != null ? `${m.age}y` : "—"}
+                                      </span>
+                                      <span>· {m.gender}</span>
+                                      <a
+                                        href={m.appHref}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-accent-accessible hover:underline"
+                                        title="Open in Applications"
+                                      >
+                                        app ↗
+                                      </a>
+                                    </span>
+                                  </li>
+                                );
+                              })
+                            )}
+                          </ul>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Footer — the single entry point to add a team. */}
+                <div className="flex items-center justify-between mt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssignSearch("");
+                      setAssignTable(previewTable);
+                      setPreviewTableId(null);
+                    }}
+                    className="btn-primary text-sm"
+                  >
+                    + Assign a team
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTableId(null)}
+                    className="px-4 py-2 rounded-lg text-sm text-white/70 hover:bg-white/5 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       {/* Add-tables modal (numbered range) */}
       {showAddModal && (
@@ -1326,8 +1516,58 @@ export default function TablesPage() {
 
 // ---------------------------------------------------------------------------
 
+// Colored grid of seats (one square per seat) shared by the card + preview.
+function SeatGrid({
+  view,
+  seatSize = "w-5 h-5",
+}: {
+  view: TableView;
+  seatSize?: string;
+}) {
+  const { table, assigned, seats, filled } = view;
+  const totalSquares = Math.max(table.capacity, filled);
+  const cols = Math.max(1, Math.ceil(Math.sqrt(totalSquares)));
+
+  return (
+    <div
+      className="grid gap-1 justify-center"
+      style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+    >
+      {Array.from({ length: totalSquares }).map((_, i) => {
+        if (i < filled) {
+          const seat = seats[i];
+          const over = i >= table.capacity;
+          const teamName =
+            assigned.find((a) => a.id === seat.formationId)?.formation
+              ?.teamName || seat.formationId;
+          return (
+            <div
+              key={i}
+              className={`${seatSize} rounded-sm ${
+                over ? "ring-2 ring-red-400" : ""
+              }`}
+              style={{
+                backgroundColor: SEAT_COLORS[seat.colorIndex % SEAT_COLORS.length],
+              }}
+              title={`${seat.memberName} — ${teamName}`}
+            />
+          );
+        }
+        return (
+          <div
+            key={i}
+            className={`${seatSize} rounded-sm border border-white/15 bg-transparent`}
+            title="Empty seat"
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function TableCard({
   view,
+  onPreview,
   onAssign,
   onRemoveFormation,
   onMoveFormation,
@@ -1335,15 +1575,14 @@ function TableCard({
   removeBusy,
 }: {
   view: TableView;
+  onPreview: () => void;
   onAssign: () => void;
   onRemoveFormation: (formationId: string) => void;
   onMoveFormation: (formationId: string) => void;
   onDelete: () => void;
   removeBusy: string | null;
 }) {
-  const { table, assigned, seats, filled, isMixed, overCapacity } = view;
-  const totalSquares = Math.max(table.capacity, filled);
-  const cols = Math.max(1, Math.ceil(Math.sqrt(totalSquares)));
+  const { table, assigned, filled, isMixed, overCapacity } = view;
 
   return (
     <div
@@ -1384,47 +1623,14 @@ function TableCard({
         </div>
       </div>
 
-      {/* Seat grid — click to assign a team. */}
+      {/* Seat grid — click to preview the seating. */}
       <button
         type="button"
-        onClick={onAssign}
-        title="Click to assign a team"
+        onClick={onPreview}
+        title="Click to preview seating"
         className="rounded-md border border-white/10 bg-black/20 p-2 hover:bg-white/5 transition-colors"
       >
-        <div
-          className="grid gap-1 justify-center"
-          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
-        >
-          {Array.from({ length: totalSquares }).map((_, i) => {
-            if (i < filled) {
-              const seat = seats[i];
-              const over = i >= table.capacity;
-              const teamName =
-                assigned.find((a) => a.id === seat.formationId)?.formation
-                  ?.teamName || seat.formationId;
-              return (
-                <div
-                  key={i}
-                  className={`w-5 h-5 rounded-sm ${
-                    over ? "ring-2 ring-red-400" : ""
-                  }`}
-                  style={{
-                    backgroundColor:
-                      SEAT_COLORS[seat.colorIndex % SEAT_COLORS.length],
-                  }}
-                  title={`${seat.memberName} — ${teamName}`}
-                />
-              );
-            }
-            return (
-              <div
-                key={i}
-                className="w-5 h-5 rounded-sm border border-white/15 bg-transparent"
-                title="Empty seat"
-              />
-            );
-          })}
-        </div>
+        <SeatGrid view={view} />
       </button>
 
       {/* Seat count */}
@@ -1441,15 +1647,7 @@ function TableCard({
       )}
 
       {/* Assigned teams */}
-      {assigned.length === 0 ? (
-        <button
-          type="button"
-          onClick={onAssign}
-          className="text-xs text-accent-accessible hover:underline"
-        >
-          + Assign a team
-        </button>
-      ) : (
+      {assigned.length > 0 && (
         <ul className="space-y-1">
           {assigned.map((a) => {
             const key = `${table.id}:${a.id}`;
@@ -1494,6 +1692,15 @@ function TableCard({
           })}
         </ul>
       )}
+
+      {/* The single entry point to add a team. */}
+      <button
+        type="button"
+        onClick={onAssign}
+        className="text-xs text-accent-accessible hover:underline text-left"
+      >
+        + Assign a team
+      </button>
     </div>
   );
 }
