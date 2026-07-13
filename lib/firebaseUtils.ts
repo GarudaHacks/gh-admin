@@ -24,6 +24,7 @@ import {
   FirestoreMentor,
   MentorshipAppointment,
   APPLICATION_STATUS,
+  TeamFormation,
 } from "./types";
 import { ONE_SLOT_INTERVAL_MINUTES } from "@/config";
 import { getDownloadURL, ref } from "firebase/storage";
@@ -74,6 +75,36 @@ export async function fetchAllApplications(): Promise<FirestoreApplication[]> {
   } catch (error) {
     console.error('Error fetching applications:', error);
     throw new Error('Failed to fetch applications');
+  }
+}
+
+/**
+ * Fetches all team formations from the `formations` collection, sorted
+ * alphabetically by team name (teams without a name sort last).
+ */
+export async function fetchAllFormations(): Promise<TeamFormation[]> {
+  try {
+    const formationsRef = collection(db, 'formations');
+    const querySnapshot = await getDocs(formationsRef);
+
+    const formations: TeamFormation[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      formations.push({
+        id: doc.id,
+        ...data,
+        members: Array.isArray(data.members) ? data.members : [],
+      } as TeamFormation);
+    });
+
+    formations.sort((a, b) =>
+      (a.teamName || '￿').localeCompare(b.teamName || '￿')
+    );
+
+    return formations;
+  } catch (error) {
+    console.error('Error fetching formations:', error);
+    throw new Error('Failed to fetch formations');
   }
 }
 

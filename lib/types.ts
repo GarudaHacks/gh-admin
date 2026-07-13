@@ -127,6 +127,17 @@ export enum APPLICATION_STATUS {
   REJECTED = "rejected",
   ACCEPTED = "accepted",
   CONFIRMED_RSVP = "confirmed rsvp",
+  CANCELED = "canceled"
+}
+
+export interface TeamFormation {
+  id: string; // doc id
+  createdAt: any // eslint-disable-line @typescript-eslint/no-explicit-any
+  updatedAt: any // eslint-disable-line @typescript-eslint/no-explicit-any
+  updatedBy: string // "system" or staff email
+  teamName: string
+  version: string // marking which event iteration this data belong to, e.g. "7.0"
+  members: string[] // list uid
 }
 
 export interface CombinedApplicationData {
