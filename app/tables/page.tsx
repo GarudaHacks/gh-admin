@@ -677,7 +677,7 @@ export default function TablesPage() {
           onClick={() => !creating && setShowAddModal(false)}
         >
           <div
-            className="card p-6 w-full max-w-md space-y-4"
+            className="modal-panel p-6 w-full max-w-md space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div>
@@ -778,7 +778,7 @@ export default function TablesPage() {
           onClick={() => !assignBusyId && setAssignTable(null)}
         >
           <div
-            className="card p-6 w-full max-w-lg flex flex-col max-h-[85vh]"
+            className="modal-panel p-6 w-full max-w-lg flex flex-col max-h-[85vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3">
@@ -941,7 +941,7 @@ export default function TablesPage() {
           onClick={() => !moveBusy && setMoveSource(null)}
         >
           <div
-            className="card p-6 w-full max-w-lg flex flex-col max-h-[80vh]"
+            className="modal-panel p-6 w-full max-w-lg flex flex-col max-h-[80vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3">

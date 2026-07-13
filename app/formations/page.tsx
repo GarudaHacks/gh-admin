@@ -765,7 +765,7 @@ export default function FormationPage() {
           onClick={() => !creating && setShowAddModal(false)}
         >
           <div
-            className="card p-6 w-full max-w-md space-y-4"
+            className="modal-panel p-6 w-full max-w-md space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div>
@@ -829,7 +829,7 @@ export default function FormationPage() {
           onClick={() => !moveBusy && setMovingMember(null)}
         >
           <div
-            className="card p-6 w-full max-w-lg flex flex-col max-h-[80vh]"
+            className="modal-panel p-6 w-full max-w-lg flex flex-col max-h-[80vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3">
@@ -897,7 +897,7 @@ export default function FormationPage() {
           onClick={() => !addBusyUid && closeAddMember()}
         >
           <div
-            className="card p-6 w-full max-w-lg flex flex-col max-h-[80vh]"
+            className="modal-panel p-6 w-full max-w-lg flex flex-col max-h-[80vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3">
