@@ -29,14 +29,28 @@ export const CheckInSteps: CheckInStep[] = [
     {
         stepName: "getHackerInformations",
         friendlyName: "Confirm Details",
-        instruction: "Confirm the hacker's information on file is correct.",
+        instruction: "Confirm the hacker's information on file is correct. If needed, validate against the Boarding Pass as well.",
     },
     {
         stepName: "confirmTeam",
         friendlyName: "Confirm Team",
         instruction:
-            "Check this hacker's team is correct. Add or remove members if needed.",
+            "Check this hacker's team is correct by saying all members, who checked-in and who yet to check-in. Let the hacker explicitly says that the composition is correct. Add or remove members if needed.",
         showWhen: (ctx) => ctx.inTeam,
+    },
+    {
+        stepName: "verifyTable",
+        friendlyName: "Verify Table",
+        instruction:
+            "Check the table sticker on the lanyard against this hacker's assigned table shown below. The location and table number must match. If the sticker is wrong or missing, fix it before handing over the lanyard.",
+        showWhen: (ctx) => ctx.hasTable,
+    },
+    {
+        stepName: "announceTable",
+        friendlyName: "Tell Their Table",
+        instruction:
+            "Tell the hacker their table number and where to find it, out loud.",
+        showWhen: (ctx) => ctx.hasTable,
     },
     {
         stepName: "giveLanyard",
@@ -51,8 +65,15 @@ export const CheckInSteps: CheckInStep[] = [
     {
         stepName: "takePicture",
         friendlyName: "Take Picture",
-        instruction: "Take the hacker's check-in photo.",
+        instruction: "Take the hacker's check-in photo with the freebies. Make sure their face is visible.",
         skippable: true,
+    },
+    {
+        stepName: "speedDatingBooth",
+        friendlyName: "Speed Dating Booth",
+        instruction:
+            "This hacker opted into Speed Dating. Direct them to the Speed Dating Booth, near the VIP booth.",
+        showWhen: (ctx) => ctx.joiningSpeedDating,
     },
     {
         stepName: "smileAndSayGoodLuck",

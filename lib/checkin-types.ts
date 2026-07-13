@@ -21,6 +21,14 @@ export interface CheckedInHacker {
 export interface CheckInContext {
   inTeam: boolean;
   joiningSpeedDating: boolean;
+  hasTable: boolean; // the hacker's team is seated at a venue table
+}
+
+/** The venue table the scanned hacker's team is seated at (from `tables`). */
+export interface CheckInTable {
+  tableId: string;
+  tableNumber: number;
+  location: string;
 }
 
 /** One member of the scanned hacker's team, resolved from the formations doc. */
@@ -57,6 +65,8 @@ export type CheckInResponse =
     context: CheckInContext;
     /** The hacker's team, if one exists in `formations`. */
     team: CheckInTeam | null;
+    /** The team's assigned venue table, if it has been placed in `tables`. */
+    table: CheckInTable | null;
   }
   | { ok: false; reason: string };
 

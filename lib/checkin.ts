@@ -3,7 +3,7 @@ import { adminDb } from "./firebaseAdmin";
 import { FirestoreUser, APPLICATION_STATUS } from "./types";
 import { isHmacEnabled, verifyCheckIn } from "./hmac";
 import { CheckInResponse } from "./checkin-types";
-import { getTeamForUser } from "./checkinTeam";
+import { getTeamForUser, getTableForFormation } from "./checkinTeam";
 
 // Server-only: imports node crypto (via ./hmac) and is invoked from the
 // /api/check-in route. Do not import this from a client component.
@@ -148,7 +148,35 @@ export async function validateAndCheckIn(
   } catch (err) {
     console.error("Failed to resolve team for", parsed.userId, err);
   }
-  const context = { inTeam: !!team, joiningSpeedDating: false };
+
+  // The team's assigned venue table (from `tables`), for the lanyard-sticker
+  // verification step. Best-effort — never fail the check-in over it.
+  let table = null;
+  if (team) {
+    try {
+      table = await getTableForFormation(team.id);
+    } catch (err) {
+      console.error("Failed to resolve table for", parsed.userId, err);
+    }
+  }
+
+  // Whether the hacker opted into Speed Dating, from their application's
+  // teamFormation answer. Best-effort.
+  let joiningSpeedDating = false;
+  try {
+    const appSnap = await adminDb
+      .collection("applications")
+      .doc(parsed.userId)
+      .get();
+    const teamFormation = appSnap.exists
+      ? (appSnap.data()?.teamFormation as string | undefined)
+      : undefined;
+    joiningSpeedDating = !!teamFormation && /speed dating/i.test(teamFormation);
+  } catch (err) {
+    console.error("Failed to read application for", parsed.userId, err);
+  }
+
+  const context = { inTeam: !!team, joiningSpeedDating, hasTable: !!table };
 
   return {
     ok: true,
@@ -158,5 +186,6 @@ export async function validateAndCheckIn(
     hacker,
     context,
     team,
+    table,
   };
 }

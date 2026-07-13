@@ -5,6 +5,7 @@ import type {
   CheckInTeamMember,
   CheckInParticipant,
   CheckInHistoryEntry,
+  CheckInTable,
 } from "./checkin-types";
 
 // Server-only: reads/writes the `formations` collection via the Admin SDK.
@@ -82,6 +83,30 @@ export async function getTeamForUser(uid: string): Promise<CheckInTeam | null> {
   const data = doc.data();
   const members: string[] = Array.isArray(data.members) ? data.members : [];
   return shapeTeam(doc.id, data.teamName ?? "", members, uid);
+}
+
+/**
+ * Finds the venue table a formation is seated at via
+ * `tables.formations array-contains formationId`. Used at check-in to verify
+ * the lanyard's table sticker. Returns null if the team hasn't been placed yet.
+ */
+export async function getTableForFormation(
+  formationId: string
+): Promise<CheckInTable | null> {
+  const snap = await adminDb
+    .collection("tables")
+    .where("formations", "array-contains", formationId)
+    .limit(1)
+    .get();
+
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  const d = doc.data();
+  return {
+    tableId: doc.id,
+    tableNumber: Number(d.tableNumber) || 0,
+    location: (d.location ?? "").toString(),
+  };
 }
 
 /** Reloads a team by its doc id (used after an edit). */
