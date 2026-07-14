@@ -109,6 +109,20 @@ export async function getTableForFormation(
   };
 }
 
+/**
+ * Whether a hacker has joined a mobile-app team (`teams` collection), matched by
+ * `teams.members array-contains uid`. Used at check-in to remind teams that
+ * haven't created their mobile team yet.
+ */
+export async function isUserInMobileTeam(uid: string): Promise<boolean> {
+  const snap = await adminDb
+    .collection("teams")
+    .where("members", "array-contains", uid)
+    .limit(1)
+    .get();
+  return !snap.empty;
+}
+
 /** Reloads a team by its doc id (used after an edit). */
 export async function getTeamById(
   teamId: string,

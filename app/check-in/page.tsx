@@ -31,6 +31,7 @@ const DEFAULT_CONTEXT: CheckInContext = {
   inTeam: false,
   joiningSpeedDating: false,
   hasTable: false,
+  needsMobileTeam: false,
 };
 
 export default function CheckInPage() {
@@ -145,6 +146,20 @@ export default function CheckInPage() {
                 <p className="text-sm text-amber-100/90">
                   No table assigned yet. Let them know they&apos;ll get their
                   table after the Speed Dating session.
+                </p>
+              </div>
+            ),
+            createMobileTeam: (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+                <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                <p className="text-sm text-amber-100/90">
+                  Team{" "}
+                  <span className="font-semibold text-white">
+                    {result?.ok && team ? team.teamName || "(unnamed)" : ""}
+                  </span>{" "}
+                  isn&apos;t created in the mobile app yet. Have them create it
+                  and make sure every member joins — it&apos;s needed for
+                  attendance confirmation later.
                 </p>
               </div>
             ),

@@ -22,6 +22,9 @@ export interface CheckInContext {
   inTeam: boolean;
   joiningSpeedDating: boolean;
   hasTable: boolean; // the hacker's team is seated at a venue table
+  // The hacker is in a multi-member formation but hasn't joined a mobile-app
+  // team (`teams`) yet — they should create/join one for attendance tracking.
+  needsMobileTeam: boolean;
 }
 
 /** The venue table the scanned hacker's team is seated at (from `tables`). */

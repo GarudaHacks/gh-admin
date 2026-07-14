@@ -39,6 +39,13 @@ export const CheckInSteps: CheckInStep[] = [
         showWhen: (ctx) => ctx.inTeam,
     },
     {
+        stepName: "createMobileTeam",
+        friendlyName: "Create Mobile Team",
+        instruction:
+            "This team hasn't been created in the mobile app yet. Remind the hacker to create their team in the app and have every member join — this is required for attendance confirmation later.",
+        showWhen: (ctx) => ctx.needsMobileTeam,
+    },
+    {
         stepName: "confirmOvernight",
         friendlyName: "Overnight Plan",
         instruction:

@@ -9,13 +9,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   fetchAllFormations,
   fetchAllUsers,
+  fetchAllTeams,
   formatApplicationDate,
   createFormation,
   moveFormationMember,
   addFormationMember,
   deleteFormation,
 } from "@/lib/firebaseUtils";
-import { TeamFormation, FirestoreUser } from "@/lib/types";
+import { TeamFormation, FirestoreUser, FirestoreTeam } from "@/lib/types";
 
 // How many team cards to reveal per lazy-load step.
 const PAGE_SIZE = 30;
@@ -40,11 +41,15 @@ export default function FormationPage() {
   const { user } = useAuth();
   const [formations, setFormations] = useState<TeamFormation[]>([]);
   const [userMap, setUserMap] = useState<Map<string, FirestoreUser>>(new Map());
+  // UIDs that appear in the mobile-app `teams` collection (any team's members).
+  const [mobileMemberSet, setMobileMemberSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   // Filter by exact member count ("all", "notfull", or "0".."4") and sort order.
   const [countFilter, setCountFilter] = useState<string>("all");
+  // Optionally narrow to formations that don't match the mobile-app teams.
+  const [mismatchOnly, setMismatchOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "members-desc" | "members-asc">(
     "name"
   );
@@ -91,18 +96,23 @@ export default function FormationPage() {
     try {
       setLoading(true);
       setError(null);
-      // Formations are required; user enrichment (names/emails for member UIDs)
-      // is best-effort so a slow/failed users read never blocks the list.
-      const [formationsData, users] = await Promise.all([
+      // Formations are required; user enrichment (names/emails) and the mobile
+      // `teams` cross-check are best-effort so a slow/failed read never blocks.
+      const [formationsData, users, teams] = await Promise.all([
         fetchAllFormations(),
         fetchAllUsers().catch(() => [] as FirestoreUser[]),
+        fetchAllTeams().catch(() => [] as FirestoreTeam[]),
       ]);
 
       const map = new Map<string, FirestoreUser>();
       users.forEach((u) => map.set(u.id, u));
 
+      const mobileSet = new Set<string>();
+      teams.forEach((t) => (t.members ?? []).forEach((uid) => mobileSet.add(uid)));
+
       setFormations(formationsData);
       setUserMap(map);
+      setMobileMemberSet(mobileSet);
       setSelectedId(formationsData[0]?.id ?? null);
     } catch (err) {
       console.error("Error loading formations:", err);
@@ -143,6 +153,22 @@ export default function FormationPage() {
     return map;
   }, [formations, resolveMember]);
 
+  // A member of a multi-person formation who hasn't joined any mobile-app team.
+  // Solo formations don't need a mobile team, so they're never flagged; and if
+  // there are no mobile teams at all we skip the check entirely (nothing to
+  // compare against — avoids flagging everyone before mobile teams exist).
+  const missingFromMobile = useCallback(
+    (f: TeamFormation): string[] =>
+      mobileMemberSet.size > 0 && f.members.length > 1
+        ? f.members.filter((uid) => !mobileMemberSet.has(uid))
+        : [],
+    [mobileMemberSet]
+  );
+  const hasMobileMismatch = useCallback(
+    (f: TeamFormation): boolean => missingFromMobile(f).length > 0,
+    [missingFromMobile]
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = formations;
@@ -157,6 +183,8 @@ export default function FormationPage() {
       });
     }
 
+    if (mismatchOnly) list = list.filter((f) => hasMobileMismatch(f));
+
     // Sort is stable, so member-count ties keep the underlying alphabetical order.
     if (sortBy === "name") {
       list = sortByName(list);
@@ -169,7 +197,7 @@ export default function FormationPage() {
     }
 
     return list;
-  }, [search, formations, haystacks, countFilter, sortBy]);
+  }, [search, formations, haystacks, countFilter, sortBy, mismatchOnly, hasMobileMismatch]);
 
   const visible = filtered.slice(0, visibleCount);
   const selected = formations.find((f) => f.id === selectedId) ?? null;
@@ -183,6 +211,24 @@ export default function FormationPage() {
     }
     return map;
   }, [formations]);
+
+  // Every UID that belongs to some formation — used to find the reverse
+  // discrepancy: people in a mobile-app team but in no formation at all.
+  const formationMemberSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of formations) for (const uid of f.members) set.add(uid);
+    return set;
+  }, [formations]);
+
+  const mobileOnlyMembers = useMemo(
+    () => [...mobileMemberSet].filter((uid) => !formationMemberSet.has(uid)),
+    [mobileMemberSet, formationMemberSet]
+  );
+
+  const mismatchCount = useMemo(
+    () => formations.filter((f) => hasMobileMismatch(f)).length,
+    [formations, hasMobileMismatch]
+  );
 
   // The user pool to add from (everyone, not just people already on a team).
   const usersList = useMemo(() => [...userMap.values()], [userMap]);
@@ -490,6 +536,75 @@ export default function FormationPage() {
         subtitle="Displays all team formations. All solo users (speed dating or not) are treated as Team as well."
       />
 
+      {/* Mobile-app vs formations reconciliation */}
+      {(mismatchCount > 0 || mobileOnlyMembers.length > 0) && (
+        <div className="card border border-amber-500/40 bg-amber-500/5 p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <span className="text-amber-300 text-lg leading-none">⚠</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-200">
+                Mobile app vs formations mismatch
+              </p>
+              <ul className="mt-1.5 space-y-1 text-sm text-amber-100/90 list-disc pl-5">
+                {mismatchCount > 0 && (
+                  <li>
+                    {mismatchCount} formation{mismatchCount === 1 ? "" : "s"} have
+                    member(s) not yet in the mobile app team.
+                  </li>
+                )}
+                {mobileOnlyMembers.length > 0 && (
+                  <li>
+                    {mobileOnlyMembers.length} member
+                    {mobileOnlyMembers.length === 1 ? "" : "s"} are in a mobile
+                    app team but in no formation.
+                  </li>
+                )}
+              </ul>
+            </div>
+            {mismatchCount > 0 && (
+              <label className="shrink-0 flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={mismatchOnly}
+                  onChange={(e) => {
+                    setMismatchOnly(e.target.checked);
+                    setVisibleCount(PAGE_SIZE);
+                  }}
+                  className="accent-primary"
+                />
+                Only mismatches
+              </label>
+            )}
+          </div>
+
+          {mobileOnlyMembers.length > 0 && (
+            <details className="text-sm">
+              <summary className="cursor-pointer text-white/70 hover:text-white">
+                In a mobile team but no formation ({mobileOnlyMembers.length})
+              </summary>
+              <ul className="mt-2 space-y-1 max-h-48 overflow-y-auto">
+                {mobileOnlyMembers.map((uid) => {
+                  const m = resolveMember(uid);
+                  return (
+                    <li
+                      key={uid}
+                      className="flex items-center justify-between gap-3 rounded-lg bg-white/5 border border-white/10 px-3 py-2"
+                    >
+                      <span className="min-w-0 truncate text-white/90">
+                        {m.resolved ? m.name : uid}
+                      </span>
+                      <span className="shrink-0 font-mono text-xs text-white/40 truncate">
+                        {uid}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-start">
         {/* List + search */}
         <div className="lg:col-span-5">
@@ -583,10 +698,20 @@ export default function FormationPage() {
                         <h4 className="font-medium text-sm text-white truncate">
                           {team.teamName || "(unnamed team)"}
                         </h4>
-                        <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-white/80 border border-white/20">
-                          {team.members.length} member
-                          {team.members.length === 1 ? "" : "s"}
-                        </span>
+                        <div className="shrink-0 flex items-center gap-1">
+                          {hasMobileMismatch(team) && (
+                            <span
+                              className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/40"
+                              title="Some members haven't joined this team in the mobile app"
+                            >
+                              ⚠ mobile
+                            </span>
+                          )}
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-white/80 border border-white/20">
+                            {team.members.length} member
+                            {team.members.length === 1 ? "" : "s"}
+                          </span>
+                        </div>
                       </div>
                       <p className="text-xs text-white/40 font-mono truncate">
                         {team.id}
@@ -677,6 +802,49 @@ export default function FormationPage() {
                 />
               </div>
 
+              {/* Mobile-app reconciliation for this formation */}
+              {(() => {
+                if (mobileMemberSet.size === 0) return null;
+                const missing = missingFromMobile(selected);
+                if (missing.length > 0) {
+                  return (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+                      <p className="text-sm font-semibold text-amber-200">
+                        ⚠ {missing.length} member
+                        {missing.length === 1 ? "" : "s"} not in the mobile app
+                        team
+                      </p>
+                      <p className="text-xs text-amber-100/80 mt-0.5">
+                        These members exist in this formation but in no mobile{" "}
+                        <code>teams</code> doc. Ask them to create/join the team
+                        in the app.
+                      </p>
+                      <ul className="mt-2 space-y-1">
+                        {missing.map((uid) => {
+                          const m = resolveMember(uid);
+                          return (
+                            <li
+                              key={uid}
+                              className="text-sm text-amber-100/90 truncate"
+                            >
+                              {m.resolved ? m.name : uid}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  );
+                }
+                if (selected.members.length > 1) {
+                  return (
+                    <p className="text-xs text-emerald-300/80">
+                      ✓ All members are in the mobile app team.
+                    </p>
+                  );
+                }
+                return null;
+              })()}
+
               {/* Members */}
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3 border-b border-white/10 pb-1">
@@ -733,6 +901,13 @@ export default function FormationPage() {
                             <p className="text-xs text-white/40 font-mono truncate">
                               {uid}
                             </p>
+                            {mobileMemberSet.size > 0 &&
+                              selected.members.length > 1 &&
+                              !mobileMemberSet.has(uid) && (
+                                <span className="inline-flex mt-1 items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/40">
+                                  ⚠ not in mobile app
+                                </span>
+                              )}
                           </div>
                           <button
                             type="button"

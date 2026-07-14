@@ -3,7 +3,11 @@ import { adminDb } from "./firebaseAdmin";
 import { FirestoreUser, APPLICATION_STATUS } from "./types";
 import { isHmacEnabled, verifyCheckIn } from "./hmac";
 import { CheckInResponse } from "./checkin-types";
-import { getTeamForUser, getTableForFormation } from "./checkinTeam";
+import {
+  getTeamForUser,
+  getTableForFormation,
+  isUserInMobileTeam,
+} from "./checkinTeam";
 
 // Server-only: imports node crypto (via ./hmac) and is invoked from the
 // /api/check-in route. Do not import this from a client component.
@@ -179,7 +183,23 @@ export async function validateAndCheckIn(
     console.error("Failed to read application for", parsed.userId, err);
   }
 
-  const context = { inTeam: !!team, joiningSpeedDating, hasTable: !!table };
+  // A multi-member formation whose hacker hasn't joined a mobile-app team yet
+  // needs to create/join one (it drives attendance confirmation). Best-effort.
+  let needsMobileTeam = false;
+  if (team && team.members.length > 1) {
+    try {
+      needsMobileTeam = !(await isUserInMobileTeam(parsed.userId));
+    } catch (err) {
+      console.error("Failed to check mobile team for", parsed.userId, err);
+    }
+  }
+
+  const context = {
+    inTeam: !!team,
+    joiningSpeedDating,
+    hasTable: !!table,
+    needsMobileTeam,
+  };
 
   return {
     ok: true,
