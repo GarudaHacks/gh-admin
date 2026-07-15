@@ -7,6 +7,7 @@ import {
   fetchApplicationsWithUsers,
   formatApplicationDate,
   updateUserStatus,
+  cancelUserStatus,
   updateApplicationResultEmail,
   updateApplicationScore,
   resetApplicationStatus,
@@ -51,6 +52,7 @@ export default function Applications() {
   const [evaluationNotes, setEvaluationNotes] = useState<string>("");
   const [rejecting, setRejecting] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [reverting, setReverting] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
@@ -380,7 +382,36 @@ export default function Applications() {
     }
   };
 
+  // Cancels an accepted participant (accepted → canceled). Only meaningful when
+  // the current status is "accepted"; the util enforces this server-side too.
+  const handleCancelParticipant = async () => {
+    if (!selectedApplication) return;
+    if (selectedApplication.status !== APPLICATION_STATUS.ACCEPTED) return;
 
+    try {
+      setCanceling(true);
+      const success = await cancelUserStatus(selectedApplication.id);
+
+      if (success) {
+        const applyCancel = (app: CombinedApplicationData) =>
+          app.id === selectedApplication.id
+            ? { ...app, status: APPLICATION_STATUS.CANCELED }
+            : app;
+
+        setApplications((prev) => prev.map(applyCancel));
+        setApplicationsOriginal((prev) => prev.map(applyCancel));
+        setSelectedApplication((prev) =>
+          prev ? { ...prev, status: APPLICATION_STATUS.CANCELED } : null
+        );
+      } else {
+        console.error("Failed to cancel participant");
+      }
+    } catch (error) {
+      console.error("Error canceling participant:", error);
+    } finally {
+      setCanceling(false);
+    }
+  };
 
   const handleResetStatus = async () => {
     if (!selectedApplication) return;
@@ -480,6 +511,8 @@ export default function Applications() {
         return "bg-yellow-500/20 text-violet-500";
       case APPLICATION_STATUS.CONFIRMED_RSVP:
         return "bg-green-500/20 text-purple-500";
+      case APPLICATION_STATUS.CANCELED:
+        return "bg-orange-500/20 text-orange-400";
       default:
         return "bg-white/10 text-white/70";
     }
@@ -505,6 +538,8 @@ export default function Applications() {
         return "bg-violet-500/20 text-violet-500 border-violet-500/50";
       case APPLICATION_STATUS.CONFIRMED_RSVP:
         return "bg-purple-500/20 text-purple-500 border-purple-500/50";
+      case APPLICATION_STATUS.CANCELED:
+        return "bg-orange-500/20 text-orange-400 border-orange-500/50";
       default:
         return "bg-white/10 text-white/70 border-white/30";
     }
@@ -2111,6 +2146,18 @@ export default function Applications() {
                             className="px-4 py-3 bg-red-600/20 border border-red-600/50 text-red-400 rounded-md hover:bg-red-600/30 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
                           >
                             {rejecting ? "Rejecting..." : "Reject"}
+                          </button>
+                        )}
+
+                        {/* Cancel is only available for accepted participants */}
+                        {selectedApplication.status ===
+                          APPLICATION_STATUS.ACCEPTED && (
+                          <button
+                            onClick={handleCancelParticipant}
+                            disabled={canceling}
+                            className="px-4 py-3 bg-orange-600/20 border border-orange-600/50 text-orange-400 rounded-md hover:bg-orange-600/30 hover:text-orange-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                          >
+                            {canceling ? "Canceling..." : "Cancel"}
                           </button>
                         )}
                       </div>

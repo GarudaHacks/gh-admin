@@ -848,6 +848,30 @@ export async function updateUserStatus(userId: string, status: APPLICATION_STATU
 }
 
 /**
+ * Cancels an accepted participant: accepted → canceled.
+ * Only applies when the user's current status is "accepted"; any other status
+ * is rejected so an override can't skip the intended flow.
+ */
+export async function cancelUserStatus(userId: string): Promise<boolean> {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists() || userSnap.data().status !== APPLICATION_STATUS.ACCEPTED) {
+      console.error(`Cannot cancel user ${userId}: status is not "${APPLICATION_STATUS.ACCEPTED}"`);
+      return false;
+    }
+
+    await updateDoc(userRef, { status: APPLICATION_STATUS.CANCELED, canceledAt: serverTimestamp() });
+    console.debug(`User ${userId} status updated to: ${APPLICATION_STATUS.CANCELED}`);
+    return true;
+  } catch (error) {
+    console.error(`Error canceling user ${userId} status:`, error);
+    return false;
+  }
+}
+
+/**
  * Reverts a user's status one step backwards in the flow:
  * confirmed rsvp → accepted, accepted/rejected → submitted.
  */
