@@ -186,6 +186,8 @@ export default function TablesPage() {
 
   // Which area (location) to show; "all" shows every location.
   const [areaFilter, setAreaFilter] = useState<string>("all");
+  // Search box for the "not seated yet" side panel.
+  const [unseatedSearch, setUnseatedSearch] = useState("");
   // Reset-all-placements confirmation.
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -299,6 +301,24 @@ export default function TablesPage() {
     }
     return map;
   }, [tables]);
+
+  // Formations not seated at any table yet — the teams still needing a table.
+  // Independent of the area filter (a team is unseated if it's on no table).
+  const unseatedFormations = useMemo(
+    () =>
+      formationsList
+        .filter((f) => !formationTableOf.has(f.id))
+        .sort((a, b) => (a.teamName || "￿").localeCompare(b.teamName || "￿")),
+    [formationsList, formationTableOf]
+  );
+
+  const visibleUnseated = useMemo(() => {
+    const q = unseatedSearch.trim().toLowerCase();
+    if (!q) return unseatedFormations;
+    return unseatedFormations.filter((f) =>
+      `${f.teamName ?? ""} ${f.id}`.toLowerCase().includes(q)
+    );
+  }, [unseatedFormations, unseatedSearch]);
 
   // Build the render model for one table (seats colored per formation).
   const buildView = useMemo(() => {
@@ -769,6 +789,8 @@ export default function TablesPage() {
         subtitle="Each square is a seat; its color is the team seated there. A table showing more than one color holds teams from different formations. Click a table to assign a team."
       />
 
+      <div className="flex flex-col xl:flex-row gap-6 xl:items-start">
+        <div className="min-w-0 flex-1 space-y-6">
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <p className="text-sm text-white/60">
@@ -876,6 +898,64 @@ export default function TablesPage() {
           ))}
         </div>
       )}
+        </div>
+
+        {/* Not-seated-yet side column */}
+        <aside className="xl:w-72 xl:shrink-0 xl:sticky xl:top-6">
+          <div className="card flex flex-col max-h-[80vh]">
+            <div className="p-4 border-b border-white/10 flex flex-col gap-2 flex-shrink-0">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-white">
+                  Not seated yet
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-white/80 border border-white/20">
+                  {unseatedFormations.length}
+                </span>
+              </div>
+              <p className="text-xs text-white/50">
+                Teams not assigned to any table. Open a table and use “Assign a
+                team” to seat one.
+              </p>
+              {unseatedFormations.length > 0 && (
+                <input
+                  value={unseatedSearch}
+                  onChange={(e) => setUnseatedSearch(e.target.value)}
+                  className="input w-full text-sm"
+                  placeholder="Search teams…"
+                />
+              )}
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {unseatedFormations.length === 0 ? (
+                <p className="text-center text-emerald-300/80 text-sm py-6">
+                  ✓ Every team is seated.
+                </p>
+              ) : visibleUnseated.length === 0 ? (
+                <p className="text-center text-white/50 text-sm py-6">
+                  No teams match your search.
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {visibleUnseated.map((f) => (
+                    <li
+                      key={f.id}
+                      className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white/5 border border-white/10"
+                    >
+                      <span className="text-sm text-white truncate">
+                        {f.teamName || "(unnamed team)"}
+                      </span>
+                      <span className="shrink-0 text-xs text-white/40">
+                        {f.members.length} member
+                        {f.members.length === 1 ? "" : "s"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </aside>
+      </div>
 
       {/* Table preview modal (opened by clicking a table card) */}
       {previewTable &&

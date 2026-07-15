@@ -16,12 +16,36 @@ import {
   addFormationMember,
   deleteFormation,
 } from "@/lib/firebaseUtils";
-import { TeamFormation, FirestoreUser, FirestoreTeam } from "@/lib/types";
+import {
+  TeamFormation,
+  FirestoreUser,
+  FirestoreTeam,
+  APPLICATION_STATUS,
+} from "@/lib/types";
 
 // How many team cards to reveal per lazy-load step.
 const PAGE_SIZE = 30;
 // A team is "full" (can't receive more members) at this size.
 const MAX_TEAM_SIZE = 4;
+// Cap the rendered rows in the "Not in any team" panel (search narrows further).
+const UNASSIGNED_RENDER_CAP = 60;
+
+// Only these participant statuses count as "should be on a team": people who
+// have been accepted or have confirmed their RSVP (i.e. are actually coming).
+const isEligibleStatus = (status?: string): boolean => {
+  const s = (status ?? "").toLowerCase().trim();
+  return (
+    s === APPLICATION_STATUS.ACCEPTED || s === APPLICATION_STATUS.CONFIRMED_RSVP
+  );
+};
+
+// Prettify a raw status for display, e.g. "confirmed rsvp" -> "Confirmed RSVP".
+const statusLabel = (status?: string): string => {
+  const s = (status ?? "").toLowerCase().trim();
+  if (s === APPLICATION_STATUS.CONFIRMED_RSVP) return "Confirmed RSVP";
+  if (s === APPLICATION_STATUS.ACCEPTED) return "Accepted";
+  return status || "—";
+};
 
 // Resolved user info we surface for each member UID.
 interface MemberInfo {
@@ -60,6 +84,11 @@ export default function FormationPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [copied, setCopied] = useState(false);
+
+  // "Not in any team" panel: accepted / confirmed-RSVP participants with no
+  // formation membership.
+  const [showUnassigned, setShowUnassigned] = useState(true);
+  const [unassignedSearch, setUnassignedSearch] = useState("");
 
   // Add-team modal.
   const [showAddModal, setShowAddModal] = useState(false);
@@ -250,6 +279,32 @@ export default function FormationPage() {
     () => [...mobileMemberSet].filter((uid) => !formationMemberSet.has(uid)),
     [mobileMemberSet, formationMemberSet]
   );
+
+  // Accepted / confirmed-RSVP participants who aren't a member of any formation
+  // yet — the people still needing a team. Sorted by name.
+  const unassignedParticipants = useMemo(
+    () =>
+      [...userMap.values()]
+        .filter(
+          (u) => isEligibleStatus(u.status) && !formationMemberSet.has(u.id)
+        )
+        .sort((a, b) =>
+          `${a.firstName ?? ""} ${a.lastName ?? ""}`
+            .trim()
+            .localeCompare(`${b.firstName ?? ""} ${b.lastName ?? ""}`.trim())
+        ),
+    [userMap, formationMemberSet]
+  );
+
+  const visibleUnassigned = useMemo(() => {
+    const q = unassignedSearch.trim().toLowerCase();
+    if (!q) return unassignedParticipants;
+    return unassignedParticipants.filter((u) =>
+      `${u.firstName ?? ""} ${u.lastName ?? ""} ${u.email ?? ""} ${u.id}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [unassignedParticipants, unassignedSearch]);
 
   const mismatchCount = useMemo(
     () => formations.filter((f) => hasMobileMismatch(f)).length,
@@ -605,6 +660,129 @@ export default function FormationPage() {
 
         </div>
       )}
+
+      {/* Participants not in any team (accepted / confirmed RSVP only) */}
+      <div className="card p-4 space-y-3">
+        <button
+          type="button"
+          onClick={() => setShowUnassigned((v) => !v)}
+          className="w-full flex items-center justify-between gap-3"
+        >
+          <span className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold text-white">
+              Not in any team
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-white/80 border border-white/20">
+              {unassignedParticipants.length}
+            </span>
+          </span>
+          <span className="text-white/40 text-sm shrink-0">
+            {showUnassigned ? "▾" : "▸"}
+          </span>
+        </button>
+
+        {showUnassigned && (
+          <>
+            <p className="text-xs text-white/50">
+              Accepted / Confirmed-RSVP participants who aren&apos;t a member of
+              any formation.
+              {selected
+                ? ` “+ Add” puts them on ${
+                    selected.teamName || "the selected team"
+                  }.`
+                : " Select a team to enable quick-add."}
+            </p>
+
+            {unassignedParticipants.length === 0 ? (
+              <p className="text-sm text-emerald-300/80">
+                ✓ Every accepted / confirmed participant is on a team.
+              </p>
+            ) : (
+              <>
+                <input
+                  value={unassignedSearch}
+                  onChange={(e) => setUnassignedSearch(e.target.value)}
+                  className="input w-full text-sm"
+                  placeholder="Search participants by name, email, or UID…"
+                />
+                <div className="max-h-72 overflow-y-auto -mx-1 px-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {visibleUnassigned
+                    .slice(0, UNASSIGNED_RENDER_CAP)
+                    .map((u) => {
+                      const name =
+                        `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() ||
+                        u.id;
+                      const canAdd =
+                        !!selected &&
+                        selected.members.length < MAX_TEAM_SIZE;
+                      return (
+                        <div
+                          key={u.id}
+                          className="flex items-center gap-2 p-2 rounded-lg bg-white/5 border border-white/10"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-white truncate">
+                              {name}
+                            </p>
+                            {u.email && (
+                              <p className="text-xs text-white/50 truncate">
+                                {u.email}
+                              </p>
+                            )}
+                            <p className="text-[10px] text-white/40 font-mono truncate">
+                              {u.id}
+                            </p>
+                          </div>
+                          <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/10 text-white/70 border border-white/20">
+                            {statusLabel(u.status)}
+                          </span>
+                          <a
+                            href={`/applications?uid=${encodeURIComponent(
+                              u.id
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 text-xs text-accent-accessible hover:underline"
+                            title="Open in Applications"
+                          >
+                            ↗
+                          </a>
+                          <button
+                            type="button"
+                            disabled={!canAdd || !!addBusyUid}
+                            onClick={() => handleAddMember(u)}
+                            className="shrink-0 px-2 py-1 rounded text-xs font-medium text-white/80 bg-white/5 border border-white/15 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={
+                              !selected
+                                ? "Select a team first"
+                                : selected.members.length >= MAX_TEAM_SIZE
+                                ? "Selected team is full (max 4)"
+                                : `Add to ${selected.teamName || selected.id}`
+                            }
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      );
+                    })}
+                </div>
+                <div className="flex items-center justify-between text-xs text-white/40">
+                  <span>
+                    {visibleUnassigned.length > UNASSIGNED_RENDER_CAP
+                      ? `Showing ${UNASSIGNED_RENDER_CAP} of ${visibleUnassigned.length}`
+                      : `${visibleUnassigned.length} shown`}
+                  </span>
+                  {selected && (
+                    <span className="truncate ml-2">
+                      Add → {selected.teamName || "(unnamed team)"}
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-start">
         {/* List + search */}
