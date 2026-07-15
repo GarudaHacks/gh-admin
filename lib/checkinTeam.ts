@@ -109,18 +109,27 @@ export async function getTableForFormation(
   };
 }
 
-/**
- * Whether a hacker has joined a mobile-app team (`teams` collection), matched by
- * `teams.members array-contains uid`. Used at check-in to remind teams that
- * haven't created their mobile team yet.
- */
-export async function isUserInMobileTeam(uid: string): Promise<boolean> {
+/** Whether a single uid appears in any mobile-app team (`teams` collection). */
+async function isUidInMobileTeam(uid: string): Promise<boolean> {
   const snap = await adminDb
     .collection("teams")
     .where("members", "array-contains", uid)
     .limit(1)
     .get();
   return !snap.empty;
+}
+
+/**
+ * Whether a formation still needs its mobile-app team created/completed: true if
+ * ANY of the given member uids hasn't joined a mobile `teams` doc yet (so it
+ * also fires when a leader made the team but teammates haven't joined). Used at
+ * check-in to remind multi-person teams. Best-effort, at most a few reads.
+ */
+export async function formationMissingFromMobile(
+  memberUids: string[]
+): Promise<boolean> {
+  const results = await Promise.all(memberUids.map((uid) => isUidInMobileTeam(uid)));
+  return results.some((inTeam) => !inTeam);
 }
 
 /** Reloads a team by its doc id (used after an edit). */

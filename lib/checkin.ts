@@ -6,7 +6,7 @@ import { CheckInResponse } from "./checkin-types";
 import {
   getTeamForUser,
   getTableForFormation,
-  isUserInMobileTeam,
+  formationMissingFromMobile,
 } from "./checkinTeam";
 
 // Server-only: imports node crypto (via ./hmac) and is invoked from the
@@ -183,12 +183,15 @@ export async function validateAndCheckIn(
     console.error("Failed to read application for", parsed.userId, err);
   }
 
-  // A multi-member formation whose hacker hasn't joined a mobile-app team yet
-  // needs to create/join one (it drives attendance confirmation). Best-effort.
+  // A multi-member formation where not everyone has joined a mobile-app team yet
+  // needs to create/complete one (it drives attendance confirmation). Fires even
+  // if the scanned hacker is in a team but a teammate hasn't joined. Best-effort.
   let needsMobileTeam = false;
   if (team && team.members.length > 1) {
     try {
-      needsMobileTeam = !(await isUserInMobileTeam(parsed.userId));
+      needsMobileTeam = await formationMissingFromMobile(
+        team.members.map((m) => m.uid)
+      );
     } catch (err) {
       console.error("Failed to check mobile team for", parsed.userId, err);
     }

@@ -577,31 +577,6 @@ export default function FormationPage() {
             )}
           </div>
 
-          {mobileOnlyMembers.length > 0 && (
-            <details className="text-sm">
-              <summary className="cursor-pointer text-white/70 hover:text-white">
-                In a mobile team but no formation ({mobileOnlyMembers.length})
-              </summary>
-              <ul className="mt-2 space-y-1 max-h-48 overflow-y-auto">
-                {mobileOnlyMembers.map((uid) => {
-                  const m = resolveMember(uid);
-                  return (
-                    <li
-                      key={uid}
-                      className="flex items-center justify-between gap-3 rounded-lg bg-white/5 border border-white/10 px-3 py-2"
-                    >
-                      <span className="min-w-0 truncate text-white/90">
-                        {m.resolved ? m.name : uid}
-                      </span>
-                      <span className="shrink-0 font-mono text-xs text-white/40 truncate">
-                        {uid}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </details>
-          )}
         </div>
       )}
 
