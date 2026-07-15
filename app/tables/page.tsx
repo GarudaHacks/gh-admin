@@ -69,6 +69,7 @@ interface Seat {
   colorIndex: number;
   isSolo: boolean; // application teamFormation = "joining … solo" (marked "S")
   isSpeedDating: boolean; // teamFormation = "…Speed Dating" (marked "SD")
+  isOvernight: boolean; // staying overnight — seat is round with a moon outline
 }
 
 interface AssignedFormation {
@@ -371,6 +372,7 @@ export default function TablesPage() {
             colorIndex,
             isSolo: soloByUid.has(uid),
             isSpeedDating: speedDatingByUid.has(uid),
+            isOvernight: overnightByUid.get(uid) ?? false,
           });
         });
       });
@@ -386,7 +388,7 @@ export default function TablesPage() {
     };
     // memberName depends on userMap; formationMap covers formation data.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formationMap, userMap, soloByUid, speedDatingByUid]);
+  }, [formationMap, userMap, soloByUid, speedDatingByUid, overnightByUid]);
 
   // Group tables by location for the room layout.
   const grouped = useMemo(() => {
@@ -1026,7 +1028,7 @@ export default function TablesPage() {
 
                 {/* Seat preview */}
                 <div className="rounded-md border border-white/10 bg-black/20 p-3 flex justify-center mb-3">
-                  <SeatGrid view={view} seatSize="w-6 h-6" />
+                  <SeatGrid view={view} seatSize="w-9 h-9" />
                 </div>
 
                 {view.overCapacity && (
@@ -1629,7 +1631,7 @@ export default function TablesPage() {
 // Colored grid of seats (one square per seat) shared by the card + preview.
 function SeatGrid({
   view,
-  seatSize = "w-5 h-5",
+  seatSize = "w-7 h-7",
 }: {
   view: TableView;
   seatSize?: string;
@@ -1657,19 +1659,35 @@ function SeatGrid({
             : seat.isSpeedDating
             ? " · speed dating"
             : "";
+          // Overnight seats are round with a moon outline; others stay square.
           return (
             <div
               key={i}
-              className={`${seatSize} rounded-sm flex items-center justify-center ${
-                over ? "ring-2 ring-red-400" : ""
-              }`}
+              className={`${seatSize} relative flex items-center justify-center ${
+                seat.isOvernight ? "rounded-full" : "rounded-sm"
+              } ${over ? "ring-2 ring-red-400" : ""}`}
               style={{
                 backgroundColor: SEAT_COLORS[seat.colorIndex % SEAT_COLORS.length],
               }}
-              title={`${seat.memberName} — ${teamName}${markTitle}`}
+              title={`${seat.memberName} — ${teamName}${markTitle}${
+                seat.isOvernight ? " · overnight" : ""
+              }`}
             >
+              {seat.isOvernight && (
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="rgba(0,0,0,0.6)"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="absolute inset-0 w-full h-full p-[2px] pointer-events-none"
+                >
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
               {mark && (
-                <span className="text-[8px] font-bold leading-none tracking-tight text-black/70">
+                <span className="relative text-sm font-extrabold leading-none tracking-tight text-white">
                   {mark}
                 </span>
               )}
