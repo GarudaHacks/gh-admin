@@ -67,6 +67,7 @@ interface Seat {
   memberUid: string;
   memberName: string;
   colorIndex: number;
+  isSolo: boolean; // application teamFormation = "joining … solo" (marked "S")
 }
 
 interface AssignedFormation {
@@ -106,6 +107,14 @@ function isMalePns(gender?: string): boolean {
   return g === "male" || g.includes("rather not");
 }
 
+// Whether an application's teamFormation answer is "joining solo". Mirrors the
+// export script's classifier: "speed dating" wins first (its option doesn't
+// contain "solo"), so a plain "solo" mention is the solo option.
+function isSoloFormation(teamFormation?: string): boolean {
+  const s = (teamFormation || "").toLowerCase();
+  return !s.includes("speed dating") && s.includes("solo");
+}
+
 // Serialize a matrix of strings to CSV (RFC-4180 quoting) and trigger a download.
 function downloadCsv(filename: string, rows: string[][]) {
   const esc = (v: string) => {
@@ -141,6 +150,8 @@ export default function TablesPage() {
   const [overnightByUid, setOvernightByUid] = useState<Map<string, boolean>>(
     new Map()
   );
+  // uids whose application teamFormation is "joining solo" (seat marked "S").
+  const [soloByUid, setSoloByUid] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -212,15 +223,18 @@ export default function TablesPage() {
       const uMap = new Map<string, FirestoreUser>();
       users.forEach((u) => uMap.set(u.id, u));
       const oMap = new Map<string, boolean>();
-      applications.forEach((a) =>
-        oMap.set(a.id, /^yes/i.test(a.overnightPlan || ""))
-      );
+      const soloSet = new Set<string>();
+      applications.forEach((a) => {
+        oMap.set(a.id, /^yes/i.test(a.overnightPlan || ""));
+        if (isSoloFormation(a.teamFormation)) soloSet.add(a.id);
+      });
 
       setTables(tablesData);
       setFormationMap(fMap);
       setFormationsList(formations);
       setUserMap(uMap);
       setOvernightByUid(oMap);
+      setSoloByUid(soloSet);
     } catch (err) {
       console.error("Error loading tables:", err);
       setError("Failed to load tables. Please try again.");
@@ -341,6 +355,7 @@ export default function TablesPage() {
             memberUid: uid,
             memberName: memberName(uid),
             colorIndex,
+            isSolo: soloByUid.has(uid),
           });
         });
       });
@@ -356,7 +371,7 @@ export default function TablesPage() {
     };
     // memberName depends on userMap; formationMap covers formation data.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formationMap, userMap]);
+  }, [formationMap, userMap, soloByUid]);
 
   // Group tables by location for the room layout.
   const grouped = useMemo(() => {
@@ -786,7 +801,7 @@ export default function TablesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Table Assignments"
-        subtitle="Each square is a seat; its color is the team seated there. A table showing more than one color holds teams from different formations. Click a table to assign a team."
+        subtitle="Each square is a seat; its color is the team seated there. A table showing more than one color holds teams from different formations. A seat marked “S” is a solo participant. Click a table to assign a team."
       />
 
       <div className="flex flex-col xl:flex-row gap-6 xl:items-start">
@@ -1623,14 +1638,22 @@ function SeatGrid({
           return (
             <div
               key={i}
-              className={`${seatSize} rounded-sm ${
+              className={`${seatSize} rounded-sm flex items-center justify-center ${
                 over ? "ring-2 ring-red-400" : ""
               }`}
               style={{
                 backgroundColor: SEAT_COLORS[seat.colorIndex % SEAT_COLORS.length],
               }}
-              title={`${seat.memberName} — ${teamName}`}
-            />
+              title={`${seat.memberName} — ${teamName}${
+                seat.isSolo ? " · solo" : ""
+              }`}
+            >
+              {seat.isSolo && (
+                <span className="text-[9px] font-bold leading-none text-black/70">
+                  S
+                </span>
+              )}
+            </div>
           );
         }
         return (
