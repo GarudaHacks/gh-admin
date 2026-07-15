@@ -149,6 +149,7 @@ export default function CheckInHistoryPage() {
                       <SignedImage
                         src={e.photoUrl}
                         alt={e.name}
+                        enableLightbox
                         className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/5"
                       />
                     ) : (

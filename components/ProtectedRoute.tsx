@@ -10,8 +10,8 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-// Ushers (non-admin staff) may only use the check-in scanner.
-const USHER_ALLOWED_PATHS = ["/check-in"];
+// Ushers (non-admin staff) may only use the check-in scanner and its history.
+const USHER_ALLOWED_PATHS = ["/check-in", "/check-in/history"];
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, role, loading } = useAuth();

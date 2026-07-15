@@ -151,13 +151,12 @@ export default function LoginForm() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full flex justify-center items-center py-3 px-4 text-sm font-medium rounded-md text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex justify-center items-center gap-2 py-3 px-4 text-sm font-medium rounded-md text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {emailLoading ? (
+                {emailLoading && (
                   <LoadingSpinner size="sm" center={false} text="" />
-                ) : (
-                  "Sign in"
                 )}
+                {emailLoading ? "Signing in..." : "Sign in"}
               </button>
             </form>
           </div>
