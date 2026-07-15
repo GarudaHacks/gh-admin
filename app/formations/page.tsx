@@ -48,8 +48,12 @@ export default function FormationPage() {
   const [search, setSearch] = useState("");
   // Filter by exact member count ("all", "notfull", or "0".."4") and sort order.
   const [countFilter, setCountFilter] = useState<string>("all");
-  // Optionally narrow to formations that don't match the mobile-app teams.
-  const [mismatchOnly, setMismatchOnly] = useState(false);
+  // Narrow by how the formation relates to the mobile-app `teams` collection:
+  // "all" (no filter), "in" (every member is in a mobile team), or "missing"
+  // (at least one member isn't — a mismatch).
+  const [mobileFilter, setMobileFilter] = useState<"all" | "in" | "missing">(
+    "all"
+  );
   const [sortBy, setSortBy] = useState<"name" | "members-desc" | "members-asc">(
     "name"
   );
@@ -168,6 +172,16 @@ export default function FormationPage() {
     (f: TeamFormation): boolean => missingFromMobile(f).length > 0,
     [missingFromMobile]
   );
+  // A formation fully represented in the mobile app: it has members and every
+  // one of them is in some mobile `teams` doc. Requires mobile teams to exist
+  // (nothing is "in the mobile app" before any have been created).
+  const isFullyInMobile = useCallback(
+    (f: TeamFormation): boolean =>
+      mobileMemberSet.size > 0 &&
+      f.members.length > 0 &&
+      f.members.every((uid) => mobileMemberSet.has(uid)),
+    [mobileMemberSet]
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -183,7 +197,10 @@ export default function FormationPage() {
       });
     }
 
-    if (mismatchOnly) list = list.filter((f) => hasMobileMismatch(f));
+    if (mobileFilter === "missing")
+      list = list.filter((f) => hasMobileMismatch(f));
+    else if (mobileFilter === "in")
+      list = list.filter((f) => isFullyInMobile(f));
 
     // Sort is stable, so member-count ties keep the underlying alphabetical order.
     if (sortBy === "name") {
@@ -197,7 +214,16 @@ export default function FormationPage() {
     }
 
     return list;
-  }, [search, formations, haystacks, countFilter, sortBy, mismatchOnly, hasMobileMismatch]);
+  }, [
+    search,
+    formations,
+    haystacks,
+    countFilter,
+    sortBy,
+    mobileFilter,
+    hasMobileMismatch,
+    isFullyInMobile,
+  ]);
 
   const visible = filtered.slice(0, visibleCount);
   const selected = formations.find((f) => f.id === selectedId) ?? null;
@@ -565,9 +591,9 @@ export default function FormationPage() {
               <label className="shrink-0 flex items-center gap-2 text-xs text-white/70 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={mismatchOnly}
+                  checked={mobileFilter === "missing"}
                   onChange={(e) => {
-                    setMismatchOnly(e.target.checked);
+                    setMobileFilter(e.target.checked ? "missing" : "all");
                     setVisibleCount(PAGE_SIZE);
                   }}
                   className="accent-primary"
@@ -606,8 +632,8 @@ export default function FormationPage() {
                 type="text"
                 placeholder="Search teams…"
               />
-              <div className="flex gap-2">
-                <label className="flex-1 flex flex-col gap-1">
+              <div className="flex flex-wrap gap-2">
+                <label className="flex-1 min-w-[7.5rem] flex flex-col gap-1">
                   <span className="text-xs text-white/50">Members</span>
                   <select
                     value={countFilter}
@@ -626,7 +652,26 @@ export default function FormationPage() {
                     <option value="4">4 (full)</option>
                   </select>
                 </label>
-                <label className="flex-1 flex flex-col gap-1">
+                {mobileMemberSet.size > 0 && (
+                  <label className="flex-1 min-w-[7.5rem] flex flex-col gap-1">
+                    <span className="text-xs text-white/50">Mobile app</span>
+                    <select
+                      value={mobileFilter}
+                      onChange={(e) => {
+                        setMobileFilter(
+                          e.target.value as typeof mobileFilter
+                        );
+                        setVisibleCount(PAGE_SIZE);
+                      }}
+                      className="input w-full text-sm"
+                    >
+                      <option value="all">All teams</option>
+                      <option value="in">In mobile app</option>
+                      <option value="missing">Missing from mobile</option>
+                    </select>
+                  </label>
+                )}
+                <label className="flex-1 min-w-[7.5rem] flex flex-col gap-1">
                   <span className="text-xs text-white/50">Sort by</span>
                   <select
                     value={sortBy}
