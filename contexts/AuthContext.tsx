@@ -78,6 +78,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Email/password login is reserved for non-@garudahacks.com accounts
+    // (ushers). @garudahacks.com staff are Google Workspace accounts and must
+    // use "Sign in with Google".
+    if (email.trim().toLowerCase().endsWith("@garudahacks.com")) {
+      throw new Error(
+        'Please use "Sign in with Google" for @garudahacks.com accounts.'
+      );
+    }
+
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const resolved = await resolveRole(cred.user);

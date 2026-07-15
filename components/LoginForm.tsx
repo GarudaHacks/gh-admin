@@ -7,8 +7,11 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 export default function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const { signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
 
   const handleGoogleSignIn = async () => {
     setError("");
@@ -26,6 +29,26 @@ export default function LoginForm() {
       setLoading(false);
     }
   };
+
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setEmailLoading(true);
+
+    try {
+      await signIn(email, password);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("An unexpected error occurred");
+      }
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const busy = loading || emailLoading;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -47,7 +70,7 @@ export default function LoginForm() {
             <div>
               <button
                 onClick={handleGoogleSignIn}
-                disabled={loading}
+                disabled={busy}
                 className="group relative w-full flex flex-row gap-2 justify-center items-center py-3 px-4 border border-input text-sm font-medium rounded-md text-card-foreground bg-card hover:bg-accent hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? (
@@ -75,6 +98,68 @@ export default function LoginForm() {
                 {loading ? "Signing in..." : "Sign in with Google"}
               </button>
             </div>
+
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                Usher login
+              </span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <form onSubmit={handleEmailSignIn} className="space-y-4">
+              <div className="space-y-1">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-card-foreground"
+                >
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={busy}
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-card-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-card-foreground"
+                >
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={busy}
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-card-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full flex justify-center items-center py-3 px-4 text-sm font-medium rounded-md text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {emailLoading ? (
+                  <LoadingSpinner size="sm" center={false} text="" />
+                ) : (
+                  "Sign in"
+                )}
+              </button>
+            </form>
           </div>
         </div>
       </div>
