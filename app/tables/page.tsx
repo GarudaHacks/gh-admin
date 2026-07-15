@@ -68,6 +68,7 @@ interface Seat {
   memberName: string;
   colorIndex: number;
   isSolo: boolean; // application teamFormation = "joining … solo" (marked "S")
+  isSpeedDating: boolean; // teamFormation = "…Speed Dating" (marked "SD")
 }
 
 interface AssignedFormation {
@@ -115,6 +116,12 @@ function isSoloFormation(teamFormation?: string): boolean {
   return !s.includes("speed dating") && s.includes("solo");
 }
 
+// Whether an application's teamFormation answer is "look for a team through
+// Speed Dating".
+function isSpeedDatingFormation(teamFormation?: string): boolean {
+  return (teamFormation || "").toLowerCase().includes("speed dating");
+}
+
 // Serialize a matrix of strings to CSV (RFC-4180 quoting) and trigger a download.
 function downloadCsv(filename: string, rows: string[][]) {
   const esc = (v: string) => {
@@ -152,6 +159,10 @@ export default function TablesPage() {
   );
   // uids whose application teamFormation is "joining solo" (seat marked "S").
   const [soloByUid, setSoloByUid] = useState<Set<string>>(new Set());
+  // uids who opted into Speed Dating (seat marked "SD").
+  const [speedDatingByUid, setSpeedDatingByUid] = useState<Set<string>>(
+    new Set()
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -224,9 +235,11 @@ export default function TablesPage() {
       users.forEach((u) => uMap.set(u.id, u));
       const oMap = new Map<string, boolean>();
       const soloSet = new Set<string>();
+      const sdSet = new Set<string>();
       applications.forEach((a) => {
         oMap.set(a.id, /^yes/i.test(a.overnightPlan || ""));
         if (isSoloFormation(a.teamFormation)) soloSet.add(a.id);
+        if (isSpeedDatingFormation(a.teamFormation)) sdSet.add(a.id);
       });
 
       setTables(tablesData);
@@ -235,6 +248,7 @@ export default function TablesPage() {
       setUserMap(uMap);
       setOvernightByUid(oMap);
       setSoloByUid(soloSet);
+      setSpeedDatingByUid(sdSet);
     } catch (err) {
       console.error("Error loading tables:", err);
       setError("Failed to load tables. Please try again.");
@@ -356,6 +370,7 @@ export default function TablesPage() {
             memberName: memberName(uid),
             colorIndex,
             isSolo: soloByUid.has(uid),
+            isSpeedDating: speedDatingByUid.has(uid),
           });
         });
       });
@@ -371,7 +386,7 @@ export default function TablesPage() {
     };
     // memberName depends on userMap; formationMap covers formation data.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formationMap, userMap, soloByUid]);
+  }, [formationMap, userMap, soloByUid, speedDatingByUid]);
 
   // Group tables by location for the room layout.
   const grouped = useMemo(() => {
@@ -801,7 +816,7 @@ export default function TablesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Table Assignments"
-        subtitle="Each square is a seat; its color is the team seated there. A table showing more than one color holds teams from different formations. A seat marked “S” is a solo participant. Click a table to assign a team."
+        subtitle="Each square is a seat; its color is the team seated there. A table showing more than one color holds teams from different formations. A seat marked “S” is a solo participant, “SD” opted into Speed Dating. Click a table to assign a team."
       />
 
       <div className="flex flex-col xl:flex-row gap-6 xl:items-start">
@@ -1635,6 +1650,13 @@ function SeatGrid({
           const teamName =
             assigned.find((a) => a.id === seat.formationId)?.formation
               ?.teamName || seat.formationId;
+          // Solo and Speed Dating are mutually exclusive teamFormation answers.
+          const mark = seat.isSolo ? "S" : seat.isSpeedDating ? "SD" : null;
+          const markTitle = seat.isSolo
+            ? " · solo"
+            : seat.isSpeedDating
+            ? " · speed dating"
+            : "";
           return (
             <div
               key={i}
@@ -1644,13 +1666,11 @@ function SeatGrid({
               style={{
                 backgroundColor: SEAT_COLORS[seat.colorIndex % SEAT_COLORS.length],
               }}
-              title={`${seat.memberName} — ${teamName}${
-                seat.isSolo ? " · solo" : ""
-              }`}
+              title={`${seat.memberName} — ${teamName}${markTitle}`}
             >
-              {seat.isSolo && (
-                <span className="text-[9px] font-bold leading-none text-black/70">
-                  S
+              {mark && (
+                <span className="text-[8px] font-bold leading-none tracking-tight text-black/70">
+                  {mark}
                 </span>
               )}
             </div>
