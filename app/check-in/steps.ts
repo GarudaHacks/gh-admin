@@ -19,63 +19,57 @@ export const CheckInSteps: CheckInStep[] = [
     {
         stepName: "scanQr",
         friendlyName: "Scan QR",
-        instruction: "Scan the hacker's boarding pass QR code.",
+        instruction: "Scan the participant's boarding pass QR code.",
     },
     {
         stepName: "askIdCard",
         friendlyName: "Verify ID",
-        instruction: "Ask for a photo ID and confirm the name matches.",
+        instruction: "Ask the participant to present a National ID, School ID, or any government- or institution-issued ID for verification.",
     },
     {
         stepName: "getHackerInformations",
         friendlyName: "Confirm Details",
-        instruction: "Confirm the hacker's information on file is correct. If needed, validate against the Boarding Pass as well.",
+        instruction: "Verify the participant's ID against their name and date of birth on the screen. A one-day difference in the date of birth is acceptable. Then verify the boarding pass against all displayed information.",
     },
     {
         stepName: "confirmTeam",
         friendlyName: "Confirm Team",
-        instruction:
-            "Check this hacker's team is correct by saying all members, who checked-in and who yet to check-in. Let the hacker explicitly says that the composition is correct. Add or remove members if needed.",
+        instruction: "Read each team member's name and check-in status. Confirm the team composition is correct. Add or remove members if needed.",
         showWhen: (ctx) => ctx.inTeam,
     },
     {
         stepName: "createMobileTeam",
         friendlyName: "Create Mobile Team",
-        instruction:
-            "This team hasn't been created in the mobile app yet. Remind the hacker to create their team in the app and have every member join — this is required for attendance confirmation later.",
+        instruction: "Ask the participant to create or join their team in the mobile app if they have not already done so.",
         showWhen: (ctx) => ctx.needsMobileTeam,
     },
     {
         stepName: "confirmOvernight",
         friendlyName: "Overnight Plan",
-        instruction:
-            "Remind the hacker of their overnight plan and confirm it's still correct. If it changed, switch it below and confirm.",
+        instruction: "Confirm the participant's overnight plan. Update it if they wish to make changes.",
     },
     {
         stepName: "verifyTable",
         friendlyName: "Verify Table",
-        instruction:
-            "Check the table sticker on the lanyard against this hacker's assigned table shown below. The location and table number must match. If the sticker is wrong or missing, fix it before handing over the lanyard.",
+        instruction: "Check that the table number and team number on the lanyard match the assignment shown on the screen. Fix any missing or incorrect labels before handing over the lanyard.",
         showWhen: (ctx) => ctx.hasTable,
     },
     {
         stepName: "announceTable",
         friendlyName: "Tell Their Table",
-        instruction:
-            "Tell the hacker their table number and where to find it, out loud.",
+        instruction: "Tell the participant their assigned table number and its location.",
         showWhen: (ctx) => ctx.hasTable,
     },
     {
         stepName: "noTableYet",
         friendlyName: "No Table Yet",
-        instruction:
-            "This hacker doesn't have an assigned table yet. Let them know they'll get their table after the Speed Dating session.",
+        instruction: "Inform the participant that they do not have a table assignment yet because they are joining Speed Dating. Direct them to the Speed Dating Booth after completing check-in.",
         showWhen: (ctx) => !ctx.hasTable,
     },
     {
         stepName: "giveLanyard",
         friendlyName: "Give Lanyard",
-        instruction: "Hand over the lanyard",
+        instruction: "Hand over the lanyard.",
     },
     {
         stepName: "giveFreebies",
@@ -85,20 +79,19 @@ export const CheckInSteps: CheckInStep[] = [
     {
         stepName: "takePicture",
         friendlyName: "Take Picture",
-        instruction: "Take the hacker's check-in photo with the freebies. Make sure their face is visible.",
+        instruction: "Take a check-in photo with the participant holding their freebies. Make sure their face is clearly visible.",
         skippable: true,
     },
     {
         stepName: "speedDatingBooth",
         friendlyName: "Speed Dating Booth",
-        instruction:
-            "This hacker opted into Speed Dating. Direct them to the Speed Dating Booth, near the VIP booth.",
+        instruction: "Direct the participant to the Speed Dating Booth near the VIP Booth.",
         showWhen: (ctx) => ctx.joiningSpeedDating,
     },
     {
         stepName: "smileAndSayGoodLuck",
         friendlyName: "All Done!",
-        instruction: "Smile and wish them good luck \u{1F389}",
+        instruction: "Smile and wish them good luck! 🎉",
     },
 ];
 

@@ -215,6 +215,15 @@ function formatDMYHMS(iso: string | null): string {
   )}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
+// Date-only display (dd/mm/yyyy) in UTC so the day matches the stored ISO date.
+function formatDMY(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+}
+
 // Classify nationality to "Indonesian" / "Non" (or "—" when unknown).
 function nationalityLabel(nationality: string): string {
   if (!nationality.trim()) return "—";
@@ -254,21 +263,19 @@ function HackerSummary({
       </p>
       <div className="mt-3 space-y-1">
         <Detail label="Name" value={`${hacker.firstName} ${hacker.lastName}`} />
-        <Detail label="Email" value={hacker.email} />
-        <Detail label="Phone" value={hacker.phone} />
-        <Detail label="Gender" value={hacker.genderIdentity} />
-        <Detail label="Date of birth" value={hacker.dateOfBirth} />
+        <Detail label="Date of birth" value={formatDMY(hacker.dateOfBirth)} />
         <Detail label="Nationality" value={nationalityLabel(hacker.nationality)} />
+        <Detail label="Gender" value={hacker.genderIdentity} />
         <Detail label="Affiliation" value={hacker.occupationPlace} />
-        <Detail label="Occupation detail" value={hacker.occupationDetail} />
-        <Detail label="Status" value={hacker.status} />
-        <Detail label="Accepted at" value={formatDMYHMS(hacker.acceptedAt)} />
+        <Detail label="Email" value={hacker.email} />
+        <Detail label="Status" value={hacker.phone} />
+        <Detail label="CHECK-IN CODE" value={userId} mono />
+        <Detail label="A-" value={formatDMYHMS(hacker.acceptedAt)} />
         <Detail
-          label="Confirmed RSVP at"
+          label="C-"
           value={formatDMYHMS(hacker.confirmedRsvpAt)}
         />
         <Detail label="Checked in" value={new Date(checkedInAt).toLocaleString()} />
-        <Detail label="UID" value={userId} mono />
       </div>
     </div>
   );
