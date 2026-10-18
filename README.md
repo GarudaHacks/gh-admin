@@ -1,6 +1,24 @@
 # Garuda Hacks Admin Portal 🚀 
 
-The official admin portal for Garuda Hacks 6.0, a premier hackathon event. Built with modern web technologies to provide a seamless experience for administrators.
+The official admin portal for Garuda Hacks 6.0-7.0. The app serves as the main interface for admin and other related capabilities.
+
+## High-level Architecture
+
+This app uses Firebase admin SDK to interact with database directly. This app has some important functionalities such as:
+- Managing application: From checking, reviewing, accepting, rejecting, canceling applications of user. The status update by admins is also complete with email send. Consider adjusting email send to be reusable or similar with what `web-be` application has.
+- Managing the configuration: such as open-close date for portal, or mentorship platform.
+- Team formation: see how team has already forming.
+- Speed dating: see which users join which mobile team.
+- Table assignments: manually assign hackers into their designated table, configurable for amount of table with different capacity (e.g. 4, 8, etc).
+- Check-in: useful for both admin and assigned volunteer at check-in booth, complete with authorship for logging.
+- Mentoship: manage or add mentors, promoting or creating account for them.
+- Mailing: send dispentation letter for users who requested.
+
+The app is authorized for `@garudahacks.com` email only. Except for Check-in feature which volunteer with regular email is authorized with custom claim `usher` in Firebase Auth, but only will able to access `/check-in` page.
+
+## Regarding Team Forming
+
+It is a known issue that current arhitecture of the app is not scaleable, especially for team forming that is in registration a typed value rather than by invite link. This cause discrepancy between mobile team app and the actual team forming. Consider improving this so the team get up to date whenever needed, including for linking with submitted project from Devpost, or the table assignment without confusing you as developer or admins who manage it.
 
 ## 🛠️ Tech Stack
 
